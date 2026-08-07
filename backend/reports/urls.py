@@ -1,0 +1,7 @@
+from django.urls import path
+from . import views
+
+urlpatterns = [
+    path('tickets-pdf/', views.AllTicketsPDFView.as_view(), name='tickets-pdf'),
+    path('technician-performance-pdf/', views.TechnicianPerformancePDFView.as_view(), name='technician-performance-pdf'),
+]

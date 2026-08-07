@@ -1,0 +1,29 @@
+# Virtual environment
+venv/
+
+# Python compiled files
+__pycache__/
+*.pyc
+
+# Environment variables (contains secrets!)
+.env
+
+# Database (if using SQLite)
+*.db
+*.sqlite3
+
+# Media files (user uploads)
+media/
+
+# Static files (collected)
+staticfiles/
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
