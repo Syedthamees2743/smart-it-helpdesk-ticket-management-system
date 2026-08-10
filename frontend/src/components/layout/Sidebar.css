@@ -1,0 +1,22 @@
+.sidebar {
+  background-color: #0f172a;
+  color: #fff;
+  height: 100%;
+}
+.sidebar a {
+  color: #cbd5e1;
+  text-decoration: none;
+}
+.sidebar .nav-link.active {
+  background-color: rgba(255,255,255,0.04);
+  color: #fff;
+}
+.sidebar .sidebar-brand {
+  padding: 1rem;
+  font-weight: 700;
+}
+
+/* mobile offcanvas adjustments */
+.offcanvas-body .sidebar {
+  padding-top: 0.5rem;
+}
