@@ -1,107 +1,225 @@
 ﻿import React, { useState, useEffect } from "react";
-import { Modal, Form, Button, Spinner, Alert } from "react-bootstrap";
+import { Modal, Form, Button, Spinner, Alert, Row, Col } from "react-bootstrap";
+import { FiUserCheck, FiCornerUpLeft, FiTool } from "react-icons/fi";
+import api from "../../services/api";
 
 const AssetActionModal = ({ show, onHide, mode, asset, onSuccess }) => {
+  const [employees, setEmployees] = useState([]);
+  const [selectedEmployee, setSelectedEmployee] = useState("");
+  const [assignedDate, setAssignedDate] = useState(
+    new Date().toISOString().split("T")[0],
+  );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [comment, setComment] = useState("");
 
   useEffect(() => {
-    if (!show) {
-      setComment("");
-      setError("");
-      setLoading(false);
+    if (mode === "assign" && show) {
+      fetchEmployees();
     }
-  }, [show]);
+    setError("");
+    setSelectedEmployee("");
+  }, [mode, show]);
 
-  const getTitle = () => {
-    switch (mode) {
-      case "assign":
-        return "Assign Asset";
-      case "return":
-        return "Return Asset";
-      case "maintenance":
-        return "Send Asset to Maintenance";
-      default:
-        return "Asset Action";
-    }
-  };
-
-  const getSubmitLabel = () => {
-    switch (mode) {
-      case "assign":
-        return "Assign";
-      case "return":
-        return "Return";
-      case "maintenance":
-        return "Update";
-      default:
-        return "Submit";
+  const fetchEmployees = async () => {
+    try {
+      const res = await api.get("/auth/users/", {
+        params: { role: "employee", page_size: 1000 },
+      });
+      const data = res.data.results || res.data;
+      setEmployees(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.error("Failed to fetch employees");
     }
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const handleAction = async () => {
     setLoading(true);
     setError("");
-
-    if (!asset?.id) {
-      setError("Asset data is missing.");
-      setLoading(false);
-      return;
-    }
-
-    const payload = {
-      asset_id: asset.id,
-      comment: comment || undefined,
-    };
-
     try {
-      await onSuccess(payload, mode);
+      if (mode === "assign") {
+        if (!selectedEmployee) return setError("Please select an employee.");
+        await onSuccess(
+          {
+            asset_id: asset.id,
+            employee_id: parseInt(selectedEmployee),
+            assigned_date: assignedDate,
+          },
+          "assign",
+        );
+      } else if (mode === "return") {
+        // FIX: Sending asset_id now instead of assignment_id
+        await onSuccess({ asset_id: asset.id }, "return");
+      } else if (mode === "maintenance") {
+        await onSuccess({ status: "maintenance" }, "maintenance");
+      }
       onHide();
     } catch (err) {
-      const responseData = err.response?.data;
-      setError(
-        responseData?.detail || responseData?.error || "Unable to perform this action."
-      );
+      const errData = err.response?.data;
+      // Bulletproof: Convert ANY error object into a readable string so React doesn't crash
+      if (typeof errData === "string") {
+        setError(errData);
+      } else if (errData?.error) {
+        setError(
+          typeof errData.error === "string"
+            ? errData.error
+            : JSON.stringify(errData.error),
+        );
+      } else if (typeof errData === "object") {
+        setError(Object.values(errData).flat().join(", ") || "Action failed.");
+      } else {
+        setError("An unknown error occurred.");
+      }
     } finally {
       setLoading(false);
     }
   };
 
-  if (!show) return null;
+  const getTitle = () => {
+    if (mode === "assign")
+      return (
+        <>
+          <FiUserCheck className="me-2 text-primary" />
+          Assign Asset
+        </>
+      );
+    if (mode === "return")
+      return (
+        <>
+          <FiCornerUpLeft className="me-2 text-warning" />
+          Return Asset
+        </>
+      );
+    return (
+      <>
+        <FiTool className="me-2 text-info" />
+        Mark for Maintenance
+      </>
+    );
+  };
 
-  return (
-    <Modal show={show} onHide={onHide} centered>
-      <Modal.Header closeButton className="bg-light">
-        <Modal.Title>{getTitle()}</Modal.Title>
-      </Modal.Header>
-      <Modal.Body>
-        {error && <Alert variant="danger">{error}</Alert>}
-        <p className="small text-muted">
-          Asset: <strong>{asset?.name || "Unknown"}</strong>
-        </p>
-        <Form onSubmit={handleSubmit}>
-          <Form.Group className="mb-3" controlId="actionComment">
-            <Form.Label>Notes</Form.Label>
+  const getBody = () => {
+    if (mode === "assign") {
+      return (
+        <Form>
+          <div className="p-3 bg-light rounded mb-3 border">
+            <Row className="align-items-center">
+              <Col xs="auto">
+                <span className="text-muted small">Asset:</span>
+              </Col>
+              <Col>
+                <span className="fw-bold">
+                  {asset?.asset_code || ""} - {asset?.name || "Unknown"}
+                </span>
+              </Col>
+            </Row>
+          </div>
+
+          <Form.Group className="mb-3">
+            <Form.Label className="fw-semibold">
+              Select Employee <span className="text-danger">*</span>
+            </Form.Label>
+            <Form.Select
+              value={selectedEmployee}
+              onChange={(e) => setSelectedEmployee(e.target.value)}
+              className="py-2"
+            >
+              <option value="">-- Choose Employee --</option>
+              {employees.map((emp) => (
+                <option key={emp.id} value={emp.id}>
+                  {emp.full_name ||
+                    `${emp.first_name || ""} ${emp.last_name || ""}`}{" "}
+                  ({emp.employee_id || emp.email || emp.username})
+                </option>
+              ))}
+            </Form.Select>
+          </Form.Group>
+
+          <Form.Group className="mb-0">
+            <Form.Label className="fw-semibold">Assigned Date</Form.Label>
             <Form.Control
-              as="textarea"
-              rows={3}
-              value={comment}
-              onChange={(e) => setComment(e.target.value)}
-              placeholder="Optional notes for this action"
+              type="date"
+              value={assignedDate}
+              onChange={(e) => setAssignedDate(e.target.value)}
+              className="py-2"
             />
           </Form.Group>
-          <div className="d-flex justify-content-end gap-2">
-            <Button variant="secondary" onClick={onHide} disabled={loading}>
-              Cancel
-            </Button>
-            <Button type="submit" variant="primary" disabled={loading}>
-              {loading ? <Spinner size="sm" /> : getSubmitLabel()}
-            </Button>
-          </div>
         </Form>
+      );
+    }
+
+    if (mode === "return") {
+      return (
+        <div className="text-center py-4">
+          <div className="mb-3">
+            <FiCornerUpLeft size={50} className="text-warning" />
+          </div>
+          <h5>Return Asset?</h5>
+          <p className="text-muted mb-0">
+            This will mark <strong>{asset?.asset_code}</strong> as available
+            again.
+          </p>
+        </div>
+      );
+    }
+
+    return (
+      <div className="text-center py-4">
+        <div className="mb-3">
+          <FiTool size={50} className="text-info" />
+        </div>
+        <h5>Move to Maintenance?</h5>
+        <p className="text-muted mb-0">
+          This will update the status of <strong>{asset?.asset_code}</strong> to
+          under maintenance.
+        </p>
+      </div>
+    );
+  };
+
+  return (
+    <Modal
+      show={show}
+      onHide={onHide}
+      centered
+      size={mode === "assign" ? "md" : undefined}
+    >
+      <Modal.Header closeButton className="bg-light border-bottom">
+        <Modal.Title className="fw-bold">{getTitle()}</Modal.Title>
+      </Modal.Header>
+      <Modal.Body>
+        {error && (
+          <Alert variant="danger" className="py-2">
+            {error}
+          </Alert>
+        )}
+        {getBody()}
       </Modal.Body>
+      <Modal.Footer className="border-top">
+        <Button
+          variant="secondary"
+          onClick={onHide}
+          disabled={loading}
+          className="px-4"
+        >
+          Cancel
+        </Button>
+        <Button
+          variant={mode === "return" ? "warning" : "primary"}
+          onClick={handleAction}
+          disabled={loading}
+          className="px-4"
+        >
+          {loading ? (
+            <>
+              <Spinner size="sm" className="me-1" /> Processing...
+            </>
+          ) : mode === "assign" ? (
+            "Assign Now"
+          ) : (
+            "Confirm"
+          )}
+        </Button>
+      </Modal.Footer>
     </Modal>
   );
 };

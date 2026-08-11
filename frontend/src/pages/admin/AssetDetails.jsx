@@ -8,6 +8,7 @@ import {
   FiCornerUpLeft,
   FiTool,
   FiTrash2,
+  FiPackage,
 } from "react-icons/fi";
 import { useAuth } from "../../context/AuthContext";
 import assetService from "../../services/assetService";
@@ -42,7 +43,7 @@ const AssetDetails = () => {
       setError(
         err.response?.status === 404
           ? "Asset not found."
-          : "Failed to load asset details."
+          : "Failed to load asset details.",
       );
     } finally {
       setLoading(false);
@@ -58,7 +59,7 @@ const AssetDetails = () => {
     if (mode === "assign") await assetService.assignAsset(payload);
     else if (mode === "return") await assetService.returnAsset(payload);
     else if (mode === "maintenance")
-      await assetService.updateAsset(id, { status: "maintenance" }); // Force lowercase here too
+      await assetService.updateAsset(id, { status: "maintenance" });
     fetchAsset();
   };
 
@@ -111,73 +112,76 @@ const AssetDetails = () => {
 
   return (
     <div>
+      {/* Header */}
       <div className="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
         <Button variant="outline-secondary" onClick={() => navigate(-1)}>
           <FiArrowLeft className="me-1" /> Back
         </Button>
-        <div className="d-flex gap-2 flex-wrap">
-          {isAdmin && (
-            <>
-              {/* FIXED: Added ?.toLowerCase() to all status checks */}
-              {asset.status?.toLowerCase() === "available" && (
-                <Button
-                  variant="success"
-                  onClick={() => {
-                    setActionMode("assign");
-                    setShowActionModal(true);
-                  }}
-                >
-                  <FiUserCheck className="me-1" /> Assign Asset
-                </Button>
-              )}
-              {asset.status?.toLowerCase() === "assigned" && (
-                <Button
-                  variant="warning"
-                  onClick={() => {
-                    setActionMode("return");
-                    setShowActionModal(true);
-                  }}
-                >
-                  <FiCornerUpLeft className="me-1" /> Return Asset
-                </Button>
-              )}
-              {(asset.status?.toLowerCase() === "available" ||
-                asset.status?.toLowerCase() === "assigned") && (
-                <Button
-                  variant="info"
-                  onClick={() => {
-                    setActionMode("maintenance");
-                    setShowActionModal(true);
-                  }}
-                >
-                  <FiTool className="me-1" /> Maintenance
-                </Button>
-              )}
-              <Button variant="primary" onClick={() => setShowEditModal(true)}>
-                <FiEdit2 className="me-1" /> Edit
+
+        {/* ADMIN ONLY ACTIONS */}
+        {isAdmin && (
+          <div className="d-flex gap-2 flex-wrap">
+            {asset.status?.toLowerCase() === "available" && (
+              <Button
+                variant="success"
+                onClick={() => {
+                  setActionMode("assign");
+                  setShowActionModal(true);
+                }}
+              >
+                <FiUserCheck className="me-1" /> Assign Asset
               </Button>
-              <Button variant="outline-danger" onClick={handleDelete}>
-                <FiTrash2 className="me-1" /> Delete
+            )}
+            {asset.status?.toLowerCase() === "assigned" && (
+              <Button
+                variant="warning"
+                onClick={() => {
+                  setActionMode("return");
+                  setShowActionModal(true);
+                }}
+              >
+                <FiCornerUpLeft className="me-1" /> Return Asset
               </Button>
-            </>
-          )}
-        </div>
+            )}
+            {(asset.status?.toLowerCase() === "available" ||
+              asset.status?.toLowerCase() === "assigned") && (
+              <Button
+                variant="info"
+                onClick={() => {
+                  setActionMode("maintenance");
+                  setShowActionModal(true);
+                }}
+              >
+                <FiTool className="me-1" /> Maintenance
+              </Button>
+            )}
+            <Button variant="primary" onClick={() => setShowEditModal(true)}>
+              <FiEdit2 className="me-1" /> Edit
+            </Button>
+            <Button variant="outline-danger" onClick={handleDelete}>
+              <FiTrash2 className="me-1" /> Delete
+            </Button>
+          </div>
+        )}
       </div>
 
       <Row>
+        {/* Left Column - Main Info */}
         <Col lg={8}>
-          <Card className="shadow-sm mb-4">
-            <Card.Header className="bg-white fw-bold">
+          <Card className="shadow-sm mb-4 border-0">
+            <Card.Header className="bg-white fw-bold border-bottom">
+              <FiPackage className="me-2 text-primary" />
               Asset Information
             </Card.Header>
             <Card.Body>
               <Row className="g-3">
                 {[
                   ["Asset Code", asset.asset_code],
-                  ["Asset Name", asset.name],
+                  ["Asset Name", asset.asset_name || asset.name],
                   ["Category", asset.category_name || "-"],
                   ["Brand", asset.brand || "-"],
                   ["Model", asset.model || "-"],
+                  ["Serial Number", asset.serial_number || "-"],
                   ["Status", getStatusBadge(asset.status)],
                   [
                     "Purchase Date",
@@ -200,73 +204,63 @@ const AssetDetails = () => {
               </Row>
             </Card.Body>
           </Card>
-
-          {asset.history && asset.history.length > 0 && (
-            <Card className="shadow-sm">
-              <Card.Header className="bg-white fw-bold">
-                Asset History
-              </Card.Header>
-              <Card.Body className="p-0">
-                <div className="table-responsive">
-                  <Table hover className="align-middle mb-0">
-                    <thead className="bg-light">
-                      <tr>
-                        <th>Action</th>
-                        <th>Employee</th>
-                        <th>Date</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {asset.history.map((h, i) => (
-                        <tr key={i}>
-                          <td>
-                            <Badge
-                              bg={
-                                h.action === "Assigned" ? "primary" : "warning"
-                              }
-                            >
-                              {h.action}
-                            </Badge>
-                          </td>
-                          <td>{h.employee_name || "-"}</td>
-                          <td className="text-nowrap small">
-                            {new Date(h.date).toLocaleString()}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </Table>
-                </div>
-              </Card.Body>
-            </Card>
-          )}
         </Col>
 
+        {/* Right Column - Assignment Info */}
         <Col lg={4}>
-          <Card className="shadow-sm border-start border-4 border-primary">
-            <Card.Header className="bg-white fw-bold">
-              Assignment Info
+          <Card
+            className="shadow-sm border-0 h-100"
+            style={{ backgroundColor: "#f8f9ff" }}
+          >
+            <Card.Header className="bg-transparent fw-bold border-bottom d-flex align-items-center gap-2">
+              <span className="text-primary">●</span> Assignment Info
             </Card.Header>
-            <Card.Body>
+            <Card.Body className="d-flex flex-column justify-content-center">
               {asset.current_assignment ? (
-                <>
-                  <p className="text-muted small mb-1">Assigned To</p>
-                  <p className="fw-bold mb-3 fs-5">
+                <div className="text-center">
+                  {/* Profile Icon */}
+                  <div
+                    className="bg-white shadow-sm rounded-circle d-inline-flex align-items-center justify-content-center mb-3 p-3"
+                    style={{ width: "80px", height: "80px" }}
+                  >
+                    <FiUserCheck size={32} className="text-primary" />
+                  </div>
+
+                  <h4 className="fw-bold mb-2">
                     {asset.current_assignment.employee_name}
-                  </p>
-                  <p className="text-muted small mb-1">Assigned Date</p>
-                  <p className="fw-semibold mb-3">
-                    {new Date(
-                      asset.current_assignment.assigned_date
-                    ).toLocaleDateString()}
-                  </p>
-                  <p className="text-muted small mb-1">Status</p>
-                  <Badge bg="success">Active</Badge>
-                </>
+                  </h4>
+                  <Badge
+                    bg="success"
+                    className="px-3 py-2 rounded-pill mb-4 shadow-sm"
+                  >
+                    Currently Assigned
+                  </Badge>
+
+                  {/* Date Info Inner Card */}
+                  <div className="bg-white p-3 rounded-3 shadow-sm text-start">
+                    <div className="d-flex justify-content-between align-items-center">
+                      <span className="text-muted small">Assigned Date</span>
+                      <span className="fw-bold text-dark">
+                        {new Date(
+                          asset.current_assignment.assigned_date,
+                        ).toLocaleDateString()}
+                      </span>
+                    </div>
+                  </div>
+                </div>
               ) : (
                 <div className="text-center py-4 text-muted">
-                  <FiUserCheck size={30} className="mb-2 opacity-50" />
-                  <p className="mb-0">Currently Available</p>
+                  {/* Empty State Icon */}
+                  <div
+                    className="bg-white shadow-sm rounded-circle d-inline-flex align-items-center justify-content-center mb-3 p-3"
+                    style={{ width: "80px", height: "80px" }}
+                  >
+                    <FiPackage size={32} className="text-muted opacity-50" />
+                  </div>
+                  <h5 className="fw-bold text-dark mb-1">Available</h5>
+                  <small className="opacity-75">
+                    Asset is unassigned and ready to deploy.
+                  </small>
                 </div>
               )}
             </Card.Body>
@@ -274,6 +268,7 @@ const AssetDetails = () => {
         </Col>
       </Row>
 
+      {/* Modals (Only accessible to Admins) */}
       {isAdmin && (
         <>
           <AssetFormModal

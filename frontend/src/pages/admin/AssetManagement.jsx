@@ -8,6 +8,7 @@ import {
   Form,
   InputGroup,
   Badge,
+  Spinner,
 } from "react-bootstrap";
 import {
   FiPlus,
@@ -60,15 +61,19 @@ const AssetManagement = () => {
 
   const fetchKpis = async () => {
     try {
-      // Fetching unpaginated for accurate KPI counts.
-      // Note: For enterprises with 10,000+ assets, a dedicated /assets/kpis/ endpoint is recommended.
       const res = await assetService.getAssets({ page_size: 1000 });
       const allAssets = res.data.results || res.data;
       setKpis({
         total: allAssets.length,
-        available: allAssets.filter((a) => a.status === "Available").length,
-        assigned: allAssets.filter((a) => a.status === "Assigned").length,
-        maintenance: allAssets.filter((a) => a.status === "Maintenance").length,
+        available: allAssets.filter(
+          (a) => a.status?.toLowerCase() === "available",
+        ).length,
+        assigned: allAssets.filter(
+          (a) => a.status?.toLowerCase() === "assigned",
+        ).length,
+        maintenance: allAssets.filter(
+          (a) => a.status?.toLowerCase() === "maintenance",
+        ).length,
       });
     } catch (err) {
       console.error(err);
@@ -83,7 +88,7 @@ const AssetManagement = () => {
   const fetchAssets = async () => {
     setLoading(true);
     try {
-      const res = await assetService.getAssets(filters);
+      const res = await assetService.getAssets({ ...filters, page_size: 1000 });
       setAssets(res.data.results || res.data);
     } catch (err) {
       console.error(err);
@@ -112,7 +117,6 @@ const AssetManagement = () => {
       await assetService.updateAsset(selectedAsset.id, payload);
     fetchAssets();
     fetchKpis();
-    // If we are on details page, we'd refresh that too, but here we just refresh list
   };
 
   const handleDelete = async (id) => {
@@ -123,32 +127,41 @@ const AssetManagement = () => {
       fetchAssets();
       fetchKpis();
     } catch (err) {
-      alert(
-        err.response?.data?.detail ||
-          "Cannot delete asset. It may be assigned or have history.",
-      );
+      alert(err.response?.data?.detail || "Cannot delete asset.");
     }
   };
 
   const getStatusBadge = (status) => {
+    if (!status)
+      return <span className="badge bg-light text-dark">Unknown</span>;
     let cls = "badge ";
-    switch (status) {
-      case "Available":
+    const s = status.toLowerCase();
+    const displayText =
+      status.charAt(0).toUpperCase() + status.slice(1).replace("_", " ");
+    switch (s) {
+      case "available":
         cls += "bg-success-subtle text-success";
         break;
-      case "Assigned":
+      case "assigned":
         cls += "bg-primary-subtle text-primary";
         break;
-      case "Maintenance":
+      case "maintenance":
         cls += "bg-warning-subtle text-warning";
         break;
-      case "Retired":
+      case "retired":
         cls += "bg-secondary-subtle text-secondary";
         break;
       default:
         cls += "bg-light text-dark";
     }
-    return <span className={cls}>{status}</span>;
+    return <span className={cls}>{displayText}</span>;
+  };
+
+  const getAssignedName = (asset) => {
+    if (asset.current_assignment?.employee_name)
+      return asset.current_assignment.employee_name;
+    if (asset.assigned_to_name) return asset.assigned_to_name;
+    return "-";
   };
 
   return (
@@ -171,7 +184,6 @@ const AssetManagement = () => {
         </Button>
       </div>
 
-      {/* KPI Cards */}
       <Row className="g-3 mb-4">
         {[
           {
@@ -256,11 +268,11 @@ const AssetManagement = () => {
                   setFilters({ ...filters, status: e.target.value })
                 }
               >
-                <option value="">All Status</option>
-                <option value="Available">Available</option>
-                <option value="Assigned">Assigned</option>
-                <option value="Maintenance">Maintenance</option>
-                <option value="Retired">Retired</option>
+                <option value="">All Statuses</option>
+                <option value="available">Available</option>
+                <option value="assigned">Assigned</option>
+                <option value="maintenance">Maintenance</option>
+                <option value="retired">Retired</option>
               </Form.Select>
             </Col>
           </Row>
@@ -283,18 +295,18 @@ const AssetManagement = () => {
                 {loading ? (
                   <tr>
                     <td colSpan="8" className="text-center py-4">
-                      <span className="spinner-border text-primary"></span>
-                      <p className="mt-2 mb-0 text-muted">Loading assets...</p>
+                      <Spinner animation="border" />
                     </td>
                   </tr>
                 ) : assets.length === 0 ? (
                   <tr>
                     <td colSpan="8" className="text-center text-muted py-4">
-                      No assets found. Add your first IT asset.
+                      No assets found.
                     </td>
                   </tr>
                 ) : (
                   assets.map((asset) => (
+                    /* FIX: Removed all whitespace between <td> tags to prevent React Hydration error */
                     <tr key={asset.id}>
                       <td className="fw-semibold text-nowrap">
                         {asset.asset_code}
@@ -309,9 +321,7 @@ const AssetManagement = () => {
                         {asset.brand} {asset.model}
                       </td>
                       <td>{getStatusBadge(asset.status)}</td>
-                      <td className="text-nowrap">
-                        {asset.current_assignment?.employee_name || "-"}
-                      </td>
+                      <td className="text-nowrap">{getAssignedName(asset)}</td>
                       <td className="text-nowrap small">
                         {asset.purchase_date
                           ? new Date(asset.purchase_date).toLocaleDateString()
@@ -340,8 +350,7 @@ const AssetManagement = () => {
                           >
                             <FiEdit2 />
                           </Button>
-
-                          {asset.status === "Available" && (
+                          {asset.status?.toLowerCase() === "available" && (
                             <Button
                               size="sm"
                               variant="outline-success"
@@ -351,7 +360,7 @@ const AssetManagement = () => {
                               👤
                             </Button>
                           )}
-                          {asset.status === "Assigned" && (
+                          {asset.status?.toLowerCase() === "assigned" && (
                             <Button
                               size="sm"
                               variant="outline-warning"
@@ -361,8 +370,8 @@ const AssetManagement = () => {
                               ↩️
                             </Button>
                           )}
-                          {(asset.status === "Available" ||
-                            asset.status === "Assigned") && (
+                          {(asset.status?.toLowerCase() === "available" ||
+                            asset.status?.toLowerCase() === "assigned") && (
                             <Button
                               size="sm"
                               variant="outline-info"
@@ -372,7 +381,6 @@ const AssetManagement = () => {
                               🔧
                             </Button>
                           )}
-
                           <Button
                             size="sm"
                             variant="outline-danger"

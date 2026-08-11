@@ -17,6 +17,9 @@ import AssetCategoryManagement from './pages/admin/AssetCategoryManagement';
 import MyAssets from './pages/employee/MyAssets';
 import DashboardLayout from './components/layout/DashboardLayout';
 
+// === DAY 9 ADDITION: Import FeedbackManagement ===
+import FeedbackManagement from './pages/admin/FeedbackManagement';
+// === END DAY 9 ADDITION ===
 
 import AdminDashboard from './pages/admin/AdminDashboard';
 import EmployeeDashboard from './pages/employee/EmployeeDashboard';
@@ -51,13 +54,16 @@ const AppRoutes = () => {
         <Route path="tickets" element={<TicketManagement />} />
         <Route path="tickets/:id" element={<TicketDetails />} />
         
-        {/* ASSET ROUTES - FIXED FROM HERE */}
+        {/* ASSET ROUTES */}
         <Route path="assets" element={<AssetManagement />} />
         <Route path="asset-categories" element={<AssetCategoryManagement />} />
         <Route path="assets/:id" element={<AssetDetails />} />
         
+        {/* === DAY 9 ADDITION: Real feedback route replaces placeholder === */}
+        <Route path="feedbacks" element={<FeedbackManagement />} />
+        {/* === END DAY 9 ADDITION === */}
+        
         <Route path="faqs" element={<Placeholder title="FAQs" />} />
-        <Route path="feedbacks" element={<Placeholder title="Feedbacks" />} />
         <Route path="reports" element={<Placeholder title="Reports" />} />
         <Route path="profile" element={<Placeholder title="Admin Profile" />} />
       </Route>
@@ -67,11 +73,11 @@ const AppRoutes = () => {
         <Route index element={<EmployeeDashboard />} />
         <Route path="tickets/new" element={<RaiseComplaint />} />
         
-        {/* EMPLOYEE ROUTES - FIXED FROM HERE */}
+        {/* EMPLOYEE ROUTES */}
         <Route path="tickets" element={<MyTickets />} />
         <Route path="tickets/:id" element={<TicketDetails />} />
         
-        {/* ASSET ROUTE - FIXED FROM HERE */}
+        {/* ASSET ROUTE */}
         <Route path="assets" element={<MyAssets />} />
         <Route path="assets/:id" element={<AssetDetails />} />
         <Route path="assets/new" element={<Placeholder title="Add Asset" />} />
@@ -85,7 +91,7 @@ const AppRoutes = () => {
       <Route path="/technician" element={<ProtectedRoute allowedRoles={['technician']}><DashboardLayout role="technician" /></ProtectedRoute>}>
         <Route index element={<TechnicianDashboard />} />
         
-        {/* TECHNICIAN ROUTES - FIXED FROM HERE */}
+        {/* TECHNICIAN ROUTES */}
         <Route path="tickets" element={<AssignedTickets />} />
         <Route path="tickets/:id" element={<TechnicianTicketDetails />} />
         
