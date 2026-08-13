@@ -1,22 +1,73 @@
-.sidebar {
-  background-color: #0f172a;
-  color: #fff;
-  height: 100%;
-}
-.sidebar a {
-  color: #cbd5e1;
+/* ========================================
+   SIDEBAR STYLES
+   ======================================== */
+
+.sidebar-link {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.55rem 1rem;
+  color: #9ca3af;
   text-decoration: none;
-}
-.sidebar .nav-link.active {
-  background-color: rgba(255,255,255,0.04);
-  color: #fff;
-}
-.sidebar .sidebar-brand {
-  padding: 1rem;
-  font-weight: 700;
+  border-radius: 0.5rem;
+  margin-bottom: 2px;
+  font-size: 0.88rem;
+  transition: all 0.15s ease;
+  white-space: nowrap;
 }
 
-/* mobile offcanvas adjustments */
-.offcanvas-body .sidebar {
-  padding-top: 0.5rem;
+.sidebar-link:hover {
+  background-color: rgba(255, 255, 255, 0.08);
+  color: #ffffff;
+}
+
+.sidebar-link.active {
+  background-color: #4f46e5;
+  color: #ffffff;
+  font-weight: 500;
+}
+
+/* ========================================
+   SCROLLABLE NAV AREA
+   ======================================== */
+
+.sidebar-nav-scroll {
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+}
+
+.sidebar-nav-scroll::-webkit-scrollbar {
+  width: 4px;
+}
+
+.sidebar-nav-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.sidebar-nav-scroll::-webkit-scrollbar-thumb {
+  background-color: rgba(255, 255, 255, 0.2);
+  border-radius: 10px;
+}
+
+.sidebar-nav-scroll::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(255, 255, 255, 0.4);
+}
+
+/* Mobile: slightly wider scrollbar for touch */
+@media (max-width: 767.98px) {
+  .sidebar-nav-scroll {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.35) transparent;
+  }
+
+  .sidebar-nav-scroll::-webkit-scrollbar {
+    width: 5px;
+  }
+
+  .sidebar-nav-scroll::-webkit-scrollbar-thumb {
+    background-color: rgba(255, 255, 255, 0.35);
+  }
 }

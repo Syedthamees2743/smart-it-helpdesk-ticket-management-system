@@ -1,16 +1,21 @@
 from rest_framework import viewsets, status, permissions
 from rest_framework.response import Response
 from rest_framework.exceptions import ValidationError, PermissionDenied
+from django.contrib.auth import get_user_model
 from .models import Feedback
 from .serializers import FeedbackCreateSerializer, FeedbackListSerializer
 from tickets.models import Ticket
+from notifications.services import create_notification  # DAY 10: Added
+
+User = get_user_model()
+
 
 class FeedbackViewSet(viewsets.ModelViewSet):
     """
     Employees can CREATE feedback for their own CLOSED tickets.
     Everyone can LIST feedback based on their role.
     """
-    http_method_names = ['get', 'post'] # No update or delete
+    http_method_names = ['get', 'post']
 
     def get_serializer_class(self):
         if self.action == 'create':
@@ -22,10 +27,8 @@ class FeedbackViewSet(viewsets.ModelViewSet):
         if user.role == 'admin':
             return Feedback.objects.all()
         elif user.role == 'technician':
-            # Technician sees feedback for tickets assigned to them
             return Feedback.objects.filter(ticket__assigned_technician=user)
         elif user.role == 'employee':
-            # Employee sees only their own feedback
             return Feedback.objects.filter(employee=user)
         return Feedback.objects.none()
 
@@ -50,5 +53,27 @@ class FeedbackViewSet(viewsets.ModelViewSet):
         if Feedback.objects.filter(ticket=ticket, employee=user).exists():
             raise ValidationError({"error": "You have already submitted feedback for this ticket."})
 
-        # Save the feedback, attaching the employee automatically
-        serializer.save(employee=user)
+        # Save the feedback
+        feedback = serializer.save(employee=user)
+
+        # DAY 10: Notify all admins about new feedback
+        rating = feedback.rating
+        admins = User.objects.filter(role='admin')
+        for admin in admins:
+            create_notification(
+                user=admin,
+                title="New Feedback Received",
+                message=f"{user.get_full_name()} gave {rating}/5 rating for ticket {ticket.ticket_number}.",
+                notification_type="feedback_received",
+                ticket=ticket,
+            )
+
+        # DAY 10: Notify technician if assigned
+        if ticket.assigned_technician:
+            create_notification(
+                user=ticket.assigned_technician,
+                title="New Feedback Received",
+                message=f"{user.get_full_name()} gave {rating}/5 rating for ticket {ticket.ticket_number}.",
+                notification_type="feedback_received",
+                ticket=ticket,
+            )

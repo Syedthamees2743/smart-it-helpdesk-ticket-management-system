@@ -1,18 +1,18 @@
 import { Row, Col, Form, Button } from 'react-bootstrap';
 import { FaSearch, FaTimes } from 'react-icons/fa';
 
-const UserFilters = ({ searchTerm, onSearchChange, roleFilter, onRoleChange, statusFilter, onStatusChange, onRefresh }) => {
+const UserFilters = ({ searchTerm, onSearchChange, roleFilter, onRoleChange, statusFilter, onStatusChange, onRefresh, onClear }) => {
+  const hasActiveFilters = searchTerm || roleFilter || statusFilter;
+
   return (
     <Row className="g-2 mb-3 align-items-end">
       <Col md={4}>
-        <Form.Group className="mb-0">
-          <Form.Control 
-            type="text" 
-            placeholder="Search by name, email, username..." 
-            value={searchTerm}
-            onChange={(e) => onSearchChange(e.target.value)}
-          />
-        </Form.Group>
+        <Form.Control 
+          type="text" 
+          placeholder="Search by name, email, username..." 
+          value={searchTerm}
+          onChange={(e) => onSearchChange(e.target.value)}
+        />
       </Col>
       <Col md={2}>
         <Form.Select value={roleFilter} onChange={(e) => onRoleChange(e.target.value)}>
@@ -30,8 +30,12 @@ const UserFilters = ({ searchTerm, onSearchChange, roleFilter, onRoleChange, sta
         </Form.Select>
       </Col>
       <Col md="auto" className="ms-auto d-flex gap-2">
-        {searchTerm && <Button variant="outline-secondary" size="sm" onClick={() => onSearchChange('')}><FaTimes /> Clear</Button>}
-        <Button variant="outline-primary" size="sm" onClick={onRefresh}><FaSearch /> Refresh</Button>
+        <Button variant="outline-secondary" size="sm" onClick={onClear} disabled={!hasActiveFilters}>
+          <FaTimes className="me-1" /> Clear
+        </Button>
+        <Button variant="outline-primary" size="sm" onClick={onRefresh}>
+          <FaSearch className="me-1" /> Refresh
+        </Button>
       </Col>
     </Row>
   );

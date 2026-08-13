@@ -20,6 +20,7 @@ import {
   FiCheckCircle,
   FiAlertCircle,
   FiTool,
+  FiX,
 } from "react-icons/fi";
 import { useNavigate } from "react-router-dom";
 import assetService from "../../services/assetService";
@@ -44,6 +45,11 @@ const AssetManagement = () => {
     status: "",
   });
   const [loading, setLoading] = useState(true);
+  const hasActiveFilters = filters.search || filters.category || filters.status;
+
+  const clearFilters = () => {
+    setFilters({ search: "", category: "", status: "" });
+  };
 
   const [showFormModal, setShowFormModal] = useState(false);
   const [editAsset, setEditAsset] = useState(null);
@@ -120,14 +126,13 @@ const AssetManagement = () => {
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm("Delete this asset? This action cannot be undone."))
-      return;
+    if (!window.confirm("Delete this asset?")) return;
     try {
       await assetService.deleteAsset(id);
       fetchAssets();
       fetchKpis();
     } catch (err) {
-      alert(err.response?.data?.detail || "Cannot delete asset.");
+      alert(err.response?.data?.detail || "Cannot delete.");
     }
   };
 
@@ -158,9 +163,9 @@ const AssetManagement = () => {
   };
 
   const getAssignedName = (asset) => {
+    // Matches the exact format we added to the backend serializer
     if (asset.current_assignment?.employee_name)
       return asset.current_assignment.employee_name;
-    if (asset.assigned_to_name) return asset.assigned_to_name;
     return "-";
   };
 
@@ -231,14 +236,14 @@ const AssetManagement = () => {
 
       <Card className="shadow-sm">
         <Card.Body>
-          <Row className="g-2 mb-3">
+          <Row className="g-2 mb-3 align-items-end">
             <Col md={5}>
               <InputGroup>
                 <InputGroup.Text>
                   <FiSearch />
                 </InputGroup.Text>
                 <Form.Control
-                  placeholder="Search by code, name, brand..."
+                  placeholder="Search by code, name, serial number, brand..."
                   value={filters.search}
                   onChange={(e) =>
                     setFilters({ ...filters, search: e.target.value })
@@ -261,7 +266,7 @@ const AssetManagement = () => {
                 ))}
               </Form.Select>
             </Col>
-            <Col md={3}>
+            <Col md={2}>
               <Form.Select
                 value={filters.status}
                 onChange={(e) =>
@@ -275,6 +280,16 @@ const AssetManagement = () => {
                 <option value="retired">Retired</option>
               </Form.Select>
             </Col>
+            <Col md="auto">
+              <Button
+                variant="outline-secondary"
+                size="sm"
+                onClick={clearFilters}
+                disabled={!hasActiveFilters}
+              >
+                <FiX className="me-1" /> Clear
+              </Button>
+            </Col>
           </Row>
 
           <div className="table-responsive">
@@ -282,51 +297,56 @@ const AssetManagement = () => {
               <thead className="bg-light">
                 <tr>
                   <th>Code</th>
-                  <th>Name</th>
+                  <th>Asset Name</th>
                   <th>Category</th>
-                  <th>Brand / Model</th>
                   <th>Status</th>
                   <th>Assigned To</th>
-                  <th>Purchase Date</th>
                   <th className="text-center">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {loading ? (
                   <tr>
-                    <td colSpan="8" className="text-center py-4">
+                    <td colSpan="6" className="text-center py-4">
                       <Spinner animation="border" />
                     </td>
                   </tr>
                 ) : assets.length === 0 ? (
                   <tr>
-                    <td colSpan="8" className="text-center text-muted py-4">
-                      No assets found.
+                    <td colSpan="6" className="text-center text-muted py-4">
+                      {hasActiveFilters ? (
+                        <>
+                          <div>
+                            <strong>No assets match your filters.</strong>
+                          </div>
+                          <Button
+                            variant="outline-primary"
+                            size="sm"
+                            className="mt-2"
+                            onClick={clearFilters}
+                          >
+                            <FiX className="me-1" /> Clear Filters
+                          </Button>
+                        </>
+                      ) : (
+                        "No assets found."
+                      )}
                     </td>
                   </tr>
                 ) : (
                   assets.map((asset) => (
-                    /* FIX: Removed all whitespace between <td> tags to prevent React Hydration error */
                     <tr key={asset.id}>
                       <td className="fw-semibold text-nowrap">
                         {asset.asset_code}
                       </td>
-                      <td>{asset.name}</td>
+                      <td>{asset.asset_name || asset.name}</td>
                       <td>
                         <Badge bg="light" text="dark" className="border">
                           {asset.category_name || "-"}
                         </Badge>
                       </td>
-                      <td className="text-muted small">
-                        {asset.brand} {asset.model}
-                      </td>
                       <td>{getStatusBadge(asset.status)}</td>
-                      <td className="text-nowrap">{getAssignedName(asset)}</td>
-                      <td className="text-nowrap small">
-                        {asset.purchase_date
-                          ? new Date(asset.purchase_date).toLocaleDateString()
-                          : "-"}
-                      </td>
+                      <td>{getAssignedName(asset)}</td>
                       <td>
                         <div className="d-flex justify-content-center gap-1 flex-nowrap">
                           <Button

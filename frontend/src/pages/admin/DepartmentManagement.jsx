@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Card, Button, Row, Col, Form, Pagination } from "react-bootstrap";
-import { FaPlus, FaSearch, FaSync } from "react-icons/fa";
+import { FaPlus, FaSearch, FaSync, FaTimes } from "react-icons/fa";
 import {
   getDepartments,
   createDepartment,
@@ -151,6 +151,19 @@ const DepartmentManagement = () => {
                 <option value="active">Active</option>
                 <option value="inactive">Inactive</option>
               </Form.Select>
+            </Col>
+            <Col md="auto">
+              <Button
+                variant="outline-secondary"
+                size="sm"
+                onClick={() => {
+                  setSearch("");
+                  setStatusFilter("");
+                }}
+                disabled={!search && !statusFilter}
+              >
+                <FaTimes className="me-1" /> Clear
+              </Button>
             </Col>
             <Col md="auto">
               <Button

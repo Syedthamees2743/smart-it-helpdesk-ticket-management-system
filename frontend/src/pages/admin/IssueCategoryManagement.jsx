@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Card, Button, Row, Col, Form, Pagination } from "react-bootstrap";
-import { FaPlus, FaSync } from "react-icons/fa";
+import { FaPlus, FaSync, FaTimes } from "react-icons/fa";
 import { useSearchParams } from "react-router-dom";
 import {
   getCategories,
@@ -99,13 +99,23 @@ const IssueCategoryManagement = () => {
 
       <Card className="border-0 shadow-sm">
         <Card.Body>
-          <Row className="g-2 mb-3">
+          <Row className="g-2 mb-3 align-items-end">
             <Col md={6}>
               <Form.Control
                 placeholder="Search categories..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />
+            </Col>
+            <Col md="auto">
+              <Button
+                variant="outline-secondary"
+                size="sm"
+                onClick={() => setSearch("")}
+                disabled={!search}
+              >
+                <FaTimes className="me-1" /> Clear
+              </Button>
             </Col>
             <Col md="auto">
               <Button

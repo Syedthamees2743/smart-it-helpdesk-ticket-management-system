@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { Card, Row, Col, Button, Badge, Spinner, Table } from "react-bootstrap";
 import {
   FiArrowLeft,
@@ -18,8 +18,10 @@ import AssetActionModal from "../../components/admin/AssetActionModal";
 const AssetDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const { user } = useAuth();
   const isAdmin = user?.role === "admin";
+  const isEmployee = user?.role === "employee" || location.pathname.startsWith("/employee");
 
   const [asset, setAsset] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -33,12 +35,52 @@ const AssetDetails = () => {
     fetchAsset();
   }, [id]);
 
+  const normalizeAssignmentData = (data) => {
+    const assetData = data.asset || {};
+    const categoryName =
+      data.category_name ||
+      assetData.category_name ||
+      assetData.category?.name ||
+      assetData.category?.category_name ||
+      "-";
+    const brand = data.brand || assetData.brand || assetData.make || "-";
+    const model = data.model || assetData.model || "-";
+    const serialNumber =
+      data.serial_number || assetData.serial_number || assetData.serialNumber || "-";
+
+    return {
+      ...data,
+      asset_code:
+        data.asset_code || assetData.asset_code || assetData.code || "-",
+      asset_name:
+        data.asset_name || assetData.asset_name || assetData.name || "Unknown Asset",
+      category_name: categoryName,
+      brand,
+      model,
+      serial_number: serialNumber,
+      purchase_date: data.purchase_date || assetData.purchase_date || assetData.purchased_date,
+      warranty_expiry:
+        data.warranty_expiry || assetData.warranty_expiry || assetData.warranty_expiry_date,
+      status: data.status || assetData.status || assetData.asset_status || "Unknown",
+      current_assignment: {
+        employee_name:
+          data.employee_name || data.asset?.employee_name || user?.name ||
+          user?.full_name || "You",
+        assigned_date: data.assigned_date || assetData.assigned_date,
+        return_date: data.return_date || assetData.return_date,
+      },
+    };
+  };
+
   const fetchAsset = async () => {
     setLoading(true);
     setError("");
     try {
-      const res = await assetService.getAssetById(id);
-      setAsset(res.data);
+      const res = isEmployee
+        ? await assetService.getAssignmentById(id)
+        : await assetService.getAssetById(id);
+      const data = res.data;
+      setAsset(isEmployee ? normalizeAssignmentData(data) : data);
     } catch (err) {
       setError(
         err.response?.status === 404

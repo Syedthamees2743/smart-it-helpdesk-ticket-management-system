@@ -17,11 +17,10 @@ def send_email_notification(subject, message, recipient_list):
             message=message,
             from_email=settings.DEFAULT_FROM_EMAIL,
             recipient_list=recipient_list,
-            fail_silently=False, # Set to True in production to prevent crashes
+            fail_silently=False,
         )
         print(f"[EMAIL SENT] To: {recipient_list} | Subject: {subject}")
     except Exception as e:
-        # In production, log this error properly. For now, print to terminal.
         print(f"[EMAIL FAILED] Error: {str(e)}")
 
 
@@ -56,7 +55,6 @@ def send_ticket_reopened_notification(ticket):
 def send_ticket_closed_notification(ticket):
     subject = f"[IT Desk] Ticket Closed: {ticket.ticket_number}"
     message = f"Ticket {ticket.ticket_number} has been successfully closed."
-    # Send to both employee and technician
     emails = []
     if ticket.employee and ticket.employee.email: emails.append(ticket.employee.email)
     if ticket.assigned_technician and ticket.assigned_technician.email: emails.append(ticket.assigned_technician.email)
@@ -76,3 +74,22 @@ def send_asset_returned_notification(assignment):
         subject = f"[IT Desk] Asset Return Confirmed: {assignment.asset.asset_code}"
         message = f"Hi {assignment.employee.get_full_name()},\n\nThe return of asset {assignment.asset.asset_name} ({assignment.asset.asset_code}) has been recorded in the system."
         send_email_notification(subject, message, [assignment.employee.email])
+
+
+# ============================================================
+# IN-APP NOTIFICATION HELPER
+# ============================================================
+
+def create_notification(user, title, message, notification_type='general', ticket=None):
+    """
+    Creates an in-app notification in the database.
+    Call this alongside email functions to create both email + in-app notification.
+    """
+    from .models import Notification
+    Notification.objects.create(
+        user=user,
+        title=title,
+        message=message,
+        notification_type=notification_type,
+        ticket=ticket,
+    )

@@ -11,8 +11,9 @@ const assetService = {
   assignAsset: (data) => api.post('/assets/manage/assign/', data),
   returnAsset: (data) => api.post('/assets/manage/return/', data),
   
-  // FIX: Changed to '/assets/assignments/' to hit the correct Employee ViewSet!
-  getMyAssets: () => api.get('/assets/assignments/'), 
+  // Employee Views
+  getMyAssets: () => api.get('/assets/assignments/'),
+  getAssignmentById: (id) => api.get(`/assets/assignments/${id}/`),
   
   // Categories
   getAssetCategories: (params) => api.get('/assets/categories/', { params }),

@@ -4,36 +4,40 @@ from .models import FAQ
 
 @admin.register(FAQ)
 class FAQAdmin(admin.ModelAdmin):
-    """
-    Admin configuration for FAQ model.
-    """
-    
     list_display = (
         'question_preview',
+        'category',
+        'status',
+        'created_by',
         'created_at',
+        'updated_at',
     )
     
     list_display_links = ('question_preview',)
+    
+    list_filter = (
+        'category',
+        'status',
+    )
     
     search_fields = (
         'question',
         'answer',
     )
     
-    ordering = ('question',)
+    ordering = ('category', 'question')
     
-    # Show preview of question (first 100 characters)
     def question_preview(self, obj):
-        return obj.question[:100] + ('...' if len(obj.question) > 100 else '')
+        return obj.question[:80] + ('...' if len(obj.question) > 80 else '')
     question_preview.short_description = 'Question'
     
     fieldsets = (
         ('FAQ Details', {
-            'fields': ('question', 'answer')
+            'fields': ('question', 'answer', 'category', 'status')
         }),
-        ('Timestamp', {
-            'fields': ('created_at',)
+        ('Meta', {
+            'fields': ('created_by', 'created_at', 'updated_at')
         }),
     )
     
-    readonly_fields = ('created_at',)
+    readonly_fields = ('created_at', 'updated_at')

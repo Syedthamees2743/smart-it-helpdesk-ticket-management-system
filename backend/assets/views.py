@@ -8,13 +8,14 @@ from django.contrib.auth import get_user_model
 from notifications.services import (
     send_asset_assigned_notification,
     send_asset_returned_notification,
+    create_notification,  # DAY 10: Added in-app notification helper
 )
 from .models import AssetCategory, Asset, AssetAssignment
 from .serializers import (
     AssetCategorySerializer,
     AssetListSerializer,
     AssetDetailSerializer,
-    AssetAssignmentListSerializer,  # <-- Import the new one
+    AssetAssignmentListSerializer,
 )
 from accounts.permissions import IsAdmin, IsAdminOrReadOnly
 
@@ -31,24 +32,18 @@ class AssetCategoryViewSet(viewsets.ModelViewSet):
 
 class AssetViewSet(viewsets.ModelViewSet):
     queryset = Asset.objects.all()
-    # 1. REMOVE THIS LINE: permission_classes = [IsAdmin]
 
     search_fields = ("asset_code", "asset_name", "brand", "model", "serial_number")
     filterset_fields = ("status", "category")
     ordering_fields = ("asset_code", "created_at", "status")
 
-    # 2. ADD THIS NEW FUNCTION:
     def get_permissions(self):
         if self.action == "list":
-            self.permission_classes = [IsAdmin]  # Only Admins see the full list
+            self.permission_classes = [IsAdmin]
         elif self.action == "retrieve":
-            self.permission_classes = [
-                permissions.IsAuthenticated
-            ]  # Employees can see details of THEIR asset
+            self.permission_classes = [permissions.IsAuthenticated]
         else:
-            self.permission_classes = [
-                IsAdmin
-            ]  # Create, Update, Delete stays Admin-only
+            self.permission_classes = [IsAdmin]
         return super().get_permissions()
 
     def get_serializer_class(self):
@@ -57,31 +52,21 @@ class AssetViewSet(viewsets.ModelViewSet):
         return AssetDetailSerializer
 
 
-# --- FIX THIS VIEWSET ---
 class AssetAssignmentViewSet(viewsets.ReadOnlyModelViewSet):
-    """
-    Employees can view their own active asset assignments.
-    Admins can view all asset assignments.
-    """
-
     serializer_class = AssetAssignmentListSerializer
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
         user = self.request.user
 
-        if user.role == "admin":
+        if user.role.lower() == "admin":
             return AssetAssignment.objects.select_related(
-                "asset",
-                "employee",
-                "asset__category",
+                "asset", "employee", "asset__category",
             ).all()
 
-        if user.role == "employee":
+        if user.role.lower() == "employee":
             return AssetAssignment.objects.select_related(
-                "asset",
-                "employee",
-                "asset__category",
+                "asset", "employee", "asset__category",
             ).filter(
                 employee=user,
                 status="active",
@@ -122,9 +107,7 @@ class AssetManagementViewSet(viewsets.ViewSet):
 
         if asset.status != "available":
             raise ValidationError(
-                {
-                    "error": f"Asset is currently '{asset.status}'. Only 'available' assets can be assigned."
-                }
+                {"error": f"Asset is currently '{asset.status}'. Only 'available' assets can be assigned."}
             )
 
         try:
@@ -134,7 +117,7 @@ class AssetManagementViewSet(viewsets.ViewSet):
                 {"error": "Employee not found or user is not an employee."}
             )
 
-        AssetAssignment.objects.create(
+        assignment = AssetAssignment.objects.create(
             asset=asset,
             employee=employee,
             assigned_date=timezone.now().date(),
@@ -143,12 +126,23 @@ class AssetManagementViewSet(viewsets.ViewSet):
         asset.status = "assigned"
         asset.save()
 
-        send_asset_assigned_notification(
-            AssetAssignment.objects.get(asset=asset, employee=employee)
+        # Email notification (existing)
+        try:
+            send_asset_assigned_notification(assignment)
+        except Exception as e:
+            print(f"Email failed, but asset was assigned: {e}")
+
+        # DAY 10: In-app notification for employee
+        create_notification(
+            user=employee,
+            title="Asset Assigned",
+            message=f"An IT asset has been assigned to you: {asset.asset_name} ({asset.asset_code}).",
+            notification_type="asset_assigned",
         )
 
         return Response(
             {
+                "success": True,
                 "message": f"Asset {asset.asset_code} assigned to {employee.get_full_name()}."
             },
             status=status.HTTP_200_OK,
@@ -156,19 +150,15 @@ class AssetManagementViewSet(viewsets.ViewSet):
 
     @action(detail=False, methods=["post"], url_path="return")
     def return_asset(self, request):
-        # CHANGED: Accept asset_id instead of assignment_id
         asset_id = request.data.get("asset_id")
 
         if not asset_id:
             raise ValidationError({"error": "asset_id is required."})
 
         try:
-            # CHANGED: Find active assignment using asset_id
             assignment = AssetAssignment.objects.get(asset_id=asset_id, status="active")
         except AssetAssignment.DoesNotExist:
-            raise ValidationError(
-                {"error": "Active assignment not found for this asset."}
-            )
+            raise ValidationError({"error": "Active assignment not found for this asset."})
 
         assignment.status = "returned"
         assignment.return_date = timezone.now().date()
@@ -177,9 +167,24 @@ class AssetManagementViewSet(viewsets.ViewSet):
         assignment.asset.status = "available"
         assignment.asset.save()
 
-        send_asset_returned_notification(assignment)
+        # Email notification (existing)
+        try:
+            send_asset_returned_notification(assignment)
+        except Exception as e:
+            print(f"Email failed, but asset was returned: {e}")
+
+        # DAY 10: In-app notification for employee
+        create_notification(
+            user=assignment.employee,
+            title="Asset Returned",
+            message=f"Your assigned asset {assignment.asset.asset_name} ({assignment.asset.asset_code}) has been returned.",
+            notification_type="asset_returned",
+        )
 
         return Response(
-            {"message": f"Asset {assignment.asset.asset_code} returned successfully."},
+            {
+                "success": True,
+                "message": f"Asset {assignment.asset.asset_code} returned successfully."
+            },
             status=status.HTTP_200_OK,
         )

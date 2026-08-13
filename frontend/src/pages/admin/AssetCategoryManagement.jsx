@@ -11,7 +11,7 @@ import {
   Spinner,
   Alert,
 } from "react-bootstrap";
-import { FiPlus, FiSearch, FiEdit2, FiTrash2 } from "react-icons/fi";
+import { FiPlus, FiSearch, FiEdit2, FiTrash2, FiX } from "react-icons/fi";
 import assetCategoryService from "../../services/assetCategoryService";
 
 const AssetCategoryManagement = () => {
@@ -94,16 +94,30 @@ const AssetCategoryManagement = () => {
 
       <Card className="shadow-sm mb-4">
         <Card.Body>
-          <InputGroup className="mb-3" style={{ maxWidth: "400px" }}>
-            <InputGroup.Text>
-              <FiSearch />
-            </InputGroup.Text>
-            <Form.Control
-              placeholder="Search categories..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-          </InputGroup>
+          <div
+            className="d-flex align-items-center gap-2 mb-3"
+            style={{ maxWidth: "500px" }}
+          >
+            <InputGroup>
+              <InputGroup.Text>
+                <FiSearch />
+              </InputGroup.Text>
+              <Form.Control
+                placeholder="Search categories..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+            </InputGroup>
+            {search && (
+              <Button
+                variant="outline-secondary"
+                size="sm"
+                onClick={() => setSearch("")}
+              >
+                <FiX className="me-1" /> Clear
+              </Button>
+            )}
+          </div>
           <div className="table-responsive">
             <Table hover className="align-middle">
               <thead className="bg-light">

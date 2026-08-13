@@ -1,6 +1,6 @@
 import { useState, useEffect, useContext } from 'react';
 import { Card, Button, Row, Col, Pagination } from 'react-bootstrap';
-import { FaPlus } from 'react-icons/fa';
+import { FaPlus, FaTimes, FaUsers } from 'react-icons/fa';
 import { AuthContext } from '../../context/AuthContext';
 import { getUsers, createUser, updateUser, deleteUser, toggleUserStatus } from '../../services/userService';
 
@@ -14,6 +14,7 @@ const UserManagement = () => {
 
   // Data States
   const [users, setUsers] = useState([]);
+  const [totalCount, setTotalCount] = useState(0);
   const [nextPage, setNextPage] = useState(null);
   const [prevPage, setPrevPage] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -31,14 +32,34 @@ const UserManagement = () => {
   const [confirmAction, setConfirmAction] = useState({ type: '', user: null });
   const [actionLoading, setActionLoading] = useState(false);
 
-  // Fetch Data Function
+  const hasActiveFilters = searchTerm || roleFilter || statusFilter;
+
+  // Build query params from filters
+  const getFilterParams = () => {
+    const params = { page_size: 20 };
+    if (searchTerm) params.search = searchTerm;
+    if (roleFilter) params.role = roleFilter;
+    if (statusFilter) params.is_active = statusFilter === 'active' ? 'true' : 'false';
+    return params;
+  };
+
+  // Fetch Data — now uses backend filtering
   const fetchUsers = async (url) => {
     setLoading(true);
     try {
-      const res = await getUsers(url);
-      setUsers(res.data.results);
-      setNextPage(res.data.next);
-      setPrevPage(res.data.previous);
+      let res;
+      if (url && typeof url === 'string') {
+        // Pagination URL — use directly
+        res = await getUsers(url);
+      } else {
+        // Fresh fetch with filters
+        res = await getUsers(getFilterParams());
+      }
+      const data = res.data;
+      setUsers(data.results || []);
+      setTotalCount(data.count || 0);
+      setNextPage(data.next);
+      setPrevPage(data.previous);
     } catch (err) {
       console.error("Failed to fetch users", err);
     } finally {
@@ -46,36 +67,27 @@ const UserManagement = () => {
     }
   };
 
+  // Re-fetch when filters change
   useEffect(() => {
     fetchUsers();
-  }, []);
+  }, [searchTerm, roleFilter, statusFilter]);
 
-  // Client-side Filtering (Applies to the currently loaded page)
-  const filteredUsers = users.filter(user => {
-    const term = searchTerm.toLowerCase();
-    const matchSearch = !term || 
-      user.username.toLowerCase().includes(term) ||
-      user.first_name.toLowerCase().includes(term) ||
-      user.last_name.toLowerCase().includes(term) ||
-      user.email.toLowerCase().includes(term);
-    
-    const matchRole = !roleFilter || user.role === roleFilter;
-    const matchStatus = !statusFilter || 
-      (statusFilter === 'active' && user.is_active) || 
-      (statusFilter === 'inactive' && !user.is_active);
-
-    return matchSearch && matchRole && matchStatus;
-  });
+  // Clear all filters
+  const clearFilters = () => {
+    setSearchTerm('');
+    setRoleFilter('');
+    setStatusFilter('');
+  };
 
   // Handlers
   const handleSaveUser = async (formData, isEditMode) => {
     if (isEditMode) {
-      const { password, password2, ...updateData } = formData; // Strip passwords from update
+      const { password, password2, ...updateData } = formData;
       await updateUser(editingUser.id, updateData);
     } else {
       await createUser(formData);
     }
-    fetchUsers(); // Refresh list
+    fetchUsers();
   };
 
   const handleToggleStatus = async () => {
@@ -109,13 +121,6 @@ const UserManagement = () => {
     setShowConfirmModal(true);
   };
 
-  // Pagination URL helper (converts relative /api/auth/users/?page=2 to absolute if needed, though Axios usually handles this)
-  const getPageUrl = (url) => {
-    if (!url) return null;
-    // Ensure we don't double-prefix the base URL if DRF returns absolute URLs
-    return url.replace(import.meta.env.VITE_API_BASE_URL, '');
-  };
-
   return (
     <div>
       <div className="d-flex justify-content-between align-items-center mb-4">
@@ -138,24 +143,47 @@ const UserManagement = () => {
             statusFilter={statusFilter}
             onStatusChange={setStatusFilter}
             onRefresh={() => fetchUsers()}
+            onClear={clearFilters}
           />
 
           <UserTable 
-            users={filteredUsers}
+            users={users}
             loading={loading}
             currentUser={currentUser}
             onEdit={(user) => { setEditingUser(user); setShowFormModal(true); }}
             onToggleStatus={(user) => openConfirm('toggle', user)}
             onDelete={(user) => openConfirm('delete', user)}
+            emptyState={
+              users.length === 0 && !loading ? (
+                <div className="text-center py-4 text-muted">
+                  <FaUsers style={{ fontSize: '2rem', color: '#d1d5db' }} />
+                  <h5 className="mt-2">
+                    {hasActiveFilters ? 'No users match your filters' : 'No users found'}
+                  </h5>
+                  <p>
+                    {hasActiveFilters
+                      ? 'Try adjusting your search or filter criteria.'
+                      : 'Click "Add User" to create one.'}
+                  </p>
+                  {hasActiveFilters && (
+                    <Button variant="outline-primary" size="sm" onClick={clearFilters}>
+                      <FaTimes className="me-1" /> Clear Filters
+                    </Button>
+                  )}
+                </div>
+              ) : null
+            }
           />
 
           {/* Pagination */}
           {(nextPage || prevPage) && (
             <div className="d-flex justify-content-between align-items-center mt-3 pt-3 border-top">
-              <div className="text-muted small">Showing {filteredUsers.length} of {users.length} on this page</div>
+              <div className="text-muted small">
+                Showing <strong>{users.length}</strong> of <strong>{totalCount}</strong> users
+              </div>
               <Pagination className="mb-0">
-                <Pagination.Prev disabled={!prevPage} onClick={() => fetchUsers(getPageUrl(prevPage))} />
-                <Pagination.Next disabled={!nextPage} onClick={() => fetchUsers(getPageUrl(nextPage))} />
+                <Pagination.Prev disabled={!prevPage} onClick={() => fetchUsers(prevPage)} />
+                <Pagination.Next disabled={!nextPage} onClick={() => fetchUsers(nextPage)} />
               </Pagination>
             </div>
           )}

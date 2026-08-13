@@ -1,7 +1,7 @@
 import { Table, Button, Badge, Spinner, Image } from 'react-bootstrap';
 import { FaEdit, FaBan, FaCheckCircle, FaTrash } from 'react-icons/fa';
 
-const UserTable = ({ users, loading, onEdit, onToggleStatus, onDelete, currentUser }) => {
+const UserTable = ({ users, loading, onEdit, onToggleStatus, onDelete, currentUser, emptyState }) => {
   
   const getRoleBadge = (role) => {
     const variant = role === 'admin' ? 'dark' : role === 'technician' ? 'info' : 'primary';
@@ -18,6 +18,9 @@ const UserTable = ({ users, loading, onEdit, onToggleStatus, onDelete, currentUs
   }
 
   if (!users || users.length === 0) {
+    if (emptyState) {
+      return <div className="py-4">{emptyState}</div>;
+    }
     return (
       <div className="text-center py-5 text-muted">
         <h5>No users found</h5>
@@ -67,7 +70,6 @@ const UserTable = ({ users, loading, onEdit, onToggleStatus, onDelete, currentUs
             </td>
             <td className="text-muted">{new Date(user.created_at || user.date_joined).toLocaleDateString()}</td>
             <td>
-              {/* Prevent admin from editing/deactivating themselves */}
               {currentUser?.id === user.id ? (
                 <Badge bg="secondary">You</Badge>
               ) : (
