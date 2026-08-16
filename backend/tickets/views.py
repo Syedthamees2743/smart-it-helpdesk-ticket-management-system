@@ -3,13 +3,15 @@ Views for Ticket Module - Complete Workflow
 """
 
 from rest_framework import viewsets, status, permissions
-from rest_framework.decorators import action
+from rest_framework.decorators import action, APIView
 from rest_framework.response import Response
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from rest_framework.exceptions import PermissionDenied, ValidationError
 from django.utils import timezone
 from django.contrib.auth import get_user_model
-
+from .services.ai_complaint_service import analyze_complaint as ai_analyze_complaint
+from accounts.permissions import IsEmployee, IsTechnician
+from .services.ai_troubleshooting_service import troubleshoot_ticket as ai_troubleshoot_ticket
 from .models import Ticket, TicketComment, IssueCategory
 from .serializers import (
     TicketListSerializer,
@@ -396,3 +398,66 @@ class TicketCommentViewSet(viewsets.ModelViewSet):
                     notification_type="ticket_comment",
                     ticket=ticket,
                 )
+
+
+class AIAnalyzeComplaintView(APIView):
+    """
+    POST /api/tickets/ai/analyze-complaint/
+    Employee AI Complaint Assistant.
+    Analyzes complaint title+description and suggests category, priority, and related FAQs.
+    """
+    permission_classes = [IsEmployee]
+
+    def post(self, request):
+        title = request.data.get('title', '').strip()
+        description = request.data.get('description', '').strip()
+
+        if not title and not description:
+            return Response(
+                {'success': False, 'error': 'Please enter a title and description first.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        result = ai_analyze_complaint(title, description)
+
+        # Always return 200 — frontend handles success/error display
+        return Response(result, status=status.HTTP_200_OK)
+
+
+class AITroubleshootView(APIView):
+    """
+    POST /api/tickets/ai/troubleshoot/
+    Technician AI Troubleshooting Assistant.
+    Analyzes an assigned ticket and suggests troubleshooting steps.
+    """
+    permission_classes = [IsTechnician]
+
+    def post(self, request):
+        ticket_id = request.data.get('ticket_id')
+
+        if not ticket_id:
+            return Response(
+                {'success': False, 'error': 'Ticket ID is required.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            ticket = Ticket.objects.select_related(
+                'category', 'assigned_technician', 'employee'
+            ).get(pk=ticket_id)
+        except Ticket.DoesNotExist:
+            return Response(
+                {'success': False, 'error': 'Ticket not found.'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        # Security: technician can only analyze tickets assigned to them
+        if ticket.assigned_technician != request.user:
+            return Response(
+                {'success': False, 'error': 'You can only analyze tickets assigned to you.'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        result = ai_troubleshoot_ticket(ticket)
+
+        return Response(result, status=status.HTTP_200_OK)

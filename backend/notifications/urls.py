@@ -10,5 +10,7 @@ router = DefaultRouter()
 router.register(r'', views.NotificationViewSet, basename='notification')
 
 urlpatterns = [
+    path('settings/', views.SettingsView.as_view(), name='notification-settings'),
+    path('admin/preferences/<int:user_id>/', views.AdminUserPreferencesView.as_view(), name='admin-user-preferences'),
     path('', include(router.urls)),
 ]

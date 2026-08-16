@@ -91,11 +91,9 @@ const DashboardLayout = ({ role }) => {
 
             <Navbar.Collapse className="justify-content-end w-100">
               <Nav className="align-items-center">
-                {/* === DAY 10: Real notification bell replacing hardcoded one === */}
                 <div className="me-3">
                   <NotificationBell />
                 </div>
-                {/* === END DAY 10 === */}
 
                 <Dropdown align="end">
                   <Dropdown.Toggle
@@ -121,11 +119,11 @@ const DashboardLayout = ({ role }) => {
                   </Dropdown.Toggle>
 
                   <Dropdown.Menu className="shadow-sm border-0">
-                    <Dropdown.Item href="#action/3.1">
+                    <Dropdown.Item onClick={() => navigate(`/${role}/settings`)}>
                       <FaCog className="me-2" /> Settings
                     </Dropdown.Item>
-                    <Dropdown.Item href="#action/3.2">
-                      <FaQuestionCircle className="me-2" /> Help
+                    <Dropdown.Item onClick={() => navigate(`/${role}/help`)}>
+                      <FaQuestionCircle className="me-2" /> Help & Support
                     </Dropdown.Item>
                     <Dropdown.Divider />
                     <Dropdown.Item

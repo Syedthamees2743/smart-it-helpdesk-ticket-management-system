@@ -22,5 +22,7 @@ comments_router.register(r'comments', views.TicketCommentViewSet, basename='tick
 
 urlpatterns = [
     path('', include(router.urls)),
+    path('ai/analyze-complaint/', views.AIAnalyzeComplaintView.as_view(), name='ai-analyze-complaint'),
+    path('ai/troubleshoot/', views.AITroubleshootView.as_view(), name='ai-troubleshoot'),
     path('tickets/<int:ticket_pk>/', include(comments_router.urls)),
 ]

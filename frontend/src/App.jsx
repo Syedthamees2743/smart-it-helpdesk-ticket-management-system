@@ -2,6 +2,7 @@ import { Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import ProtectedRoute from "./routes/ProtectedRoute";
 import Login from "./pages/auth/Login";
+import SettingsPage from "./components/settings/SettingsPage";
 import UserManagement from "./pages/admin/UserManagement";
 import DepartmentManagement from "./pages/admin/DepartmentManagement";
 import IssueCategoryManagement from "./pages/admin/IssueCategoryManagement";
@@ -28,9 +29,16 @@ import KnowledgeBase from "./pages/employee/KnowledgeBase";
 import TechnicianPerformance from './pages/admin/TechnicianPerformance';
 import MyPerformance from './pages/technician/MyPerformance';
 
+import AdminProfile from "./pages/admin/AdminProfile";
+import EmployeeProfile from "./pages/employee/EmployeeProfile";
+import TechnicianProfile from "./pages/technician/TechnicianProfile";
+
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import EmployeeDashboard from "./pages/employee/EmployeeDashboard";
 import TechnicianDashboard from "./pages/technician/TechnicianDashboard";
+
+// Help & Support
+import HelpSupport from "./pages/support/HelpSupport";
 
 // Placeholder for future pages
 const Placeholder = ({ title }) => (
@@ -71,13 +79,13 @@ const AppRoutes = () => {
         <Route path="asset-categories" element={<AssetCategoryManagement />} />
         <Route path="assets/:id" element={<AssetDetails />} />
         <Route path="feedbacks" element={<FeedbackManagement />} />
-        {/* DAY 10: New routes */}
         <Route path="notifications" element={<NotificationCenter />} />
         <Route path="reports" element={<Reports />} />
         <Route path="technician-performance" element={<TechnicianPerformance />} />
-        {/* End Day 10 */}
         <Route path="faqs" element={<FAQManagement />} />
-        <Route path="profile" element={<Placeholder title="Admin Profile" />} />
+        <Route path="settings" element={<SettingsPage />} />
+        <Route path="profile" element={<AdminProfile />} />
+        <Route path="help" element={<HelpSupport />} />
       </Route>
 
       {/* Employee Routes */}
@@ -95,13 +103,13 @@ const AppRoutes = () => {
         <Route path="tickets/:id" element={<TicketDetails />} />
         <Route path="assets" element={<MyAssets />} />
         <Route path="assets/:id" element={<AssetDetails />} />
-        {/* DAY 10: New route */}
         <Route path="notifications" element={<NotificationCenter />} />
-        {/* End Day 10 */}
         <Route path="faqs" element={<KnowledgeBase />} />
         <Route path="feedbacks" element={<Placeholder title="Feedbacks" />} />
         <Route path="assets/new" element={<Placeholder title="Add Asset" />} />
-        <Route path="profile" element={<Placeholder title="My Profile" />} />
+        <Route path="settings" element={<SettingsPage />} />
+        <Route path="profile" element={<EmployeeProfile />} />
+        <Route path="help" element={<HelpSupport />} />
       </Route>
 
       {/* Technician Routes */}
@@ -116,15 +124,12 @@ const AppRoutes = () => {
         <Route index element={<TechnicianDashboard />} />
         <Route path="tickets" element={<AssignedTickets />} />
         <Route path="tickets/:id" element={<TechnicianTicketDetails />} />
-        {/* DAY 10: New route */}
         <Route path="notifications" element={<NotificationCenter />} />
-        {/* End Day 10 */}
-        <Route
-          path="performance"
-          element={<MyPerformance />}
-        />
+        <Route path="performance" element={<MyPerformance />} />
         <Route path="faqs" element={<KnowledgeBase />} />
-        <Route path="profile" element={<Placeholder title="My Profile" />} />
+        <Route path="settings" element={<SettingsPage />} />
+        <Route path="profile" element={<TechnicianProfile />} />
+        <Route path="help" element={<HelpSupport />} />
       </Route>
 
       {/* Catch-all for wrong URLs */}

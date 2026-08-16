@@ -1,26 +1,32 @@
 import { useState, useEffect } from 'react';
-import { Card, Row, Col, Badge, Button, Form, Spinner, Image } from 'react-bootstrap';
+import { Card, Row, Col, Badge, Button, Form, Spinner, Image, Alert } from 'react-bootstrap';
 import { useParams, useNavigate } from 'react-router-dom';
-import { FaArrowLeft, FaPlay, FaCheckCircle, FaComment, FaPaperclip } from 'react-icons/fa';
+import { FaArrowLeft, FaPlay, FaCheckCircle, FaComment, FaPaperclip, FaMagic, FaRobot, FaTimes, FaWrench, FaExclamationTriangle, FaLightbulb, FaClipboardList, FaSearch } from 'react-icons/fa';
 import { getTicketById, getComments, addComment, changeTicketStatus } from '../../services/ticketService';
+import aiService from '../../services/aiService';
 import ConfirmModal from '../../components/admin/ConfirmModal';
 
 const TechnicianTicketDetails = () => {
     const { id } = useParams();
     const navigate = useNavigate();
-    
+
     const [ticket, setTicket] = useState(null);
     const [comments, setComments] = useState([]);
     const [loading, setLoading] = useState(true);
-    
+
     // UI States
     const [commentText, setCommentText] = useState('');
     const [submittingComment, setSubmittingComment] = useState(false);
-    
+
     // Modal States
     const [showStatusModal, setShowStatusModal] = useState(false);
     const [nextStatus, setNextStatus] = useState('');
     const [modalLoading, setModalLoading] = useState(false);
+
+    // AI States
+    const [aiLoading, setAiLoading] = useState(false);
+    const [aiResult, setAiResult] = useState(null);
+    const [aiError, setAiError] = useState('');
 
     // Fetch Data
     const fetchData = async () => {
@@ -28,7 +34,7 @@ const TechnicianTicketDetails = () => {
         try {
             const ticketRes = await getTicketById(id);
             setTicket(ticketRes.data);
-            
+
             const commentRes = await getComments(id);
             setComments(commentRes.data.results || commentRes.data);
         } catch (err) {
@@ -39,6 +45,36 @@ const TechnicianTicketDetails = () => {
     };
 
     useEffect(() => { fetchData(); }, [id]);
+
+    // Handle AI Troubleshoot
+    const handleAiTroubleshoot = async () => {
+        setAiLoading(true);
+        setAiError('');
+        setAiResult(null);
+        try {
+            const res = await aiService.troubleshootTicket({ ticket_id: parseInt(id) });
+            if (res.success && res.data) {
+                setAiResult(res.data);
+            } else {
+                setAiError(res.error || 'AI analysis failed.');
+            }
+        } catch (err) {
+            if (err.response?.status === 403) {
+                setAiError('You can only analyze tickets assigned to you.');
+            } else if (err.response?.status === 404) {
+                setAiError('Ticket not found.');
+            } else if (err.response?.data?.error) {
+                const e = err.response.data.error;
+                setAiError(typeof e === 'string' ? e : 'AI analysis failed.');
+            } else if (!err.response) {
+                setAiError('Network error. Please check your connection.');
+            } else {
+                setAiError('AI assistance is currently unavailable. You can continue troubleshooting manually.');
+            }
+        } finally {
+            setAiLoading(false);
+        }
+    };
 
     // Handle "Start Working" or "Mark as Resolved" click
     const openStatusModal = (status) => {
@@ -51,7 +87,7 @@ const TechnicianTicketDetails = () => {
         try {
             await changeTicketStatus(id, { status: nextStatus });
             setShowStatusModal(false);
-            fetchData(); // Refresh to get new status and timestamps
+            fetchData();
         } catch (err) {
             alert(err.response?.data?.error || "Failed to update status.");
         } finally {
@@ -63,13 +99,12 @@ const TechnicianTicketDetails = () => {
     const handleAddComment = async (e) => {
         e.preventDefault();
         if (!commentText.trim()) return alert("Comment cannot be empty.");
-        
+
         setSubmittingComment(true);
         try {
             await addComment(id, { comment: commentText });
-            setCommentText(''); // Clear input
-            
-            // Refresh comments
+            setCommentText('');
+
             const commentRes = await getComments(id);
             setComments(commentRes.data.results || commentRes.data);
         } catch (err) {
@@ -88,23 +123,49 @@ const TechnicianTicketDetails = () => {
         return <Badge bg="warning" text="dark">Pending</Badge>;
     };
 
-    // Dynamic Workflow Buttons based on current status
+    // Dynamic Workflow Buttons
     const renderActions = () => {
         if (!ticket) return null;
 
         if (ticket.status === 'assigned' || ticket.status === 'reopened') {
             return (
-                <Button variant="primary w-100 mb-3" onClick={() => openStatusModal('in_progress')}>
-                    <FaPlay className="me-2" /> Start Working
-                </Button>
+                <div className="d-flex flex-column gap-2 mb-3">
+                    <Button variant="primary w-100" onClick={() => openStatusModal('in_progress')}>
+                        <FaPlay className="me-2" /> Start Working
+                    </Button>
+                    <Button
+                        variant="outline-primary w-100"
+                        onClick={handleAiTroubleshoot}
+                        disabled={aiLoading}
+                    >
+                        {aiLoading ? (
+                            <><Spinner size="sm" className="me-2" />Analyzing Ticket...</>
+                        ) : (
+                            <><FaMagic className="me-2" />Analyze with AI</>
+                        )}
+                    </Button>
+                </div>
             );
         }
 
         if (ticket.status === 'in_progress') {
             return (
-                <Button variant="success w-100 mb-3" onClick={() => openStatusModal('resolved')}>
-                    <FaCheckCircle className="me-2" /> Mark as Resolved
-                </Button>
+                <div className="d-flex flex-column gap-2 mb-3">
+                    <Button variant="success w-100" onClick={() => openStatusModal('resolved')}>
+                        <FaCheckCircle className="me-2" /> Mark as Resolved
+                    </Button>
+                    <Button
+                        variant="outline-primary w-100"
+                        onClick={handleAiTroubleshoot}
+                        disabled={aiLoading}
+                    >
+                        {aiLoading ? (
+                            <><Spinner size="sm" className="me-2" />Analyzing Ticket...</>
+                        ) : (
+                            <><FaMagic className="me-2" />Analyze with AI</>
+                        )}
+                    </Button>
+                </div>
             );
         }
 
@@ -141,13 +202,13 @@ const TechnicianTicketDetails = () => {
     return (
         <div>
             {/* Header */}
-            <div className="d-flex align-items-center mb-4">
-                <Button variant="link" className="text-dark me-3 text-decoration-none" onClick={() => navigate(-1)}><FaArrowLeft size={24} /></Button>
-                <div>
+            <div className="d-flex align-items-center mb-4 flex-wrap gap-2">
+                <Button variant="link" className="text-dark me-3 text-decoration-none p-0" onClick={() => navigate(-1)}><FaArrowLeft size={24} /></Button>
+                <div className="flex-grow-1">
                     <h4 className="mb-0">{ticket.ticket_number}</h4>
                     <h6 className="text-muted mb-0">{ticket.title}</h6>
                 </div>
-                <div className="ms-auto d-flex gap-2 align-items-center">
+                <div className="d-flex gap-2 align-items-center">
                     {getPriorityBadge(ticket.priority)}
                     {getStatusBadge(ticket.status)}
                     {getSlaBadge(ticket.sla_status)}
@@ -160,16 +221,119 @@ const TechnicianTicketDetails = () => {
                     {/* Action Buttons */}
                     {renderActions()}
 
+                    {/* ── AI Error ── */}
+                    {aiError && (
+                        <Alert variant="warning" className="d-flex align-items-start py-2 mb-3" dismissible onClose={() => setAiError('')}>
+                            <FaRobot className="me-2 mt-1 flex-shrink-0" />
+                            <div>
+                                <div className="fw-semibold small">AI Analysis Unavailable</div>
+                                <div className="small mb-0">{aiError}</div>
+                            </div>
+                        </Alert>
+                    )}
+
+                    {/* ── AI Result Card ── */}
+                    {aiResult && (
+                        <Card className="border-0 shadow-sm mb-3" style={{ borderLeft: '4px solid #8b5cf6' }}>
+                            <Card.Body className="p-3">
+                                <div className="d-flex align-items-center justify-content-between mb-3">
+                                    <div className="d-flex align-items-center gap-2">
+                                        <FaMagic className="text-primary" />
+                                        <span className="fw-bold" style={{ fontSize: '0.95rem' }}>AI Troubleshooting Assistant</span>
+                                    </div>
+                                    <Button variant="outline-secondary" size="sm" onClick={() => setAiResult(null)} className="rounded-pill px-2 py-0">
+                                        <FaTimes size={12} />
+                                    </Button>
+                                </div>
+
+                                {/* Possible Issue */}
+                                <div className="mb-3">
+                                    <div className="d-flex align-items-center gap-2 mb-1">
+                                        <FaExclamationTriangle className="text-warning" style={{ fontSize: '0.85rem' }} />
+                                        <span className="fw-semibold" style={{ fontSize: '0.85rem' }}>Possible Issue</span>
+                                    </div>
+                                    <div className="fw-medium ps-4" style={{ fontSize: '0.9rem', color: '#8b5cf6' }}>
+                                        {aiResult.possible_issue}
+                                    </div>
+                                </div>
+
+                                {/* Possible Causes */}
+                                {aiResult.possible_causes && aiResult.possible_causes.length > 0 && (
+                                    <div className="mb-3">
+                                        <div className="d-flex align-items-center gap-2 mb-1">
+                                            <FaSearch className="text-info" style={{ fontSize: '0.85rem' }} />
+                                            <span className="fw-semibold" style={{ fontSize: '0.85rem' }}>Possible Causes</span>
+                                        </div>
+                                        <ul className="mb-0 ps-4" style={{ fontSize: '0.88rem' }}>
+                                            {aiResult.possible_causes.map((cause, idx) => (
+                                                <li key={idx} className="text-muted mb-1">{cause}</li>
+                                            ))}
+                                        </ul>
+                                    </div>
+                                )}
+
+                                {/* Troubleshooting Steps */}
+                                {aiResult.troubleshooting_steps && aiResult.troubleshooting_steps.length > 0 && (
+                                    <div className="mb-3">
+                                        <div className="d-flex align-items-center gap-2 mb-2">
+                                            <FaClipboardList className="text-primary" style={{ fontSize: '0.85rem' }} />
+                                            <span className="fw-semibold" style={{ fontSize: '0.85rem' }}>Suggested Troubleshooting</span>
+                                        </div>
+                                        <div className="ps-4">
+                                            {aiResult.troubleshooting_steps.map((step, idx) => (
+                                                <div key={idx} className="d-flex align-items-start mb-2">
+                                                    <span
+                                                        className="rounded-circle d-flex align-items-center justify-content-center me-2 flex-shrink-0 text-white fw-bold"
+                                                        style={{
+                                                            width: 22,
+                                                            height: 22,
+                                                            backgroundColor: '#3b82f6',
+                                                            fontSize: '0.7rem'
+                                                        }}
+                                                    >
+                                                        {idx + 1}
+                                                    </span>
+                                                    <span style={{ fontSize: '0.88rem' }}>{step}</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Suggested Resolution */}
+                                {aiResult.suggested_resolution && (
+                                    <div className="p-2 rounded-2" style={{ backgroundColor: '#f0fdf4', borderLeft: '3px solid #22c55e' }}>
+                                        <div className="d-flex align-items-center gap-2 mb-1">
+                                            <FaLightbulb className="text-success" style={{ fontSize: '0.85rem' }} />
+                                            <span className="fw-semibold" style={{ fontSize: '0.85rem' }}>Suggested Resolution</span>
+                                        </div>
+                                        <div className="text-muted ps-4" style={{ fontSize: '0.88rem' }}>
+                                            {aiResult.suggested_resolution}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Disclaimer */}
+                                <div className="mt-3 pt-2 border-top">
+                                    <small className="text-muted" style={{ fontSize: '0.75rem' }}>
+                                        <FaRobot className="me-1" />
+                                        AI-generated assistance — verify before applying.
+                                    </small>
+                                </div>
+                            </Card.Body>
+                        </Card>
+                    )}
+
                     {/* Details Card */}
                     <Card className="border-0 shadow-sm mb-3">
                         <Card.Body>
                             <h6 className="fw-bold border-bottom pb-2 mb-3">Description</h6>
                             <p className="text-muted" style={{ whiteSpace: 'pre-wrap' }}>{ticket.description}</p>
-                            
+
                             {ticket.screenshot && (
                                 <div className="mt-3">
                                     <FaPaperclip className="me-2" /><strong>Attachment:</strong>
-                                    <div className="mt-2"><Image src={ticket.screenshot} fluid rounded thumbnail style={{maxHeight: '300px'}} /></div>
+                                    <div className="mt-2"><Image src={ticket.screenshot} fluid rounded thumbnail style={{ maxHeight: '300px' }} /></div>
                                 </div>
                             )}
                         </Card.Body>
@@ -179,34 +343,33 @@ const TechnicianTicketDetails = () => {
                     <Card className="border-0 shadow-sm">
                         <Card.Body>
                             <h6 className="fw-bold border-bottom pb-2 mb-3"><FaComment className="me-2" />Conversation</h6>
-                            
+
                             {comments.length === 0 && <p className="text-muted small">No comments yet. Start the conversation.</p>}
-                            
+
                             <div className="mb-3" style={{ maxHeight: '300px', overflowY: 'auto' }}>
                                 {comments.map(c => (
                                     <div key={c.id} className="mb-3 p-2 bg-light rounded">
                                         <div className="d-flex justify-content-between mb-1">
-                                            <strong style={{fontSize: '0.9rem'}}>{c.user_name || c.user?.username}</strong>
+                                            <strong style={{ fontSize: '0.9rem' }}>{c.user_name || c.user?.username}</strong>
                                             <small className="text-muted">{new Date(c.created_at).toLocaleString()}</small>
                                         </div>
-                                        <p className="mb-0" style={{fontSize: '0.9rem'}}>{c.comment}</p>
+                                        <p className="mb-0" style={{ fontSize: '0.9rem' }}>{c.comment}</p>
                                     </div>
                                 ))}
                             </div>
 
-                            {/* Add Comment Form */}
                             <Form onSubmit={handleAddComment}>
-                                <Form.Control 
-                                    as="textarea" 
-                                    rows={2} 
-                                    placeholder="Write a comment..." 
+                                <Form.Control
+                                    as="textarea"
+                                    rows={2}
+                                    placeholder="Write a comment..."
                                     value={commentText}
                                     onChange={(e) => setCommentText(e.target.value)}
                                     className="mb-2"
                                 />
                                 <div className="d-flex justify-content-end">
                                     <Button type="submit" size="sm" disabled={submittingComment}>
-                                        {submittingComment ? <Spinner size="sm"/> : 'Post Comment'}
+                                        {submittingComment ? <Spinner size="sm" /> : 'Post Comment'}
                                     </Button>
                                 </div>
                             </Form>
@@ -220,19 +383,21 @@ const TechnicianTicketDetails = () => {
                         <Card.Body>
                             <h6 className="fw-bold border-bottom pb-2 mb-3">Information</h6>
                             <table className="w-100 small">
-                                <tr><td className="text-muted py-1">Category:</td><td className="fw-medium ps-2">{ticket.category_name || '-'}</td></tr>
-                                <tr><td className="text-muted py-1">Employee:</td><td className="fw-medium ps-2">{ticket.employee_name || '-'}</td></tr>
-                                <tr><td className="text-muted py-1">Department:</td><td className="fw-medium ps-2">{ticket.department_name || '-'}</td></tr>
-                                <tr><td className="text-muted py-1">Created:</td><td className="fw-medium ps-2">{new Date(ticket.created_at).toLocaleString()}</td></tr>
-                                <tr><td className="text-muted py-1">Updated:</td><td className="fw-medium ps-2">{new Date(ticket.updated_at).toLocaleString()}</td></tr>
-                                {ticket.sla_deadline && (
-                                    <tr><td className="text-muted py-1">SLA Deadline:</td><td className="fw-medium ps-2">{new Date(ticket.sla_deadline).toLocaleDateString()}</td></tr>
-                                )}
+                                <tbody>
+                                    <tr><td className="text-muted py-1">Category:</td><td className="fw-medium ps-2">{ticket.category_name || '-'}</td></tr>
+                                    <tr><td className="text-muted py-1">Employee:</td><td className="fw-medium ps-2">{ticket.employee_name || '-'}</td></tr>
+                                    <tr><td className="text-muted py-1">Department:</td><td className="fw-medium ps-2">{ticket.department_name || '-'}</td></tr>
+                                    <tr><td className="text-muted py-1">Created:</td><td className="fw-medium ps-2">{new Date(ticket.created_at).toLocaleString()}</td></tr>
+                                    <tr><td className="text-muted py-1">Updated:</td><td className="fw-medium ps-2">{new Date(ticket.updated_at).toLocaleString()}</td></tr>
+                                    {ticket.sla_deadline && (
+                                        <tr><td className="text-muted py-1">SLA Deadline:</td><td className="fw-medium ps-2">{new Date(ticket.sla_deadline).toLocaleDateString()}</td></tr>
+                                    )}
+                                </tbody>
                             </table>
                         </Card.Body>
                     </Card>
 
-                    {/* Simple Status Timeline */}
+                    {/* Status Timeline */}
                     <Card className="border-0 shadow-sm">
                         <Card.Body>
                             <h6 className="fw-bold border-bottom pb-2 mb-3">Status Timeline</h6>
@@ -242,8 +407,8 @@ const TechnicianTicketDetails = () => {
                                     <span className={ticket.status === 'open' ? 'fw-bold' : 'text-muted'}>Open</span>
                                 </div>
                                 <div className="d-flex align-items-center">
-                                    <span className={`badge ${ticket.status === 'assigned' || ticket.status === 'in_progress' || ticket.status === 'reopened' ? 'bg-info' : 'bg-secondary'} rounded-pill me-2 px-3`}>2</span>
-                                    <span className={ticket.status === 'assigned' || ticket.status === 'in_progress' || ticket.status === 'reopened' ? 'fw-bold' : 'text-muted'}>Assigned / In Progress / Reopened</span>
+                                    <span className={`badge ${['assigned', 'in_progress', 'reopened'].includes(ticket.status) ? 'bg-info' : 'bg-secondary'} rounded-pill me-2 px-3`}>2</span>
+                                    <span className={['assigned', 'in_progress', 'reopened'].includes(ticket.status) ? 'fw-bold' : 'text-muted'}>Assigned / In Progress / Reopened</span>
                                 </div>
                                 <div className="d-flex align-items-center">
                                     <span className={`badge ${ticket.status === 'resolved' ? 'bg-success' : 'bg-secondary'} rounded-pill me-2 px-3`}>3</span>
@@ -260,11 +425,11 @@ const TechnicianTicketDetails = () => {
             </Row>
 
             {/* Status Change Modal */}
-            <ConfirmModal 
-                show={showStatusModal} 
-                onHide={() => setShowStatusModal(false)} 
-                onConfirm={handleStatusChange} 
-                title={nextStatus === 'in_progress' ? 'Start Working?' : 'Resolve Ticket?'} 
+            <ConfirmModal
+                show={showStatusModal}
+                onHide={() => setShowStatusModal(false)}
+                onConfirm={handleStatusChange}
+                title={nextStatus === 'in_progress' ? 'Start Working?' : 'Resolve Ticket?'}
                 loading={modalLoading}
                 message={getStatusText()}
             />

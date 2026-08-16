@@ -79,5 +79,62 @@ class Notification(models.Model):
         verbose_name_plural = 'Notifications'
         ordering = ['-created_at']
 
+class NotificationPreference(models.Model):
+    """
+    Per-user notification preferences.
+    Auto-created on first access via get_or_create.
+    """
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='notification_preferences',
+        verbose_name='User',
+        help_text='The user who owns these preferences'
+    )
+
+    # Master toggle — if False, no emails are sent regardless of other toggles
+    email_notifications = models.BooleanField(
+        default=True,
+        verbose_name='Email Notifications',
+        help_text='Master toggle for all email notifications'
+    )
+
+    ticket_assignment = models.BooleanField(
+        default=True,
+        verbose_name='Ticket Assignment',
+        help_text='Notify when a ticket is assigned to you'
+    )
+
+    ticket_status_update = models.BooleanField(
+        default=True,
+        verbose_name='Ticket Status Updates',
+        help_text='Notify when a ticket status changes'
+    )
+
+    comment_notifications = models.BooleanField(
+        default=True,
+        verbose_name='Comment Notifications',
+        help_text='Notify when someone comments on your tickets'
+    )
+
+    sla_alerts = models.BooleanField(
+        default=True,
+        verbose_name='SLA Alerts',
+        help_text='Notify when SLA is at risk or breached'
+    )
+
+    asset_notifications = models.BooleanField(
+        default=True,
+        verbose_name='Asset Notifications',
+        help_text='Notify when assets are assigned or returned'
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='Created At')
+    updated_at = models.DateTimeField(auto_now=True, verbose_name='Updated At')
+
+    class Meta:
+        verbose_name = 'Notification Preference'
+        verbose_name_plural = 'Notification Preferences'
+
     def __str__(self):
-        return f"Notification for {self.user.get_full_name()}: {self.title}"
+        return f"Preferences for {self.user.get_full_name() or self.user.username}"

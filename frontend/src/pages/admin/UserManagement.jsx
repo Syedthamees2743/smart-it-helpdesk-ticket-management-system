@@ -8,6 +8,7 @@ import UserFilters from '../../components/admin/UserFilters';
 import UserTable from '../../components/admin/UserTable';
 import UserFormModal from '../../components/admin/UserFormModal';
 import ConfirmModal from '../../components/admin/ConfirmModal';
+import UserPrefModal from '../../components/settings/UserPrefModal';
 
 const UserManagement = () => {
   const { user: currentUser } = useContext(AuthContext);
@@ -32,6 +33,10 @@ const UserManagement = () => {
   const [confirmAction, setConfirmAction] = useState({ type: '', user: null });
   const [actionLoading, setActionLoading] = useState(false);
 
+  // Notification Preferences Modal State
+  const [showPrefModal, setShowPrefModal] = useState(false);
+  const [prefTargetUser, setPrefTargetUser] = useState(null);
+
   const hasActiveFilters = searchTerm || roleFilter || statusFilter;
 
   // Build query params from filters
@@ -49,10 +54,8 @@ const UserManagement = () => {
     try {
       let res;
       if (url && typeof url === 'string') {
-        // Pagination URL — use directly
         res = await getUsers(url);
       } else {
-        // Fresh fetch with filters
         res = await getUsers(getFilterParams());
       }
       const data = res.data;
@@ -121,6 +124,12 @@ const UserManagement = () => {
     setShowConfirmModal(true);
   };
 
+  // Open notification preferences modal
+  const openPrefModal = (user) => {
+    setPrefTargetUser(user);
+    setShowPrefModal(true);
+  };
+
   return (
     <div>
       <div className="d-flex justify-content-between align-items-center mb-4">
@@ -153,6 +162,7 @@ const UserManagement = () => {
             onEdit={(user) => { setEditingUser(user); setShowFormModal(true); }}
             onToggleStatus={(user) => openConfirm('toggle', user)}
             onDelete={(user) => openConfirm('delete', user)}
+            onManagePrefs={openPrefModal}
             emptyState={
               users.length === 0 && !loading ? (
                 <div className="text-center py-4 text-muted">
@@ -209,6 +219,14 @@ const UserManagement = () => {
             : `Are you sure you want to deactivate ${confirmAction.user?.username}? They will not be able to log in.`
         }
         loading={actionLoading}
+      />
+
+      {/* Notification Preferences Modal */}
+      <UserPrefModal
+        show={showPrefModal}
+        onHide={() => setShowPrefModal(false)}
+        userId={prefTargetUser?.id}
+        userName={prefTargetUser ? `${prefTargetUser.first_name} ${prefTargetUser.last_name}` : ''}
       />
     </div>
   );

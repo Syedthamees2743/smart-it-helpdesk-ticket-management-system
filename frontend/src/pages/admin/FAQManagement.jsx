@@ -425,7 +425,7 @@ const FAQManagement = () => {
             </div>
             <h5 className="fw-bold mb-3">{viewingFAQ.question}</h5>
             <div className="p-3 rounded-3 border bg-light" style={{ whiteSpace: 'pre-wrap', lineHeight: '1.7' }}>
-              {viewingFAQ.answer}
+              {viewingFAQ.answer || viewingFAQ.content || viewingFAQ.details || viewingFAQ.description || 'No answer available yet.'}
             </div>
             <div className="d-flex gap-4 mt-3 text-muted small">
               <span>Created by: <strong>{viewingFAQ.created_by_name || '—'}</strong></span>

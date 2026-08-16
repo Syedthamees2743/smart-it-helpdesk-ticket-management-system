@@ -4,6 +4,7 @@ Serializers for Notification Module
 
 from rest_framework import serializers
 from .models import Notification
+from .models import NotificationPreference
 
 
 class NotificationListSerializer(serializers.ModelSerializer):
@@ -24,3 +25,18 @@ class NotificationUnreadCountSerializer(serializers.Serializer):
 class MarkReadSerializer(serializers.Serializer):
     """Validates mark-read request."""
     notification_id = serializers.IntegerField()
+
+
+class NotificationPreferenceSerializer(serializers.ModelSerializer):
+    """Serializer for notification preferences."""
+
+    class Meta:
+        model = NotificationPreference
+        fields = (
+            'email_notifications',
+            'ticket_assignment',
+            'ticket_status_update',
+            'comment_notifications',
+            'sla_alerts',
+            'asset_notifications',
+        )

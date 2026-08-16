@@ -26,10 +26,15 @@ urlpatterns = [
     path('users/', views.UserManagementView.as_view(), name='user-management'),
     path('users/<int:pk>/', views.UserDetailView.as_view(), name='user-detail'),
     path('users/<int:pk>/toggle-status/', views.ToggleUserStatusView.as_view(), name='toggle-user-status'),
+    path('users/<int:pk>/role-profile/', views.UserRoleProfileView.as_view(), name='user-role-profile'),
     
     # --- Upgraded Profile URLs (Using Router) ---
     path('profiles/', include(profile_router.urls)),
     
     # --- Profile Image Upload (Kept from yesterday) ---
     path('update-profile-image/', views.UpdateProfileImageView.as_view(), name='update-profile-image'),
+
+    # --- Own Profile Update & Change Password ---
+    path('update-own-profile/', views.UpdateOwnProfileView.as_view(), name='update-own-profile'),
+    path('change-password/', views.ChangePasswordView.as_view(), name='change-password'),
 ]

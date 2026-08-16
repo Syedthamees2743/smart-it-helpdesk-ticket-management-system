@@ -195,6 +195,9 @@ SIMPLE_JWT = {
     'AUTH_HEADER_TYPES' : ('Bearer',),
 }
 
+# Hugging Face AI Configuration
+HF_TOKEN = config('HF_TOKEN', default='')
+HUGGINGFACE_AI_MODEL = config('HUGGINGFACE_AI_MODEL', default='Qwen/Qwen3-8B:nscale')
 
 # Email Configuration (Reading from .env)
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'

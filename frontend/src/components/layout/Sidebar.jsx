@@ -15,6 +15,7 @@ import {
   FaBell,
   FaSignOutAlt,
 } from "react-icons/fa";
+import { FiHelpCircle } from "react-icons/fi";
 import { useAuth } from "../../context/AuthContext";
 
 const Sidebar = ({ role, mobile, onClick }) => {
@@ -59,7 +60,11 @@ const Sidebar = ({ role, mobile, onClick }) => {
         icon: <FaBell />,
         label: "Notifications",
       },
-      { path: '/admin/technician-performance', icon: <FaTachometerAlt />, label: 'Tech Performance' },
+      {
+        path: "/admin/technician-performance",
+        icon: <FaTachometerAlt />,
+        label: "Tech Performance",
+      },
       { path: "/admin/reports", icon: <FaStar />, label: "Reports" },
     ],
     employee: [
@@ -119,10 +124,17 @@ const Sidebar = ({ role, mobile, onClick }) => {
 
   const currentMenu = menus[role] || [];
 
+  const handleClose = () => {
+    if (onClick) onClick();
+  };
+
   return (
-    <div className="d-flex flex-column h-100 bg-dark sidebar-scrollbar">
-      {/* Logo Area */}
-      <div className="p-3 border-bottom border-secondary text-center">
+    <div className="d-flex flex-column h-100 bg-dark">
+      {/* ── LOGO — Fixed Top ── */}
+      <div
+        className="p-3 border-bottom border-secondary text-center"
+        style={{ flexShrink: 0 }}
+      >
         <h5 className="text-white mb-0 fw-bold">IT Service Desk</h5>
         <small
           className="text-secondary text-uppercase"
@@ -132,35 +144,78 @@ const Sidebar = ({ role, mobile, onClick }) => {
         </small>
       </div>
 
-      {/* Navigation */}
-      <Nav className="flex-column p-2 flex-grow-1 sidebar-nav-scroll">
-        {currentMenu
-          .filter((item) => !item.hidden)
-          .map((item, idx) => (
-            <NavLink
-              key={idx}
-              to={item.path}
-              end={item.end}
-              className={({ isActive }) =>
-                `sidebar-link ${isActive ? "active" : ""}`
-              }
-              onClick={onClick}
-            >
-              {item.icon}
-              {item.label}
-            </NavLink>
-          ))}
-      </Nav>
+      {/* ── NAV LINKS — Scrollable Middle ── */}
+      <div
+        className="sidebar-nav-scroll flex-grow-1"
+        style={{ minHeight: 0, overflowY: "auto" }}
+      >
+        <Nav className="flex-column p-2">
+          {currentMenu
+            .filter((item) => !item.hidden)
+            .map((item, idx) => (
+              <NavLink
+                key={idx}
+                to={item.path}
+                end={item.end}
+                className={({ isActive }) =>
+                  `sidebar-link ${isActive ? "active" : ""}`
+                }
+                onClick={handleClose}
+              >
+                {item.icon}
+                {item.label}
+              </NavLink>
+            ))}
+        </Nav>
+      </div>
 
-      {/* Bottom Settings/Logout */}
-      <div className="p-3 border-top border-secondary">
-        <NavLink to={`/${role}/profile`} className="sidebar-link mb-2">
+      {/* ── BOTTOM BAR — Fixed Bottom (Help / Settings / Profile / Logout) ── */}
+      <div
+        className="border-top border-secondary"
+        style={{ flexShrink: 0, backgroundColor: "rgba(0,0,0,0.2)" }}
+      >
+        <NavLink
+          to={`/${role}/help`}
+          className={({ isActive }) =>
+            `sidebar-link d-block ${isActive ? "active" : ""}`
+          }
+          onClick={handleClose}
+          style={{ borderRadius: 0, paddingLeft: "1.5rem" }}
+        >
+          <FiHelpCircle /> Help & Support
+        </NavLink>
+        <NavLink
+          to={`/${role}/settings`}
+          className={({ isActive }) =>
+            `sidebar-link d-block ${isActive ? "active" : ""}`
+          }
+          onClick={handleClose}
+          style={{ borderRadius: 0, paddingLeft: "1.5rem" }}
+        >
+          <FaCog /> Settings
+        </NavLink>
+        <NavLink
+          to={`/${role}/profile`}
+          className={({ isActive }) =>
+            `sidebar-link d-block ${isActive ? "active" : ""}`
+          }
+          onClick={handleClose}
+          style={{ borderRadius: 0, paddingLeft: "1.5rem" }}
+        >
           <FaUserEdit /> My Profile
         </NavLink>
         <div
-          className="sidebar-link"
-          style={{ cursor: "pointer", color: "#f87171" }}
-          onClick={logout}
+          className="sidebar-link d-block"
+          style={{
+            borderRadius: 0,
+            paddingLeft: "1.5rem",
+            cursor: "pointer",
+            color: "#f87171",
+          }}
+          onClick={() => {
+            logout();
+            handleClose();
+          }}
         >
           <FaSignOutAlt className="me-2" /> Logout
         </div>

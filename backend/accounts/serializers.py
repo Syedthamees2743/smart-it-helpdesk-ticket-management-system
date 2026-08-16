@@ -37,18 +37,20 @@ class UserSerializer(serializers.ModelSerializer):
 
 
 class EmployeeProfileSerializer(serializers.ModelSerializer):
-    user = UserSerializer(read_only=True) # Shows full user details inside profile
+    user = UserSerializer(read_only=True)
+    department_name = serializers.CharField(source='department.name', read_only=True, default=None)
 
     class Meta:
         model = EmployeeProfile
-        fields = ('id', 'user', 'employee_id', 'department', 'designation', 'created_at')
+        fields = ('id', 'user', 'employee_id', 'department', 'department_name', 'designation', 'created_at')
         read_only_fields = ('id', 'user', 'created_at')
 
 
 class TechnicianProfileSerializer(serializers.ModelSerializer):
     user = UserSerializer(read_only=True)
+    department_name = serializers.CharField(source='department.name', read_only=True, default=None)
 
     class Meta:
         model = TechnicianProfile
-        fields = ('id', 'user', 'technician_id', 'department', 'specialization', 'created_at')
+        fields = ('id', 'user', 'technician_id', 'department', 'department_name', 'specialization', 'created_at')
         read_only_fields = ('id', 'user', 'created_at')

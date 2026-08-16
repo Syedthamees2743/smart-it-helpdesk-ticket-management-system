@@ -1,7 +1,7 @@
 import { Table, Button, Badge, Spinner, Image } from 'react-bootstrap';
-import { FaEdit, FaBan, FaCheckCircle, FaTrash } from 'react-icons/fa';
+import { FaEdit, FaBan, FaCheckCircle, FaTrash, FaBell } from 'react-icons/fa';
 
-const UserTable = ({ users, loading, onEdit, onToggleStatus, onDelete, currentUser, emptyState }) => {
+const UserTable = ({ users, loading, onEdit, onToggleStatus, onDelete, onManagePrefs, currentUser, emptyState }) => {
   
   const getRoleBadge = (role) => {
     const variant = role === 'admin' ? 'dark' : role === 'technician' ? 'info' : 'primary';
@@ -39,7 +39,7 @@ const UserTable = ({ users, loading, onEdit, onToggleStatus, onDelete, currentUs
           <th>Role</th>
           <th>Status</th>
           <th>Created</th>
-          <th style={{width: '150px'}}>Actions</th>
+          <th style={{width: '185px'}}>Actions</th>
         </tr>
       </thead>
       <tbody>
@@ -73,8 +73,16 @@ const UserTable = ({ users, loading, onEdit, onToggleStatus, onDelete, currentUs
               {currentUser?.id === user.id ? (
                 <Badge bg="secondary">You</Badge>
               ) : (
-                <div className="d-flex gap-1">
+                <div className="d-flex gap-1 flex-wrap">
                   <Button size="sm" variant="outline-primary" onClick={() => onEdit(user)} title="Edit"><FaEdit /></Button>
+                  <Button 
+                    size="sm" 
+                    variant="outline-secondary"
+                    onClick={() => onManagePrefs(user)}
+                    title="Notification Preferences"
+                  >
+                    <FaBell />
+                  </Button>
                   <Button 
                     size="sm" 
                     variant={user.is_active ? "outline-warning" : "outline-success"} 

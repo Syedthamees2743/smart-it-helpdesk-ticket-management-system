@@ -3,6 +3,8 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from django.contrib.auth import get_user_model
+from django.db.models.signals import post_save
+from django.dispatch import receiver
 from .serializers import (
     RegisterSerializer,
     UserSerializer,
@@ -123,6 +125,100 @@ class ToggleUserStatusView(APIView):
                 {"error": "User not found"}, status=status.HTTP_404_NOT_FOUND
             )
 
+# ==========================================
+# OWN PROFILE UPDATE & CHANGE PASSWORD
+# ==========================================
+
+
+class UpdateOwnProfileView(APIView):
+    """
+    Any logged-in user can update their own first_name, last_name, email, phone_number.
+    Uses request.user — no ID from frontend needed.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+    parser_classes = [MultiPartParser, FormParser, JSONParser]
+
+    def get(self, request):
+        serializer = UserSerializer(request.user)
+        return Response({"success": True, "data": serializer.data})
+
+    def patch(self, request):
+        user = request.user
+        # Only allow these 4 fields + profile_image
+        allowed_fields = ['first_name', 'last_name', 'email', 'phone_number', 'profile_image']
+        data = {}
+        for field in allowed_fields:
+            if field in request.data:
+                data[field] = request.data[field]
+
+        if not data:
+            return Response(
+                {"success": False, "error": "No valid fields provided."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        serializer = UserSerializer(user, data=data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response({"success": True, "data": serializer.data})
+        return Response({"success": False, "error": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class ChangePasswordView(APIView):
+    """
+    Any logged-in user can change their own password.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        user = request.user
+        current_password = request.data.get('current_password')
+        new_password = request.data.get('new_password')
+        confirm_password = request.data.get('confirm_password')
+
+        # Validate all fields present
+        if not current_password or not new_password or not confirm_password:
+            return Response(
+                {"success": False, "error": {"detail": ["All three password fields are required."]}},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Check current password
+        if not user.check_password(current_password):
+            return Response(
+                {"success": False, "error": {"current_password": ["Current password is incorrect."]}},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Check new passwords match
+        if new_password != confirm_password:
+            return Response(
+                {"success": False, "error": {"confirm_password": ["New passwords do not match."]}},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Validate password strength (Django's built-in validators)
+        from django.contrib.auth.password_validation import validate_password
+        try:
+            validate_password(new_password, user=user)
+        except Exception as e:
+            return Response(
+                {"success": False, "error": {"new_password": list(e.messages)}},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Check not same as old password
+        if current_password == new_password:
+            return Response(
+                {"success": False, "error": {"new_password": ["New password must be different from current password."]}},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Set new password (Django hashes it automatically)
+        user.set_password(new_password)
+        user.save()
+
+        return Response({"success": True, "message": "Password changed successfully."})
 
 # ==========================================
 # PROFILE VIEWS
@@ -279,3 +375,73 @@ class TechnicianProfileViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         return TechnicianProfile.objects.filter(user=self.request.user)
+
+
+class UserRoleProfileView(APIView):
+    """
+    Admin can view and update employee/technician profile fields
+    like department, employee_id, designation, specialization.
+    """
+    permission_classes = [IsAdmin]
+    parser_classes = [MultiPartParser, FormParser, JSONParser]
+
+    def get(self, request, pk):
+        try:
+            user = User.objects.get(pk=pk)
+        except User.DoesNotExist:
+            return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        if user.role == 'employee':
+            try:
+                profile = EmployeeProfile.objects.get(user=user)
+                return Response({"success": True, "data": EmployeeProfileSerializer(profile).data})
+            except EmployeeProfile.DoesNotExist:
+                return Response({"success": True, "data": None})
+        elif user.role == 'technician':
+            try:
+                profile = TechnicianProfile.objects.get(user=user)
+                return Response({"success": True, "data": TechnicianProfileSerializer(profile).data})
+            except TechnicianProfile.DoesNotExist:
+                return Response({"success": True, "data": None})
+        else:
+            return Response({"success": True, "data": None, "message": "Admin has no role profile"})
+
+    def patch(self, request, pk):
+        try:
+            user = User.objects.get(pk=pk)
+        except User.DoesNotExist:
+            return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        if user.role == 'employee':
+            try:
+                profile = EmployeeProfile.objects.get(user=user)
+            except EmployeeProfile.DoesNotExist:
+                # Auto-create if missing
+                profile = EmployeeProfile.objects.create(user=user)
+            serializer = EmployeeProfileSerializer(profile, data=request.data, partial=True)
+        elif user.role == 'technician':
+            try:
+                profile = TechnicianProfile.objects.get(user=user)
+            except TechnicianProfile.DoesNotExist:
+                profile = TechnicianProfile.objects.create(user=user)
+            serializer = TechnicianProfileSerializer(profile, data=request.data, partial=True)
+        else:
+            return Response({"error": "No role profile for admin users"}, status=status.HTTP_400_BAD_REQUEST)
+
+        if serializer.is_valid():
+            serializer.save()
+            return Response({"success": True, "data": serializer.data})
+        return Response({"success": False, "error": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+
+    
+# ==========================================
+# AUTO-CREATE PROFILE ON USER CREATION
+# ==========================================
+
+@receiver(post_save, sender=User)
+def create_user_profile(sender, instance, created, **kwargs):
+    if created:
+        if instance.role == 'employee':
+            EmployeeProfile.objects.get_or_create(user=instance)
+        elif instance.role == 'technician':
+            TechnicianProfile.objects.get_or_create(user=instance)
