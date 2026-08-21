@@ -1,13 +1,8 @@
-"""
-Ticket models for Smart IT Service Desk
-"""
-
 from django.db import models
 from django.conf import settings
 from .validators import validate_screenshot
 
 
-# Priority choices
 PRIORITY_CHOICES = (
     ('low', 'Low'),
     ('medium', 'Medium'),
@@ -15,7 +10,6 @@ PRIORITY_CHOICES = (
     ('critical', 'Critical'),
 )
 
-# Status choices
 STATUS_CHOICES = (
     ('open', 'Open'),
     ('assigned', 'Assigned'),
@@ -27,10 +21,6 @@ STATUS_CHOICES = (
 
 
 class IssueCategory(models.Model):
-    """
-    Categories for tickets.
-    Examples: Hardware, Software, Network, Access Request, Email Issues
-    """
     
     name = models.CharField(
         max_length=100,
@@ -56,9 +46,6 @@ class IssueCategory(models.Model):
 
 
 class Ticket(models.Model):
-    """
-    Main ticket model - represents a support request.
-    """
     
     ticket_number = models.CharField(max_length=20, unique=True, editable=False, verbose_name='Ticket Number')
     employee = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='created_tickets', verbose_name='Employee')
@@ -91,9 +78,7 @@ class Ticket(models.Model):
         return f"{self.ticket_number} - {self.title}"
     
     def save(self, *args, **kwargs):
-        """
-        Override save to generate Ticket Number AND calculate SLA.
-        """
+
         # 1. Generate Ticket Number
         if not self.ticket_number:
             last_ticket = Ticket.objects.order_by('-id').first()
@@ -123,9 +108,6 @@ class Ticket(models.Model):
 
 
 class TicketComment(models.Model):
-    """
-    Comments on tickets - for conversation between employee and technician.
-    """
     
     ticket = models.ForeignKey(
         Ticket,
@@ -156,7 +138,7 @@ class TicketComment(models.Model):
     class Meta:
         verbose_name = 'Ticket Comment'
         verbose_name_plural = 'Ticket Comments'
-        ordering = ['created_at']  # Oldest comments first
+        ordering = ['created_at'] 
     
     def __str__(self):
         return f"Comment by {self.user.get_full_name()} on {self.ticket.ticket_number}"

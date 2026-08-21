@@ -2,7 +2,6 @@ from rest_framework import serializers
 from django.contrib.auth import get_user_model
 from .models import EmployeeProfile, TechnicianProfile
 
-# Get the custom user model
 User = get_user_model()
 
 
@@ -15,25 +14,62 @@ class RegisterSerializer(serializers.ModelSerializer):
         fields = ('username', 'email', 'password', 'password2', 'first_name', 'last_name', 'role', 'phone_number')
 
     def validate(self, attrs):
-        # Check if passwords match
         if attrs['password'] != attrs['password2']:
             raise serializers.ValidationError({"password": "Passwords do not match."})
         return attrs
 
     def create(self, validated_data):
-        # Remove password2 as it's not a field in the User model
         validated_data.pop('password2')
-        
-        # Create the user using Django's built-in create_user method (hashes password automatically)
         user = User.objects.create_user(**validated_data)
         return user
 
 
 class UserSerializer(serializers.ModelSerializer):
+    employee_id = serializers.SerializerMethodField(read_only=True)
+    employee_department = serializers.SerializerMethodField(read_only=True)
+    technician_id = serializers.SerializerMethodField(read_only=True)
+    technician_department = serializers.SerializerMethodField(read_only=True)
+    designation = serializers.SerializerMethodField(read_only=True)
+    specialization = serializers.SerializerMethodField(read_only=True)
+
     class Meta:
         model = User
-        fields = ('id', 'username', 'email', 'first_name', 'last_name', 'role', 'phone_number', 'profile_image', 'is_active', 'created_at')
-        read_only_fields = ('id', 'created_at') # These fields cannot be changed by the user
+        fields = (
+            'id', 'username', 'email', 'first_name', 'last_name', 'role', 'phone_number',
+            'profile_image', 'is_active', 'created_at',
+            'employee_id', 'employee_department',
+            'technician_id', 'technician_department',
+            'designation', 'specialization',
+        )
+        read_only_fields = ('id', 'created_at')
+
+    def get_employee_id(self, obj):
+        profile = getattr(obj, 'employee_profile', None)
+        return profile.employee_id if profile else None
+
+    def get_employee_department(self, obj):
+        profile = getattr(obj, 'employee_profile', None)
+        if profile and profile.department:
+            return profile.department.name
+        return None
+
+    def get_technician_id(self, obj):
+        profile = getattr(obj, 'technician_profile', None)
+        return profile.technician_id if profile else None
+
+    def get_technician_department(self, obj):
+        profile = getattr(obj, 'technician_profile', None)
+        if profile and profile.department:
+            return profile.department.name
+        return None
+
+    def get_designation(self, obj):
+        profile = getattr(obj, 'employee_profile', None)
+        return profile.designation if profile else None
+
+    def get_specialization(self, obj):
+        profile = getattr(obj, 'technician_profile', None)
+        return profile.specialization if profile else None
 
 
 class EmployeeProfileSerializer(serializers.ModelSerializer):

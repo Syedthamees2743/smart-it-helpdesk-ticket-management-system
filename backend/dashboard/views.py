@@ -81,7 +81,6 @@ class EmployeeDashboardAPIView(APIView):
             "assigned_technician", "category"
         ).filter(employee=request.user)
 
-        # ── EXISTING fields (unchanged) ──
         my_total = my_tickets.count()
         my_open = my_tickets.filter(status="open").count()
         my_assigned = my_tickets.filter(status="assigned").count()
@@ -90,7 +89,6 @@ class EmployeeDashboardAPIView(APIView):
         my_closed = my_tickets.filter(status="closed").count()
         my_reopened = my_tickets.filter(status="reopened").count()
 
-        # ── NEW: Status Distribution ──
         STATUS_COLORS = {
             "open": "#3b82f6",
             "assigned": "#8b5cf6",
@@ -109,7 +107,6 @@ class EmployeeDashboardAPIView(APIView):
             for s in status_counts
         ]
 
-        # ── NEW: Priority Distribution ──
         PRIORITY_COLORS = {
             "low": "#22c55e",
             "medium": "#3b82f6",
@@ -126,13 +123,12 @@ class EmployeeDashboardAPIView(APIView):
             for p in priority_counts
         ]
 
-        # ── NEW: SLA Overview ──
+        # ── SLA Overview ──
         sla_resolved = my_tickets.filter(resolved_at__isnull=False)
         sla_total = sla_resolved.count()
         sla_met = sla_resolved.filter(resolved_at__lte=F("sla_deadline")).count()
         sla_breached = sla_total - sla_met
 
-        # Currently active tickets past deadline
         sla_active_breached = my_tickets.filter(
             status__in=["open", "assigned", "in_progress", "reopened"],
             sla_deadline__lt=now,
@@ -142,7 +138,7 @@ class EmployeeDashboardAPIView(APIView):
             round((sla_met / sla_total) * 100, 1) if sla_total > 0 else None
         )
 
-        # ── NEW: Recent Tickets (last 5, matching RecentTicketsTable format) ──
+        # ── Recent Tickets  ──
         recent_qs = my_tickets.order_by("-created_at")[:5]
         recent_tickets = []
         for t in recent_qs:
@@ -164,7 +160,7 @@ class EmployeeDashboardAPIView(APIView):
                 }
             )
 
-        # ── NEW: My Assets List ──
+        # ── My Assets List ──
         my_assets_qs = AssetAssignment.objects.filter(
             employee=request.user, status="active"
         ).select_related("asset", "asset__category")
@@ -181,13 +177,11 @@ class EmployeeDashboardAPIView(APIView):
         ]
 
         data = {
-            # ── EXISTING structure (backward compatible) ──
             "tickets": {
                 "my_total": my_total,
                 "my_open": my_open,
                 "my_in_progress": my_in_progress,
                 "my_closed": my_closed,
-                # ── NEW fields added inside same dict ──
                 "my_assigned": my_assigned,
                 "my_resolved": my_resolved,
                 "my_reopened": my_reopened,
@@ -203,7 +197,6 @@ class EmployeeDashboardAPIView(APIView):
             },
             "assets": {
                 "my_assigned_assets": my_assets_qs.count(),
-                # ── NEW field inside same dict ──
                 "list": my_assets_list,
             },
         }
@@ -252,17 +245,13 @@ class TechnicianDashboardAPIView(APIView):
 
 
 class TechnicianPerformanceAPIView(APIView):
-    """
-    ADMIN ONLY — View all technicians' workload, SLA, and performance.
-    """
 
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
         if request.user.role != "admin":
             return Response({"success": False, "error": "Access denied"}, status=403)
-
-        # Query 1: Main counts per technician
+        
         tech_stats = (
             User.objects.filter(role="technician", is_active=True)
             .annotate(
@@ -299,7 +288,6 @@ class TechnicianPerformanceAPIView(APIView):
             .order_by("-total_assigned")
         )
 
-        # Query 2: SLA stats per technician
         sla_data = (
             Ticket.objects.filter(
                 assigned_technician__isnull=False, resolved_at__isnull=False
@@ -310,8 +298,6 @@ class TechnicianPerformanceAPIView(APIView):
                 sla_met=Count("id", filter=Q(resolved_at__lte=F("sla_deadline"))),
             )
         )
-
-        # Query 3: Average resolution time per technician (FIXED - calculate in Python, not ORM)
         resolution_times = []
         resolved_tickets = (
             Ticket.objects.filter(
@@ -408,9 +394,6 @@ class TechnicianPerformanceAPIView(APIView):
 
 
 class MyPerformanceAPIView(APIView):
-    """
-    TECHNICIAN ONLY — View own performance stats.
-    """
 
     permission_classes = [IsAuthenticated]
 
@@ -433,7 +416,7 @@ class MyPerformanceAPIView(APIView):
             priority__in=["high", "critical"],
         ).count()
 
-        # Rating (FIXED - extract dict value correctly)
+        # Rating 
         avg_rating = Feedback.objects.filter(
             ticket__assigned_technician=tech
         ).aggregate(avg=Avg("rating"))
@@ -445,7 +428,7 @@ class MyPerformanceAPIView(APIView):
         sla_met = sla_tickets.filter(resolved_at__lte=F("sla_deadline")).count()
         sla_breached = total_sla - sla_met
 
-        # Resolution time (FIXED - calculate in Python, not ORM)
+        # Resolution time 
         resolved_list = my_tickets.filter(resolved_at__isnull=False).only(
             "resolved_at", "created_at"
         )
@@ -481,7 +464,6 @@ class MyPerformanceAPIView(APIView):
             {"name": "Breached", "value": sla_breached},
         ]
 
-        # ── NEW: Priority Distribution ──
         PRIORITY_COLORS = {
             "low": "#22c55e",
             "medium": "#3b82f6",
@@ -498,7 +480,6 @@ class MyPerformanceAPIView(APIView):
             for p in priority_counts
         ]
 
-        # ── NEW: Recent Assigned Tickets (last 5) ──
         recent_qs = my_tickets.order_by("-created_at")[:5]
         recent_tickets = [
             {
@@ -517,7 +498,6 @@ class MyPerformanceAPIView(APIView):
             {
                 "success": True,
                 "technician": {
-                    # ── ALL EXISTING fields unchanged ──
                     "name": f"{tech.first_name} {tech.last_name}",
                     "total_assigned": total,
                     "open": open_count,
@@ -537,7 +517,6 @@ class MyPerformanceAPIView(APIView):
                     "workload": workload,
                     "status_distribution": status_dist,
                     "sla_distribution": sla_dist,
-                    # ── NEW fields added at end ──
                     "priority_distribution": priority_distribution,
                     "recent_tickets": recent_tickets,
                 },
@@ -547,10 +526,6 @@ class MyPerformanceAPIView(APIView):
 
 
 class AISupportInsightsView(APIView):
-    """
-    POST /api/dashboard/ai/support-insights/
-    Admin AI Support Insights — analyzes real PostgreSQL support data.
-    """
     permission_classes = [IsAdmin]
 
     def post(self, request):

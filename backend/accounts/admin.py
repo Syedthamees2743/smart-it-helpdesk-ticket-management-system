@@ -1,7 +1,3 @@
-"""
-Admin configuration for accounts app
-"""
-
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
 from .models import User, EmployeeProfile, TechnicianProfile
@@ -9,9 +5,6 @@ from .models import User, EmployeeProfile, TechnicianProfile
 
 @admin.register(User)
 class CustomUserAdmin(UserAdmin):
-    """
-    Custom admin configuration for User model.
-    """
     
     list_display = (
         'username',
@@ -72,9 +65,6 @@ class CustomUserAdmin(UserAdmin):
 
 @admin.register(EmployeeProfile)
 class EmployeeProfileAdmin(admin.ModelAdmin):
-    """
-    Admin configuration for EmployeeProfile model.
-    """
     
     list_display = (
         'employee_id',
@@ -118,9 +108,6 @@ class EmployeeProfileAdmin(admin.ModelAdmin):
 
 @admin.register(TechnicianProfile)
 class TechnicianProfileAdmin(admin.ModelAdmin):
-    """
-    Admin configuration for TechnicianProfile model.
-    """
     
     list_display = (
         'technician_id',

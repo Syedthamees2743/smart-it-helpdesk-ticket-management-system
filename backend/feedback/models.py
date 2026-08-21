@@ -1,7 +1,3 @@
-"""
-Feedback models for Smart IT Service Desk
-"""
-
 from django.db import models
 from django.conf import settings
 
@@ -17,9 +13,6 @@ RATING_CHOICES = (
 
 
 class Feedback(models.Model):
-    """
-    Feedback given by employees after ticket resolution.
-    """
     
     ticket = models.ForeignKey(
         'tickets.Ticket',
@@ -59,7 +52,6 @@ class Feedback(models.Model):
     class Meta:
         verbose_name = 'Feedback'
         verbose_name_plural = 'Feedbacks'
-        # Ensure one feedback per ticket per employee
         unique_together = ('ticket', 'employee')
         ordering = ['-created_at']
     

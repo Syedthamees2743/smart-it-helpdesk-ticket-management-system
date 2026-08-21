@@ -49,6 +49,18 @@ const AssignedTickets = () => {
     const getPriorityBadge = (p) => <Badge className={`badge-priority-${p.toLowerCase()}`}>{p}</Badge>;
     const getSlaBadge = (sla) => sla === 'Breached' ? <Badge bg="danger">Breached</Badge> : sla === 'Met' ? <Badge bg="success">Ok</Badge> : <Badge bg="warning" text="dark">Pending</Badge>;
 
+    const empLabel = (t) => {
+        const id = t.employee_id ? ` · ${t.employee_id}` : "";
+        const dept = t.employee_department ? ` · ${t.employee_department}` : "";
+        const sub = [id, dept].filter(Boolean).join("");
+        return (
+          <div>
+            <div>{t.employee_name || '-'}</div>
+            {sub && <div className="text-muted" style={{ fontSize: "0.72rem", lineHeight: 1.2 }}>{sub}</div>}
+          </div>
+        );
+    };
+
     return (
         <div>
             <div className="mb-4">
@@ -116,7 +128,7 @@ const AssignedTickets = () => {
                                 {tickets.map(t => (
                                     <tr key={t.id}>
                                         <td className="fw-medium">{t.ticket_number}</td>
-                                        <td>{t.employee_name || '-'}</td>
+                                        <td style={{ minWidth: "140px" }}>{empLabel(t)}</td>
                                         <td>{t.title}</td>
                                         <td>{getPriorityBadge(t.priority)}</td>
                                         <td>{getStatusBadge(t.status)}</td>

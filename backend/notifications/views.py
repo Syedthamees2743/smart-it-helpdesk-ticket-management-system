@@ -1,47 +1,48 @@
-"""
-Views for Notification Module
-"""
 from accounts.permissions import IsAdmin
 from rest_framework import viewsets, status, permissions
 from rest_framework.decorators import APIView, action
 from rest_framework.response import Response
 from rest_framework.exceptions import ValidationError
+from rest_framework.pagination import PageNumberPagination
 from .models import Notification, NotificationPreference
 from .serializers import NotificationListSerializer, NotificationPreferenceSerializer
-from .models import Notification
-from .serializers import NotificationListSerializer
+
+
+class NotificationPagination(PageNumberPagination):
+    page_size = 10
+    page_size_query_param = 'page_size'
+    max_page_size = 100
 
 
 class NotificationViewSet(viewsets.GenericViewSet):
-    """
-    Users can only see their OWN notifications.
-    No create/update/delete — notifications are created by the system.
-    """
     serializer_class = NotificationListSerializer
     permission_classes = [permissions.IsAuthenticated]
+    pagination_class = NotificationPagination 
 
     def get_queryset(self):
-        # CRITICAL: Only return notifications for the logged-in user
         return Notification.objects.filter(user=self.request.user)
 
     def list(self, request):
-        """GET /api/notifications/ — List all notifications for current user."""
         queryset = self.get_queryset()
-        # Support ?unread=true filter
+        
         unread_only = request.query_params.get('unread')
         if unread_only and unread_only.lower() in ('true', '1', 'yes'):
             queryset = queryset.filter(is_read=False)
 
-        serializer = self.get_serializer(queryset, many=True)
-        return Response({
-            "success": True,
-            "count": queryset.count(),
-            "results": serializer.data
-        })
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+        else:
+            serializer = self.get_serializer(queryset, many=True)
+            return Response({
+                "success": True,
+                "count": queryset.count(),
+                "results": serializer.data
+            })
 
     @action(detail=False, methods=['get'], url_path='unread-count')
     def unread_count(self, request):
-        """GET /api/notifications/unread-count/ — Get unread notification count."""
         count = self.get_queryset().filter(is_read=False).count()
         return Response({
             "success": True,
@@ -50,7 +51,6 @@ class NotificationViewSet(viewsets.GenericViewSet):
 
     @action(detail=True, methods=['post'], url_path='mark-read')
     def mark_read(self, request, pk=None):
-        """POST /api/notifications/{id}/mark-read/ — Mark one notification as read."""
         try:
             notification = self.get_queryset().get(pk=pk)
         except Notification.DoesNotExist:
@@ -71,25 +71,15 @@ class NotificationViewSet(viewsets.GenericViewSet):
             "message": f"{updated} notification(s) marked as read."
         })
 
+
 class SettingsView(APIView):
-    """
-    GET  /api/notifications/settings/  — Returns account info + notification preferences
-    PATCH /api/notifications/settings/ — Updates notification preferences only
-    Uses request.user exclusively. No user ID from frontend.
-    Auto-creates preferences on first GET.
-    """
     permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request):
         user = request.user
-
-        # Auto-create preferences if they don't exist
         prefs, _ = NotificationPreference.objects.get_or_create(user=user)
-
-        # Serialize preferences
         pref_data = NotificationPreferenceSerializer(prefs).data
 
-        # Build account info (read-only)
         account_data = {
             'username': user.username,
             'email': user.email,
@@ -110,18 +100,11 @@ class SettingsView(APIView):
 
     def patch(self, request):
         user = request.user
-
-        # Get or create preferences
         prefs, _ = NotificationPreference.objects.get_or_create(user=user)
 
-        # Only allow preference fields — ignore anything else sent
         allowed = [
-            'email_notifications',
-            'ticket_assignment',
-            'ticket_status_update',
-            'comment_notifications',
-            'sla_alerts',
-            'asset_notifications',
+            'email_notifications', 'ticket_assignment', 'ticket_status_update',
+            'comment_notifications', 'sla_alerts', 'asset_notifications',
         ]
         data = {}
         for field in allowed:
@@ -149,11 +132,6 @@ class SettingsView(APIView):
 
 
 class AdminUserPreferencesView(APIView):
-    """
-    GET    /api/notifications/admin/preferences/<user_id>/  — Admin fetches a user's preferences
-    PATCH  /api/notifications/admin/preferences/<user_id>/  — Admin updates a user's preferences
-    Only accessible by admins. Uses URL user_id but verifies admin permission first.
-    """
     permission_classes = [IsAdmin]
 
     def get(self, request, user_id):
@@ -168,7 +146,6 @@ class AdminUserPreferencesView(APIView):
                 status=status.HTTP_404_NOT_FOUND
             )
 
-        # Auto-create preferences if missing
         prefs, _ = NotificationPreference.objects.get_or_create(user=target_user)
 
         return Response({
@@ -194,17 +171,11 @@ class AdminUserPreferencesView(APIView):
                 status=status.HTTP_404_NOT_FOUND
             )
 
-        # Get or create preferences
         prefs, _ = NotificationPreference.objects.get_or_create(user=target_user)
 
-        # Only allow preference fields
         allowed = [
-            'email_notifications',
-            'ticket_assignment',
-            'ticket_status_update',
-            'comment_notifications',
-            'sla_alerts',
-            'asset_notifications',
+            'email_notifications', 'ticket_assignment', 'ticket_status_update',
+            'comment_notifications', 'sla_alerts', 'asset_notifications',
         ]
         data = {}
         for field in allowed:

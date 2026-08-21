@@ -5,16 +5,12 @@ from django.contrib.auth import get_user_model
 from .models import Feedback
 from .serializers import FeedbackCreateSerializer, FeedbackListSerializer
 from tickets.models import Ticket
-from notifications.services import create_notification  # DAY 10: Added
+from notifications.services import create_notification 
 
 User = get_user_model()
 
 
 class FeedbackViewSet(viewsets.ModelViewSet):
-    """
-    Employees can CREATE feedback for their own CLOSED tickets.
-    Everyone can LIST feedback based on their role.
-    """
     http_method_names = ['get', 'post']
 
     def get_serializer_class(self):
@@ -53,10 +49,8 @@ class FeedbackViewSet(viewsets.ModelViewSet):
         if Feedback.objects.filter(ticket=ticket, employee=user).exists():
             raise ValidationError({"error": "You have already submitted feedback for this ticket."})
 
-        # Save the feedback
         feedback = serializer.save(employee=user)
 
-        # DAY 10: Notify all admins about new feedback
         rating = feedback.rating
         admins = User.objects.filter(role='admin')
         for admin in admins:
@@ -68,7 +62,6 @@ class FeedbackViewSet(viewsets.ModelViewSet):
                 ticket=ticket,
             )
 
-        # DAY 10: Notify technician if assigned
         if ticket.assigned_technician:
             create_notification(
                 user=ticket.assigned_technician,

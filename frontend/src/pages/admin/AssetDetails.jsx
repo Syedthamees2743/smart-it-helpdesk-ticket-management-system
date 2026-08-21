@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
-import { Card, Row, Col, Button, Badge, Spinner, Table } from "react-bootstrap";
+import { Card, Row, Col, Button, Badge, Spinner } from "react-bootstrap";
 import {
   FiArrowLeft,
   FiEdit2,
@@ -9,6 +9,14 @@ import {
   FiTool,
   FiTrash2,
   FiPackage,
+  FiHash,
+  FiLayers,
+  FiCpu,
+  FiShield,
+  FiCalendar,
+  FiCheck,
+  FiAlertTriangle,
+  FiClock,
 } from "react-icons/fi";
 import { useAuth } from "../../context/AuthContext";
 import assetService from "../../services/assetService";
@@ -21,7 +29,8 @@ const AssetDetails = () => {
   const location = useLocation();
   const { user } = useAuth();
   const isAdmin = user?.role === "admin";
-  const isEmployee = user?.role === "employee" || location.pathname.startsWith("/employee");
+  const isEmployee =
+    user?.role === "employee" || location.pathname.startsWith("/employee");
 
   const [asset, setAsset] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -35,52 +44,22 @@ const AssetDetails = () => {
     fetchAsset();
   }, [id]);
 
-  const normalizeAssignmentData = (data) => {
-    const assetData = data.asset || {};
-    const categoryName =
-      data.category_name ||
-      assetData.category_name ||
-      assetData.category?.name ||
-      assetData.category?.category_name ||
-      "-";
-    const brand = data.brand || assetData.brand || assetData.make || "-";
-    const model = data.model || assetData.model || "-";
-    const serialNumber =
-      data.serial_number || assetData.serial_number || assetData.serialNumber || "-";
-
-    return {
-      ...data,
-      asset_code:
-        data.asset_code || assetData.asset_code || assetData.code || "-",
-      asset_name:
-        data.asset_name || assetData.asset_name || assetData.name || "Unknown Asset",
-      category_name: categoryName,
-      brand,
-      model,
-      serial_number: serialNumber,
-      purchase_date: data.purchase_date || assetData.purchase_date || assetData.purchased_date,
-      warranty_expiry:
-        data.warranty_expiry || assetData.warranty_expiry || assetData.warranty_expiry_date,
-      status: data.status || assetData.status || assetData.asset_status || "Unknown",
-      current_assignment: {
-        employee_name:
-          data.employee_name || data.asset?.employee_name || user?.name ||
-          user?.full_name || "You",
-        assigned_date: data.assigned_date || assetData.assigned_date,
-        return_date: data.return_date || assetData.return_date,
-      },
-    };
-  };
-
   const fetchAsset = async () => {
     setLoading(true);
     setError("");
     try {
-      const res = isEmployee
-        ? await assetService.getAssignmentById(id)
-        : await assetService.getAssetById(id);
-      const data = res.data;
-      setAsset(isEmployee ? normalizeAssignmentData(data) : data);
+      let data;
+      if (isEmployee) {
+        // Employee: get assignment detail (has all asset fields now)
+        const res = await assetService.getAssignmentById(id);
+        data = res.data;
+      } else {
+        // Admin: get asset detail directly
+        const res = await assetService.getAssetById(id);
+        data = res.data;
+      }
+      console.log("Asset Detail Data:", JSON.stringify(data, null, 2));
+      setAsset(data);
     } catch (err) {
       setError(
         err.response?.status === 404
@@ -90,6 +69,72 @@ const AssetDetails = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Extract field safely from both admin and employee response
+  const getField = (field) => {
+    if (!asset) return "-";
+    return asset[field] || "-";
+  };
+
+  const formatDate = (dateStr) => {
+    if (!dateStr || dateStr === "-") return "-";
+    return new Date(dateStr).toLocaleDateString("en-IN", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    });
+  };
+
+  // Warranty status
+  const getWarrantyInfo = () => {
+    const expiry = asset?.warranty_expiry || asset?.asset?.warranty_expiry;
+    if (!expiry) return null;
+    const diffDays = Math.ceil(
+      (new Date(expiry) - new Date()) / (1000 * 60 * 60 * 24),
+    );
+    if (diffDays < 0)
+      return {
+        text: "Expired",
+        color: "danger",
+        icon: <FiAlertTriangle size={12} />,
+      };
+    if (diffDays <= 30)
+      return {
+        text: `${diffDays} days left`,
+        color: "warning",
+        icon: <FiAlertTriangle size={12} />,
+      };
+    if (diffDays <= 90)
+      return {
+        text: `${diffDays} days left`,
+        color: "info",
+        icon: <FiClock size={12} />,
+      };
+    return {
+      text: `${diffDays} days left`,
+      color: "success",
+      icon: <FiCheck size={12} />,
+    };
+  };
+
+  const warrantyInfo = getWarrantyInfo();
+
+  const getStatusBadge = (status) => {
+    const s = (status || "").toLowerCase();
+    const config = {
+      available: { bg: "success", text: "Available" },
+      assigned: { bg: "primary", text: "Assigned" },
+      active: { bg: "primary", text: "Active" },
+      maintenance: { bg: "warning", text: "Maintenance" },
+      retired: { bg: "secondary", text: "Retired" },
+    };
+    const c = config[s] || { bg: "light", text: status || "Unknown" };
+    return (
+      <Badge bg={c.bg} className="px-3 py-2">
+        {c.text}
+      </Badge>
+    );
   };
 
   const handleUpdate = async (data) => {
@@ -116,41 +161,56 @@ const AssetDetails = () => {
     }
   };
 
-  const getStatusBadge = (status) => {
-    if (!status)
-      return <span className="badge bg-light text-dark">Unknown</span>;
-    let cls = "badge fs-6 ";
-    const s = status.toLowerCase();
-    const displayText =
-      status.charAt(0).toUpperCase() + status.slice(1).replace("_", " ");
-    switch (s) {
-      case "available":
-        cls += "bg-success-subtle text-success";
-        break;
-      case "assigned":
-        cls += "bg-primary-subtle text-primary";
-        break;
-      case "maintenance":
-        cls += "bg-warning-subtle text-warning";
-        break;
-      case "retired":
-        cls += "bg-secondary-subtle text-secondary";
-        break;
-      default:
-        cls += "bg-light text-dark";
-    }
-    return <span className={cls}>{displayText}</span>;
-  };
-
   if (loading)
     return (
       <div className="text-center py-5">
-        <Spinner animation="border" />
-        <p className="mt-2">Loading asset details...</p>
+        <Spinner animation="border" variant="primary" />
+        <p className="mt-2 text-muted">Loading asset details...</p>
       </div>
     );
   if (error) return <div className="alert alert-danger mt-4">{error}</div>;
   if (!asset) return null;
+
+  // Build info object from both admin & employee response formats
+  const info = {
+    asset_code: asset.asset_code || "-",
+    asset_name: asset.asset_name || asset.name || "Unknown Asset",
+    category_name: asset.category_name || "-",
+    brand: asset.brand || "-",
+    model: asset.model || "-",
+    serial_number: asset.serial_number || "-",
+    status: asset.asset_status || asset.status || "-",
+    purchase_date: asset.purchase_date || "-",
+    warranty_expiry: asset.warranty_expiry || "-",
+    // Assignment info
+    assigned_to:
+      asset.current_assignment?.employee_name || asset.employee_name || null,
+    assigned_date:
+      asset.current_assignment?.assigned_date || asset.assigned_date || null,
+    employee_id:
+      asset.current_assignment?.employee_id || asset.employee_id || null,
+    department:
+      asset.current_assignment?.employee_department ||
+      asset.employee_department ||
+      null,
+  };
+
+  const InfoBox = ({ icon, label, value, children }) => (
+    <div
+      className="p-3 rounded-3"
+      style={{ backgroundColor: "#f8f9fc", border: "1px solid #eef0f5" }}
+    >
+      <div className="d-flex align-items-center gap-2 mb-1">
+        <span style={{ color: "#6b7280" }}>{icon}</span>
+        <span className="text-muted small" style={{ fontSize: "0.75rem" }}>
+          {label}
+        </span>
+      </div>
+      <div className="fw-semibold text-dark" style={{ fontSize: "0.95rem" }}>
+        {children || value || "—"}
+      </div>
+    </div>
+  );
 
   return (
     <div>
@@ -159,11 +219,9 @@ const AssetDetails = () => {
         <Button variant="outline-secondary" onClick={() => navigate(-1)}>
           <FiArrowLeft className="me-1" /> Back
         </Button>
-
-        {/* ADMIN ONLY ACTIONS */}
         {isAdmin && (
           <div className="d-flex gap-2 flex-wrap">
-            {asset.status?.toLowerCase() === "available" && (
+            {info.status?.toLowerCase() === "available" && (
               <Button
                 variant="success"
                 onClick={() => {
@@ -171,10 +229,10 @@ const AssetDetails = () => {
                   setShowActionModal(true);
                 }}
               >
-                <FiUserCheck className="me-1" /> Assign Asset
+                <FiUserCheck className="me-1" /> Assign
               </Button>
             )}
-            {asset.status?.toLowerCase() === "assigned" && (
+            {info.status?.toLowerCase() === "assigned" && (
               <Button
                 variant="warning"
                 onClick={() => {
@@ -182,11 +240,10 @@ const AssetDetails = () => {
                   setShowActionModal(true);
                 }}
               >
-                <FiCornerUpLeft className="me-1" /> Return Asset
+                <FiCornerUpLeft className="me-1" /> Return
               </Button>
             )}
-            {(asset.status?.toLowerCase() === "available" ||
-              asset.status?.toLowerCase() === "assigned") && (
+            {["available", "assigned"].includes(info.status?.toLowerCase()) && (
               <Button
                 variant="info"
                 onClick={() => {
@@ -207,48 +264,126 @@ const AssetDetails = () => {
         )}
       </div>
 
-      <Row>
-        {/* Left Column - Main Info */}
+      <Row className="g-4">
+        {/* Left Column - Asset Info */}
         <Col lg={8}>
-          <Card className="shadow-sm mb-4 border-0">
-            <Card.Header className="bg-white fw-bold border-bottom">
-              <FiPackage className="me-2 text-primary" />
-              Asset Information
-            </Card.Header>
-            <Card.Body>
+          {/* Title Card */}
+          <Card className="shadow-sm border-0 mb-4 overflow-hidden">
+            <div
+              style={{
+                height: "4px",
+                background: "linear-gradient(90deg, #1a73e8, #4fc3f7)",
+              }}
+            />
+            <Card.Body className="p-4">
+              <div className="d-flex align-items-start gap-3 mb-4">
+                <div
+                  className="d-flex align-items-center justify-content-center rounded-3 flex-shrink-0"
+                  style={{
+                    width: "52px",
+                    height: "52px",
+                    backgroundColor: "#e8f0fe",
+                  }}
+                >
+                  <FiPackage size={26} style={{ color: "#1a73e8" }} />
+                </div>
+                <div className="flex-grow-1">
+                  <h4 className="fw-bold mb-1">{info.asset_name}</h4>
+                  <div className="d-flex align-items-center gap-2 flex-wrap">
+                    <span
+                      className="d-flex align-items-center gap-1 text-muted"
+                      style={{ fontSize: "0.85rem" }}
+                    >
+                      <FiHash size={14} /> {info.asset_code}
+                    </span>
+                    {getStatusBadge(info.status)}
+                  </div>
+                </div>
+              </div>
+
+              {/* Info Grid */}
               <Row className="g-3">
-                {[
-                  ["Asset Code", asset.asset_code],
-                  ["Asset Name", asset.asset_name || asset.name],
-                  ["Category", asset.category_name || "-"],
-                  ["Brand", asset.brand || "-"],
-                  ["Model", asset.model || "-"],
-                  ["Serial Number", asset.serial_number || "-"],
-                  ["Status", getStatusBadge(asset.status)],
-                  [
-                    "Purchase Date",
-                    asset.purchase_date
-                      ? new Date(asset.purchase_date).toLocaleDateString()
-                      : "-",
-                  ],
-                  [
-                    "Warranty Expiry",
-                    asset.warranty_expiry
-                      ? new Date(asset.warranty_expiry).toLocaleDateString()
-                      : "-",
-                  ],
-                ].map(([label, value], i) => (
-                  <Col md={6} key={i}>
-                    <p className="text-muted small mb-1">{label}</p>
-                    <p className="fw-semibold mb-0">{value}</p>
-                  </Col>
-                ))}
+                <Col md={6}>
+                  <InfoBox
+                    icon={<FiLayers size={14} />}
+                    label="Category"
+                    value={info.category_name}
+                  />
+                </Col>
+                <Col md={6}>
+                  <InfoBox
+                    icon={<FiCpu size={14} />}
+                    label="Brand"
+                    value={info.brand}
+                  />
+                </Col>
+                <Col md={6}>
+                  <InfoBox
+                    icon={<FiCpu size={14} />}
+                    label="Model"
+                    value={info.model}
+                  />
+                </Col>
+                <Col md={6}>
+                  <InfoBox icon={<FiShield size={14} />} label="Serial Number">
+                    <span className="text-uppercase">{info.serial_number}</span>
+                  </InfoBox>
+                </Col>
+                <Col md={6}>
+                  <InfoBox
+                    icon={<FiCalendar size={14} />}
+                    label="Purchase Date"
+                    value={formatDate(info.purchase_date)}
+                  />
+                </Col>
+                <Col md={6}>
+                  <div
+                    className="p-3 rounded-3"
+                    style={{
+                      backgroundColor: "#f8f9fc",
+                      border: "1px solid #eef0f5",
+                    }}
+                  >
+                    <div className="d-flex align-items-center gap-2 mb-1">
+                      <span style={{ color: "#6b7280" }}>
+                        <FiShield size={14} />
+                      </span>
+                      <span
+                        className="text-muted small"
+                        style={{ fontSize: "0.75rem" }}
+                      >
+                        Warranty Expiry
+                      </span>
+                    </div>
+                    <div className="d-flex justify-content-between align-items-center">
+                      <span
+                        className="fw-semibold text-dark"
+                        style={{ fontSize: "0.95rem" }}
+                      >
+                        {formatDate(info.warranty_expiry)}
+                      </span>
+                      {warrantyInfo && (
+                        <span
+                          className={`d-flex align-items-center gap-1 px-2 py-1 rounded-pill`}
+                          style={{
+                            fontSize: "0.72rem",
+                            fontWeight: 600,
+                            color: `var(--bs-${warrantyInfo.color})`,
+                            backgroundColor: `var(--bs-${warrantyInfo.color})10`,
+                          }}
+                        >
+                          {warrantyInfo.icon} {warrantyInfo.text}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </Col>
               </Row>
             </Card.Body>
           </Card>
         </Col>
 
-        {/* Right Column - Assignment Info */}
+        {/* Right Column - Assignment */}
         <Col lg={4}>
           <Card
             className="shadow-sm border-0 h-100"
@@ -257,47 +392,48 @@ const AssetDetails = () => {
             <Card.Header className="bg-transparent fw-bold border-bottom d-flex align-items-center gap-2">
               <span className="text-primary">●</span> Assignment Info
             </Card.Header>
-            <Card.Body className="d-flex flex-column justify-content-center">
-              {asset.current_assignment ? (
+            <Card.Body className="d-flex flex-column justify-content-center py-4">
+              {info.assigned_to ? (
                 <div className="text-center">
-                  {/* Profile Icon */}
                   <div
-                    className="bg-white shadow-sm rounded-circle d-inline-flex align-items-center justify-content-center mb-3 p-3"
+                    className="bg-white shadow-sm rounded-circle d-inline-flex align-items-center justify-content-center mb-3"
                     style={{ width: "80px", height: "80px" }}
                   >
                     <FiUserCheck size={32} className="text-primary" />
                   </div>
-
-                  <h4 className="fw-bold mb-2">
-                    {asset.current_assignment.employee_name}
-                  </h4>
+                  <h5 className="fw-bold mb-1">{info.assigned_to}</h5>
+                  {info.employee_id && (
+                    <p className="text-muted small mb-2">
+                      ID: {info.employee_id}
+                    </p>
+                  )}
+                  {info.department && (
+                    <Badge bg="light" text="dark" className="border mb-3">
+                      {info.department}
+                    </Badge>
+                  )}
                   <Badge
                     bg="success"
-                    className="px-3 py-2 rounded-pill mb-4 shadow-sm"
+                    className="px-3 py-2 rounded-pill shadow-sm mb-4"
                   >
                     Currently Assigned
                   </Badge>
-
-                  {/* Date Info Inner Card */}
                   <div className="bg-white p-3 rounded-3 shadow-sm text-start">
                     <div className="d-flex justify-content-between align-items-center">
                       <span className="text-muted small">Assigned Date</span>
                       <span className="fw-bold text-dark">
-                        {new Date(
-                          asset.current_assignment.assigned_date,
-                        ).toLocaleDateString()}
+                        {formatDate(info.assigned_date)}
                       </span>
                     </div>
                   </div>
                 </div>
               ) : (
-                <div className="text-center py-4 text-muted">
-                  {/* Empty State Icon */}
+                <div className="text-center py-3 text-muted">
                   <div
-                    className="bg-white shadow-sm rounded-circle d-inline-flex align-items-center justify-content-center mb-3 p-3"
+                    className="bg-white shadow-sm rounded-circle d-inline-flex align-items-center justify-content-center mb-3"
                     style={{ width: "80px", height: "80px" }}
                   >
-                    <FiPackage size={32} className="text-muted opacity-50" />
+                    <FiPackage size={32} className="opacity-50" />
                   </div>
                   <h5 className="fw-bold text-dark mb-1">Available</h5>
                   <small className="opacity-75">
@@ -310,7 +446,7 @@ const AssetDetails = () => {
         </Col>
       </Row>
 
-      {/* Modals (Only accessible to Admins) */}
+      {/* Modals */}
       {isAdmin && (
         <>
           <AssetFormModal

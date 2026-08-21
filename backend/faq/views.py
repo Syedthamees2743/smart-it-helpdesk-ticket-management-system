@@ -2,6 +2,7 @@ from rest_framework import viewsets, status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.exceptions import PermissionDenied
+from rest_framework.pagination import PageNumberPagination
 from .models import FAQ
 from .serializers import (
     FAQListSerializer,
@@ -11,14 +12,16 @@ from .serializers import (
 from accounts.permissions import IsAdminOrReadOnly
 
 
+class FAQPagination(PageNumberPagination):
+    page_size = 10
+    page_size_query_param = 'page_size'
+    max_page_size = 100
+
+
 class FAQViewSet(viewsets.ModelViewSet):
-    """
-    Admin: Full CRUD on all FAQs.
-    Employee/Technician: Read-only, active FAQs only.
-    """
 
     permission_classes = [IsAuthenticated, IsAdminOrReadOnly]
-    pagination_class = None
+    pagination_class = FAQPagination
 
     search_fields = ("question", "answer")
     filterset_fields = ("category", "status")
@@ -34,23 +37,19 @@ class FAQViewSet(viewsets.ModelViewSet):
                 return FAQCreateUpdateSerializer
             return FAQDetailSerializer
         else:
-            # Employee/Technician: always return full details including answer
             return FAQDetailSerializer
 
     def get_queryset(self):
         user = self.request.user
         if user.role == "admin":
             return FAQ.objects.all()
-        # Employee and Technician see ONLY active FAQs
         return FAQ.objects.filter(status="active")
 
     def perform_create(self, serializer):
-        # Auto-attach the admin who created it
         serializer.save(created_by=self.request.user)
 
     def check_object_permissions(self, request, obj):
         super().check_object_permissions(request, obj)
-        # Extra safety: block employees/technicians from modify/delete even if URL is guessed
         if (
             request.method in ("PUT", "PATCH", "DELETE")
             and request.user.role != "admin"

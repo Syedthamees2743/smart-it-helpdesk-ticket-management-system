@@ -1,5 +1,6 @@
 import { NavLink } from "react-router-dom";
 import { Nav } from "react-bootstrap";
+
 import {
   FaTachometerAlt,
   FaUsers,
@@ -15,11 +16,16 @@ import {
   FaBell,
   FaSignOutAlt,
 } from "react-icons/fa";
+
 import { FiHelpCircle } from "react-icons/fi";
 import { useAuth } from "../../context/AuthContext";
 
 const Sidebar = ({ role, mobile, onClick }) => {
   const { logout } = useAuth();
+
+  // =========================================================
+  // MENU
+  // =========================================================
 
   const menus = {
     admin: [
@@ -29,44 +35,81 @@ const Sidebar = ({ role, mobile, onClick }) => {
         label: "Dashboard",
         end: true,
       },
-      { path: "/admin/users", icon: <FaUsers />, label: "Users" },
+
+      {
+        path: "/admin/users",
+        icon: <FaUsers />,
+        label: "Users",
+      },
+
       {
         path: "/admin/departments",
         icon: <FaBuilding />,
         label: "Departments",
       },
+
       {
         path: "/admin/categories",
         icon: <FaListAlt />,
         label: "Issue Categories",
       },
-      { path: "/admin/tickets", icon: <FaTicketAlt />, label: "Tickets" },
+
+      {
+        path: "/admin/tickets",
+        icon: <FaTicketAlt />,
+        label: "Tickets",
+      },
+
       {
         path: "/admin/tickets/:id",
         icon: <FaTicketAlt />,
         label: "Ticket Details",
         hidden: true,
       },
-      { path: "/admin/assets", icon: <FaLaptop />, label: "Assets" },
+
+      {
+        path: "/admin/assets",
+        icon: <FaLaptop />,
+        label: "Assets",
+      },
+
       {
         path: "/admin/asset-categories",
         icon: <FaListAlt />,
         label: "Asset Categories",
       },
-      { path: "/admin/faqs", icon: <FaQuestionCircle />, label: "FAQ / KB" },
-      { path: "/admin/feedbacks", icon: <FaComments />, label: "Feedback" },
+
+      {
+        path: "/admin/faqs",
+        icon: <FaQuestionCircle />,
+        label: "FAQ / KB",
+      },
+
+      {
+        path: "/admin/feedbacks",
+        icon: <FaComments />,
+        label: "Feedback",
+      },
+
       {
         path: "/admin/notifications",
         icon: <FaBell />,
         label: "Notifications",
       },
+
       {
         path: "/admin/technician-performance",
         icon: <FaTachometerAlt />,
         label: "Tech Performance",
       },
-      { path: "/admin/reports", icon: <FaStar />, label: "Reports" },
+
+      {
+        path: "/admin/reports",
+        icon: <FaStar />,
+        label: "Reports",
+      },
     ],
+
     employee: [
       {
         path: "/employee",
@@ -74,24 +117,38 @@ const Sidebar = ({ role, mobile, onClick }) => {
         label: "Dashboard",
         end: true,
       },
+
       {
         path: "/employee/tickets/new",
         icon: <FaTicketAlt />,
         label: "Raise Complaint",
       },
-      { path: "/employee/tickets", icon: <FaListAlt />, label: "My Tickets" },
-      { path: "/employee/assets", icon: <FaLaptop />, label: "My Assets" },
+
+      {
+        path: "/employee/tickets",
+        icon: <FaListAlt />,
+        label: "My Tickets",
+      },
+
+      {
+        path: "/employee/assets",
+        icon: <FaLaptop />,
+        label: "My Assets",
+      },
+
       {
         path: "/employee/notifications",
         icon: <FaBell />,
         label: "Notifications",
       },
+
       {
         path: "/employee/faqs",
         icon: <FaQuestionCircle />,
         label: "Knowledge Base",
       },
     ],
+
     technician: [
       {
         path: "/technician",
@@ -99,21 +156,25 @@ const Sidebar = ({ role, mobile, onClick }) => {
         label: "Dashboard",
         end: true,
       },
+
       {
         path: "/technician/tickets",
         icon: <FaTicketAlt />,
         label: "Assigned Tickets",
       },
+
       {
         path: "/technician/performance",
         icon: <FaTachometerAlt />,
         label: "My Performance",
       },
+
       {
         path: "/technician/notifications",
         icon: <FaBell />,
         label: "Notifications",
       },
+
       {
         path: "/technician/faqs",
         icon: <FaQuestionCircle />,
@@ -124,101 +185,137 @@ const Sidebar = ({ role, mobile, onClick }) => {
 
   const currentMenu = menus[role] || [];
 
+  // =========================================================
+  // CLOSE MOBILE SIDEBAR
+  // =========================================================
+
   const handleClose = () => {
-    if (onClick) onClick();
+    if (onClick) {
+      onClick();
+    }
   };
 
+  // =========================================================
+  // LOGOUT
+  // =========================================================
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+    } catch (error) {
+      console.error("Logout error:", error);
+    }
+
+    handleClose();
+  };
+
+  // =========================================================
+  // RENDER
+  // =========================================================
+
   return (
-    <div className="d-flex flex-column h-100 bg-dark">
-      {/* ── LOGO — Fixed Top ── */}
-      <div
-        className="p-3 border-bottom border-secondary text-center"
-        style={{ flexShrink: 0 }}
-      >
-        <h5 className="text-white mb-0 fw-bold">IT Service Desk</h5>
-        <small
-          className="text-secondary text-uppercase"
-          style={{ fontSize: "0.7rem" }}
-        >
-          Management Portal
+    <div className="sidebar-wrapper">
+
+      {/* =====================================================
+          LOGO
+          ===================================================== */}
+      <div className="sidebar-logo">
+        <h5>IT Service Desk</h5>
+
+        <small>
+          MANAGEMENT PORTAL
         </small>
       </div>
 
-      {/* ── NAV LINKS — Scrollable Middle ── */}
-      <div
-        className="sidebar-nav-scroll flex-grow-1"
-        style={{ minHeight: 0, overflowY: "auto" }}
-      >
+      {/* =====================================================
+          MAIN NAVIGATION
+          ===================================================== */}
+      <div className="sidebar-nav-scroll">
+
         <Nav className="flex-column p-2">
+
           {currentMenu
             .filter((item) => !item.hidden)
-            .map((item, idx) => (
+            .map((item, index) => (
               <NavLink
-                key={idx}
+                key={index}
                 to={item.path}
                 end={item.end}
                 className={({ isActive }) =>
-                  `sidebar-link ${isActive ? "active" : ""}`
+                  `sidebar-link ${
+                    isActive ? "active" : ""
+                  }`
                 }
                 onClick={handleClose}
               >
-                {item.icon}
-                {item.label}
+                <span className="sidebar-icon">
+                  {item.icon}
+                </span>
+
+                <span>{item.label}</span>
               </NavLink>
             ))}
+
         </Nav>
       </div>
 
-      {/* ── BOTTOM BAR — Fixed Bottom (Help / Settings / Profile / Logout) ── */}
-      <div
-        className="border-top border-secondary"
-        style={{ flexShrink: 0, backgroundColor: "rgba(0,0,0,0.2)" }}
-      >
+      {/* =====================================================
+          BOTTOM MENU
+          ===================================================== */}
+      <div className="sidebar-bottom">
+
+        {/* Help */}
         <NavLink
           to={`/${role}/help`}
           className={({ isActive }) =>
-            `sidebar-link d-block ${isActive ? "active" : ""}`
+            `sidebar-link bottom-link ${
+              isActive ? "active" : ""
+            }`
           }
           onClick={handleClose}
-          style={{ borderRadius: 0, paddingLeft: "1.5rem" }}
         >
-          <FiHelpCircle /> Help & Support
+          <FiHelpCircle />
+          <span>Help & Support</span>
         </NavLink>
+
+        {/* Settings */}
         <NavLink
           to={`/${role}/settings`}
           className={({ isActive }) =>
-            `sidebar-link d-block ${isActive ? "active" : ""}`
+            `sidebar-link bottom-link ${
+              isActive ? "active" : ""
+            }`
           }
           onClick={handleClose}
-          style={{ borderRadius: 0, paddingLeft: "1.5rem" }}
         >
-          <FaCog /> Settings
+          <FaCog />
+          <span>Settings</span>
         </NavLink>
+
+        {/* Profile */}
         <NavLink
           to={`/${role}/profile`}
           className={({ isActive }) =>
-            `sidebar-link d-block ${isActive ? "active" : ""}`
+            `sidebar-link bottom-link ${
+              isActive ? "active" : ""
+            }`
           }
           onClick={handleClose}
-          style={{ borderRadius: 0, paddingLeft: "1.5rem" }}
         >
-          <FaUserEdit /> My Profile
+          <FaUserEdit />
+          <span>My Profile</span>
         </NavLink>
-        <div
-          className="sidebar-link d-block"
-          style={{
-            borderRadius: 0,
-            paddingLeft: "1.5rem",
-            cursor: "pointer",
-            color: "#f87171",
-          }}
-          onClick={() => {
-            logout();
-            handleClose();
-          }}
+
+        {/* Logout */}
+        <button
+          type="button"
+          className="sidebar-logout"
+          onClick={handleLogout}
         >
-          <FaSignOutAlt className="me-2" /> Logout
-        </div>
+          <FaSignOutAlt />
+          <span>Logout</span>
+        </button>
+
       </div>
     </div>
   );

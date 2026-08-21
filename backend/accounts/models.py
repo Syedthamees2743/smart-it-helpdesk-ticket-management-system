@@ -1,7 +1,3 @@
-"""
-Custom User Model for Smart IT Service Desk
-"""
-
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 
@@ -15,25 +11,7 @@ ROLE_CHOICES = (
 
 
 class User(AbstractUser):
-    """
-    Custom User model that extends Django's AbstractUser.
     
-    AbstractUser already includes:
-    - username
-    - password
-    - first_name
-    - last_name
-    - email
-    - is_staff
-    - is_active
-    - is_superuser
-    - last_login
-    - date_joined
-    
-    We add our custom fields below.
-    """
-    
-    # Role field - determines what the user can do
     role = models.CharField(
         max_length=20,
         choices=ROLE_CHOICES,
@@ -42,7 +20,6 @@ class User(AbstractUser):
         help_text='Select the role of this user'
     )
     
-    # Phone number - optional field
     phone_number = models.CharField(
         max_length=15,
         blank=True,
@@ -51,7 +28,6 @@ class User(AbstractUser):
         help_text='Enter phone number with country code'
     )
     
-    # Profile image - for user avatar
     profile_image = models.ImageField(
         upload_to='profile_images/',
         blank=True,
@@ -60,14 +36,12 @@ class User(AbstractUser):
         help_text='Upload a profile picture'
     )
     
-    # created_at - when the user was created
     created_at = models.DateTimeField(
         auto_now_add=True,
         verbose_name='Created At',
         help_text='Timestamp when user was created'
     )
     
-    # updated_at - last time user was modified
     updated_at = models.DateTimeField(
         auto_now=True,
         verbose_name='Updated At',
@@ -75,25 +49,14 @@ class User(AbstractUser):
     )
     
     class Meta:
-        """
-        Meta options for the User model.
-        """
         verbose_name = 'User'
         verbose_name_plural = 'Users'
-        ordering = ['-date_joined']  # Newest users first
+        ordering = ['-date_joined']  
     
     def __str__(self):
-        """
-        String representation of the User.
-        This is what shows in Django Admin and dropdowns.
-        """
         return f"{self.get_full_name()} ({self.get_role_display()})"
 
 class EmployeeProfile(models.Model):
-    """
-    Additional profile information for employees.
-    OneToOneField because each user can have only one employee profile.
-    """
     
     user = models.OneToOneField(
         User,
@@ -143,10 +106,6 @@ class EmployeeProfile(models.Model):
 
 
 class TechnicianProfile(models.Model):
-    """
-    Additional profile information for technicians.
-    OneToOneField because each user can have only one technician profile.
-    """
     
     user = models.OneToOneField(
         User,

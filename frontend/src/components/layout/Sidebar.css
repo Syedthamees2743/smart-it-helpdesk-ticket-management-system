@@ -1,43 +1,78 @@
-/* ========================================
-   SIDEBAR STYLES
-   ======================================== */
+/* =========================================================
+   SIDEBAR WRAPPER
+   ========================================================= */
 
-.sidebar-link {
+.sidebar-wrapper {
+  width: 260px;
+  height: 100vh;
+
   display: flex;
+  flex-direction: column;
+
+  background-color: #212529;
+  color: #ffffff;
+
+  overflow: hidden;
+}
+
+
+/* =========================================================
+   LOGO
+   ========================================================= */
+
+.sidebar-logo {
+  height: 98px;
+
+  flex-shrink: 0;
+
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
   align-items: center;
-  gap: 0.6rem;
-  padding: 0.55rem 1rem;
-  color: #9ca3af;
-  text-decoration: none;
-  border-radius: 0.5rem;
-  margin-bottom: 2px;
-  font-size: 0.88rem;
-  transition: all 0.15s ease;
-  white-space: nowrap;
+
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
 }
 
-.sidebar-link:hover {
-  background-color: rgba(255, 255, 255, 0.08);
+.sidebar-logo h5 {
+  margin: 0;
+
   color: #ffffff;
+
+  font-size: 1.35rem;
+  font-weight: 700;
 }
 
-.sidebar-link.active {
-  background-color: #4f46e5;
-  color: #ffffff;
-  font-weight: 500;
+.sidebar-logo small {
+  margin-top: 5px;
+
+  color: #6c757d;
+
+  font-size: 0.7rem;
+  letter-spacing: 0.5px;
 }
 
-/* ========================================
-   SCROLLABLE NAV AREA
-   ======================================== */
+
+/* =========================================================
+   SCROLLABLE MAIN NAVIGATION
+   ========================================================= */
 
 .sidebar-nav-scroll {
+  flex: 1;
+
+  min-height: 0;
+
   overflow-y: auto;
   overflow-x: hidden;
-  -webkit-overflow-scrolling: touch;
+
+  padding-top: 6px;
+  padding-bottom: 6px;
+
   scrollbar-width: thin;
   scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
 }
+
+
+/* Chrome scrollbar */
 
 .sidebar-nav-scroll::-webkit-scrollbar {
   width: 4px;
@@ -56,18 +91,180 @@
   background-color: rgba(255, 255, 255, 0.4);
 }
 
-/* Mobile: slightly wider scrollbar for touch */
+
+/* =========================================================
+   SIDEBAR LINKS
+   ========================================================= */
+
+.sidebar-link {
+  display: flex;
+
+  align-items: center;
+
+  gap: 0.65rem;
+
+  padding: 0.55rem 0.9rem;
+
+  margin: 2px 0;
+
+  color: #9ca3af;
+
+  text-decoration: none;
+
+  border-radius: 0.5rem;
+
+  font-size: 0.88rem;
+
+  font-weight: 400;
+
+  white-space: nowrap;
+
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease;
+}
+
+
+/* =========================================================
+   ICON
+   ========================================================= */
+
+.sidebar-link svg {
+  width: 16px;
+  min-width: 16px;
+
+  font-size: 0.9rem;
+}
+
+
+/* =========================================================
+   HOVER
+   ========================================================= */
+
+.sidebar-link:hover {
+  background-color: rgba(255, 255, 255, 0.08);
+
+  color: #ffffff;
+}
+
+
+/* =========================================================
+   ACTIVE
+   ========================================================= */
+
+.sidebar-link.active {
+  background-color: #4f46e5;
+
+  color: #ffffff;
+
+  font-weight: 600;
+}
+
+
+/* =========================================================
+   BOTTOM SECTION
+   ========================================================= */
+
+.sidebar-bottom {
+  flex-shrink: 0;
+
+  border-top: 1px solid rgba(255, 255, 255, 0.25);
+
+  padding: 7px 8px 8px;
+
+  background-color: rgba(0, 0, 0, 0.18);
+}
+
+
+/* Bottom links */
+
+.sidebar-bottom .sidebar-link {
+  margin: 1px 0;
+
+  padding: 0.48rem 0.75rem;
+
+  border-radius: 0.4rem;
+}
+
+
+/* =========================================================
+   LOGOUT BUTTON
+   ========================================================= */
+
+.sidebar-logout {
+  width: 100%;
+
+  display: flex;
+
+  align-items: center;
+
+  gap: 0.65rem;
+
+  padding: 0.48rem 0.75rem;
+
+  margin-top: 1px;
+
+  border: none;
+
+  border-radius: 0.4rem;
+
+  background: transparent;
+
+  color: #f87171;
+
+  font-size: 0.88rem;
+
+  text-align: left;
+
+  cursor: pointer;
+
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease;
+}
+
+.sidebar-logout svg {
+  width: 16px;
+  min-width: 16px;
+}
+
+.sidebar-logout:hover {
+  background-color: rgba(248, 113, 113, 0.12);
+
+  color: #ff6b6b;
+}
+
+
+/* =========================================================
+   MOBILE
+   ========================================================= */
+
 @media (max-width: 767.98px) {
-  .sidebar-nav-scroll {
-    scrollbar-width: thin;
-    scrollbar-color: rgba(255, 255, 255, 0.35) transparent;
+
+  .sidebar-wrapper {
+    width: 260px;
+    height: 100%;
   }
 
-  .sidebar-nav-scroll::-webkit-scrollbar {
-    width: 5px;
+  .sidebar-logo {
+    height: 70px;
   }
 
-  .sidebar-nav-scroll::-webkit-scrollbar-thumb {
-    background-color: rgba(255, 255, 255, 0.35);
+  .sidebar-logo h5 {
+    font-size: 1rem;
+  }
+
+  .sidebar-logo small {
+    font-size: 0.6rem;
+  }
+
+  .sidebar-link {
+    font-size: 0.82rem;
+
+    padding: 0.48rem 0.75rem;
+  }
+
+  .sidebar-bottom {
+    padding-bottom: 6px;
   }
 }

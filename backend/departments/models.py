@@ -1,23 +1,20 @@
-"""
-Department models for Smart IT Service Desk
-"""
 
 from django.db import models
 
 
-# Status choices for department
 STATUS_CHOICES = (
     ('active', 'Active'),
     ('inactive', 'Inactive'),
 )
 
+DEPARTMENT_TYPE_CHOICES = (
+    ('employee', 'Employee'),
+    ('technician', 'Technician'),
+    ('both', 'Both'),
+)
+
 
 class Department(models.Model):
-    """
-    Represents a department in the organization.
-    Examples: IT, HR, Finance, Marketing, Operations
-    """
-    
     name = models.CharField(
         max_length=100,
         unique=True,
@@ -32,6 +29,14 @@ class Department(models.Model):
         help_text='Brief description of the department'
     )
     
+    department_type = models.CharField(
+        max_length=20,
+        choices=DEPARTMENT_TYPE_CHOICES,
+        default='both',
+        verbose_name='Department Type',
+        help_text='Which role can use this department'
+    )
+    
     status = models.CharField(
         max_length=20,
         choices=STATUS_CHOICES,
@@ -40,15 +45,12 @@ class Department(models.Model):
         help_text='Whether the department is active or inactive'
     )
     
-    created_at = models.DateTimeField(
-        auto_now_add=True,
-        verbose_name='Created At'
-    )
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='Created At')
     
     class Meta:
         verbose_name = 'Department'
         verbose_name_plural = 'Departments'
-        ordering = ['name']  # Alphabetical order
+        ordering = ['name']
     
     def __str__(self):
-        return self.name
+        return f"{self.name} ({self.get_department_type_display()})"

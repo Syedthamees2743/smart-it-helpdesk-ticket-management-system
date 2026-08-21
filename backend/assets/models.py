@@ -1,12 +1,7 @@
-"""
-Asset models for Smart IT Service Desk
-"""
-
 from django.db import models
 from django.conf import settings
 
 
-# Updated Status choices as per your request
 ASSET_STATUS_CHOICES = (
     ('available', 'Available'),
     ('assigned', 'Assigned'),
@@ -23,6 +18,7 @@ ASSIGNMENT_STATUS_CHOICES = (
 class AssetCategory(models.Model):
     name = models.CharField(max_length=100, unique=True, verbose_name='Category Name')
     description = models.TextField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='Created At')  
 
     class Meta:
         verbose_name = 'Asset Category'
@@ -41,8 +37,6 @@ class Asset(models.Model):
     
     brand = models.CharField(max_length=100, blank=True, null=True)
     model = models.CharField(max_length=100, blank=True, null=True)
-    
-    # NEW FIELD ADDED
     serial_number = models.CharField(max_length=100, blank=True, null=True, verbose_name='Serial Number')
     
     purchase_date = models.DateField(blank=True, null=True)

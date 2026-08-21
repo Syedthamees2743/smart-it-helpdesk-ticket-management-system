@@ -24,22 +24,16 @@ from .serializers import EmployeeProfileSerializer, TechnicianProfileSerializer
 User = get_user_model()
 
 
-# ==========================================
-# AUTHENTICATION VIEWS
-# ==========================================
-
-
 class RegisterView(generics.CreateAPIView):
     queryset = User.objects.all()
     serializer_class = RegisterSerializer
-    permission_classes = [permissions.AllowAny]  # Public endpoint
+    permission_classes = [permissions.AllowAny]
 
 
 class CurrentUserView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request):
-        # request.user is automatically set by JWT authentication
         serializer = UserSerializer(request.user)
         return Response(serializer.data)
 
@@ -49,11 +43,9 @@ class LogoutView(APIView):
 
     def post(self, request):
         try:
-            # Get the refresh token from the request body
             refresh_token = request.data["refresh"]
             token = RefreshToken(refresh_token)
 
-            # Blacklist the token
             token.blacklist()
 
             return Response({"message": "Logout successful"}, status=status.HTTP_200_OK)
@@ -69,17 +61,11 @@ class LogoutView(APIView):
             )
 
 
-# ==========================================
-# USER MANAGEMENT VIEWS (ADMIN ONLY)
-# ==========================================
-
-
 class UserManagementView(generics.ListCreateAPIView):
     queryset = User.objects.all().order_by("-date_joined")
     serializer_class = RegisterSerializer
     permission_classes = [IsAdmin]
 
-    # DAY 12: Enable backend search and filtering (inherits filter_backends from settings.py)
     search_fields = ("username", "first_name", "last_name", "email")
     filterset_fields = ("role", "is_active")
     ordering_fields = ("username", "first_name", "date_joined")
@@ -97,7 +83,6 @@ class UserDetailView(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = [IsAdmin]
 
     def destroy(self, request, *args, **kwargs):
-        # Instead of actually deleting from DB, we just deactivate the user
         user = self.get_object()
         user.is_active = False
         user.save()
@@ -125,16 +110,7 @@ class ToggleUserStatusView(APIView):
                 {"error": "User not found"}, status=status.HTTP_404_NOT_FOUND
             )
 
-# ==========================================
-# OWN PROFILE UPDATE & CHANGE PASSWORD
-# ==========================================
-
-
 class UpdateOwnProfileView(APIView):
-    """
-    Any logged-in user can update their own first_name, last_name, email, phone_number.
-    Uses request.user — no ID from frontend needed.
-    """
     permission_classes = [permissions.IsAuthenticated]
     parser_classes = [MultiPartParser, FormParser, JSONParser]
 
@@ -144,7 +120,6 @@ class UpdateOwnProfileView(APIView):
 
     def patch(self, request):
         user = request.user
-        # Only allow these 4 fields + profile_image
         allowed_fields = ['first_name', 'last_name', 'email', 'phone_number', 'profile_image']
         data = {}
         for field in allowed_fields:
@@ -165,9 +140,6 @@ class UpdateOwnProfileView(APIView):
 
 
 class ChangePasswordView(APIView):
-    """
-    Any logged-in user can change their own password.
-    """
     permission_classes = [permissions.IsAuthenticated]
 
     def post(self, request):
@@ -197,7 +169,7 @@ class ChangePasswordView(APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        # Validate password strength (Django's built-in validators)
+        # Validate password strength 
         from django.contrib.auth.password_validation import validate_password
         try:
             validate_password(new_password, user=user)
@@ -220,17 +192,11 @@ class ChangePasswordView(APIView):
 
         return Response({"success": True, "message": "Password changed successfully."})
 
-# ==========================================
-# PROFILE VIEWS
-# ==========================================
-
-
 class EmployeeProfileView(APIView):
     permission_classes = [permissions.IsAuthenticated]
     parser_classes = [MultiPartParser, FormParser]  # Required for image upload
 
     def get(self, request):
-        # If admin, they can pass ?user_id=X to see a specific profile
         if request.user.role == "admin":
             user_id = request.query_params.get("user_id")
             if user_id:
@@ -256,7 +222,6 @@ class EmployeeProfileView(APIView):
             )
 
     def put(self, request):
-        """Update employee profile"""
         try:
             profile = EmployeeProfile.objects.get(user=request.user)
             serializer = EmployeeProfileSerializer(
@@ -302,7 +267,6 @@ class TechnicianProfileView(APIView):
             )
 
     def put(self, request):
-        """Update technician profile"""
         try:
             profile = TechnicianProfile.objects.get(user=request.user)
             serializer = TechnicianProfileSerializer(
@@ -325,7 +289,6 @@ class UpdateProfileImageView(APIView):
 
     def put(self, request):
         user = request.user
-        # Get the image from the request (key should be 'profile_image')
         if "profile_image" not in request.data:
             return Response(
                 {"error": "No image provided"}, status=status.HTTP_400_BAD_REQUEST
@@ -338,39 +301,25 @@ class UpdateProfileImageView(APIView):
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
-# ==========================================
-# UPGRADED PROFILE VIEWSETS (CORRECTED)
-# ==========================================
-
-
 class EmployeeProfileViewSet(viewsets.ModelViewSet):
-    """
-    Employee can view and update their OWN profile.
-    """
 
     serializer_class = EmployeeProfileSerializer
     permission_classes = [permissions.IsAuthenticated]
     parser_classes = [MultiPartParser, FormParser, JSONParser]
 
-    # FIX 1: Explicitly tell Django which HTTP methods are allowed.
-    # We remove 'post' (create) and 'delete' (destroy).
+
     http_method_names = ["get", "put", "patch"]
 
-    # FIX 2: Only return the profile of the logged-in user.
     def get_queryset(self):
         return EmployeeProfile.objects.filter(user=self.request.user)
 
 
 class TechnicianProfileViewSet(viewsets.ModelViewSet):
-    """
-    Technician can view and update their OWN profile.
-    """
 
     serializer_class = TechnicianProfileSerializer
     permission_classes = [permissions.IsAuthenticated]
     parser_classes = [MultiPartParser, FormParser, JSONParser]
 
-    # Only allow viewing and updating
     http_method_names = ["get", "put", "patch"]
 
     def get_queryset(self):
@@ -378,10 +327,6 @@ class TechnicianProfileViewSet(viewsets.ModelViewSet):
 
 
 class UserRoleProfileView(APIView):
-    """
-    Admin can view and update employee/technician profile fields
-    like department, employee_id, designation, specialization.
-    """
     permission_classes = [IsAdmin]
     parser_classes = [MultiPartParser, FormParser, JSONParser]
 
@@ -416,7 +361,6 @@ class UserRoleProfileView(APIView):
             try:
                 profile = EmployeeProfile.objects.get(user=user)
             except EmployeeProfile.DoesNotExist:
-                # Auto-create if missing
                 profile = EmployeeProfile.objects.create(user=user)
             serializer = EmployeeProfileSerializer(profile, data=request.data, partial=True)
         elif user.role == 'technician':
@@ -433,10 +377,6 @@ class UserRoleProfileView(APIView):
             return Response({"success": True, "data": serializer.data})
         return Response({"success": False, "error": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
 
-    
-# ==========================================
-# AUTO-CREATE PROFILE ON USER CREATION
-# ==========================================
 
 @receiver(post_save, sender=User)
 def create_user_profile(sender, instance, created, **kwargs):

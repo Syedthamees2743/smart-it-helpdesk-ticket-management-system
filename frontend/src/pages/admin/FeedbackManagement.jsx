@@ -67,7 +67,9 @@ const FeedbackManagement = () => {
       search === '' ||
       (f.ticket_number || '').toLowerCase().includes(searchLower) ||
       (f.employee_name || '').toLowerCase().includes(searchLower) ||
+      (f.employee_id || '').toLowerCase().includes(searchLower) ||
       (f.technician_name || '').toLowerCase().includes(searchLower) ||
+      (f.technician_id || '').toLowerCase().includes(searchLower) ||
       (f.review || '').toLowerCase().includes(searchLower);
     const matchesRating =
       ratingFilter === '' || f.rating === parseInt(ratingFilter);
@@ -115,6 +117,31 @@ const FeedbackManagement = () => {
     if (r === 4) return 'Good';
     if (r === 5) return 'Excellent';
     return '';
+  };
+
+  const empLabel = (f) => {
+    const id = f.employee_id ? `  ${f.employee_id}` : "";
+    const dept = f.employee_department ? ` - ${f.employee_department}` : "";
+    const sub = [id, dept].filter(Boolean).join("");
+    return (
+      <div>
+        <div className="fw-semibold">{f.employee_name}</div>
+        {sub && <div className="text-muted" style={{ fontSize: "0.75rem" }}>{sub}</div>}
+      </div>
+    );
+  };
+
+  const techLabel = (f) => {
+    if (!f.technician_name) return <span className="text-muted fst-italic">Unassigned</span>;
+    const id = f.technician_id ? `  ${f.technician_id}` : "";
+    const dept = f.technician_department ? ` - ${f.technician_department}` : "";
+    const sub = [id, dept].filter(Boolean).join("");
+    return (
+      <div>
+        <div className="fw-semibold">{f.technician_name}</div>
+        {sub && <div className="text-muted" style={{ fontSize: "0.75rem" }}>{sub}</div>}
+      </div>
+    );
   };
 
   return (
@@ -207,7 +234,7 @@ const FeedbackManagement = () => {
                   <FaSearch className="text-muted" />
                 </InputGroup.Text>
                 <Form.Control
-                  placeholder="Search by ticket, employee, technician, review..."
+                  placeholder="Search by ticket, employee, technician, ID, review..."
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   className="border-start-0"
@@ -279,10 +306,8 @@ const FeedbackManagement = () => {
                       <td className="ps-3">
                         <strong>{f.ticket_number}</strong>
                       </td>
-                      <td>{f.employee_name}</td>
-                      <td>
-                        {f.technician_name ? f.technician_name : <span className="text-muted">—</span>}
-                      </td>
+                      <td style={{ minWidth: "150px" }}>{empLabel(f)}</td>
+                      <td style={{ minWidth: "150px" }}>{techLabel(f)}</td>
                       <td>
                         <div className="d-flex align-items-center gap-1">
                           {renderStars(f.rating)}
@@ -361,15 +386,13 @@ const FeedbackManagement = () => {
               <Col md={6}>
                 <div className="p-3 bg-light rounded-3">
                   <div className="text-muted small mb-1">Employee</div>
-                  <div className="fw-semibold">{selectedFeedback.employee_name}</div>
+                  <div>{empLabel(selectedFeedback)}</div>
                 </div>
               </Col>
               <Col md={6}>
                 <div className="p-3 bg-light rounded-3">
                   <div className="text-muted small mb-1">Technician</div>
-                  <div className="fw-semibold">
-                    {selectedFeedback.technician_name ? selectedFeedback.technician_name : <span className="text-muted">Unassigned</span>}
-                  </div>
+                  <div>{techLabel(selectedFeedback)}</div>
                 </div>
               </Col>
               <Col md={6}>
