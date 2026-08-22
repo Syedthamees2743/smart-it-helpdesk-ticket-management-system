@@ -5,6 +5,12 @@ const getNotifications = async (params = {}) => {
   return response.data;
 };
 
+// ⭐ NEW - For pagination next/prev URL
+const getNotificationsByUrl = async (url) => {
+  const response = await api.get(url);
+  return response.data;
+};
+
 const getUnreadCount = async () => {
   const response = await api.get('/notifications/unread-count/');
   return response.data;
@@ -22,6 +28,7 @@ const markAllAsRead = async () => {
 
 const notificationService = {
   getNotifications,
+  getNotificationsByUrl,  // ⭐ NEW
   getUnreadCount,
   markAsRead,
   markAllAsRead,

@@ -115,6 +115,11 @@ DATABASES = {
 }
 
 
+# FRONTEND URL CONFIGURATION
+FRONTEND_URL = os.environ.get('FRONTEND_URL', 'http://localhost:5173')
+FRONTEND_LOGIN_URL = f"{FRONTEND_URL}/login"
+
+
 # Password validation
 # https://docs.djangoproject.com/en/6.0/ref/settings/#auth-password-validators
 

@@ -50,75 +50,38 @@ const ROLE_LABELS = {
   technician: { label: "Technician", color: "success" },
 };
 
-/* ── Skeleton ── */
+/* ── Skeleton (Premium Layout) ── */
 const Skeleton = () => (
-  <div>
-    <div
-      className="rounded mb-2"
-      style={{ width: "35%", height: 28, backgroundColor: "#e2e8f0" }}
-    />
-    <div
-      className="rounded mb-4"
-      style={{ width: "55%", height: 14, backgroundColor: "#e2e8f0" }}
-    />
+  <div className="p-3 p-md-4" style={{ backgroundColor: "#f8fafc", minHeight: "100vh" }}>
+    <div className="d-flex align-items-center gap-3 mb-4">
+      <div className="rounded-2" style={{ width: 40, height: 40, backgroundColor: "#e2e8f0" }} />
+      <div>
+        <div className="rounded mb-1" style={{ width: 120, height: 18, backgroundColor: "#e2e8f0" }} />
+        <div className="rounded" style={{ width: 180, height: 10, backgroundColor: "#e2e8f0" }} />
+      </div>
+    </div>
     <Row className="g-4">
-      <Col lg={4}>
-        <Card className="border-0 shadow-sm">
-          <Card.Body className="text-center py-5">
-            <div
-              className="rounded-circle mx-auto mb-3"
-              style={{ width: 120, height: 120, backgroundColor: "#e2e8f0" }}
-            />
-            <div
-              className="rounded mx-auto"
-              style={{ width: "60%", height: 16, backgroundColor: "#e2e8f0" }}
-            />
+      <Col xl={4} lg={5}>
+        <Card className="border-0 shadow-sm rounded-4 overflow-hidden" style={{ backgroundColor: "#fff", border: "1px solid #f1f5f9" }}>
+          <div style={{ height: 100, backgroundColor: "#e2e8f0" }} />
+          <Card.Body className="text-center pb-4 pt-0">
+            <div className="rounded-circle mx-auto mt-n6 mb-3 shadow" style={{ width: 110, height: 110, backgroundColor: "#cbd5e1", border: "4px solid #fff" }} />
+            <div className="rounded mx-auto mb-2" style={{ width: "50%", height: 16, backgroundColor: "#e2e8f0" }} />
+            <div className="rounded mx-auto" style={{ width: "30%", height: 10, backgroundColor: "#e2e8f0" }} />
           </Card.Body>
         </Card>
       </Col>
-      <Col lg={8}>
-        <Card className="border-0 shadow-sm">
+      <Col xl={8} lg={7}>
+        <Card className="border-0 shadow-sm rounded-4 mb-4" style={{ backgroundColor: "#fff", border: "1px solid #f1f5f9" }}>
           <Card.Body className="p-4">
-            {[...Array(5)].map((_, i) => (
-              <Row key={i} className="mb-3">
-                <Col md={6}>
-                  <div
-                    className="rounded mb-1"
-                    style={{
-                      width: "30%",
-                      height: 10,
-                      backgroundColor: "#e2e8f0",
-                    }}
-                  />
-                  <div
-                    className="rounded"
-                    style={{
-                      width: "80%",
-                      height: 20,
-                      backgroundColor: "#e2e8f0",
-                    }}
-                  />
-                </Col>
-                <Col md={6}>
-                  <div
-                    className="rounded mb-1"
-                    style={{
-                      width: "30%",
-                      height: 10,
-                      backgroundColor: "#e2e8f0",
-                    }}
-                  />
-                  <div
-                    className="rounded"
-                    style={{
-                      width: "80%",
-                      height: 20,
-                      backgroundColor: "#e2e8f0",
-                    }}
-                  />
-                </Col>
-              </Row>
-            ))}
+            <div className="d-flex flex-column gap-4">
+              {[...Array(3)].map((_, i) => (
+                <Row key={i} className="g-4">
+                  <Col md={6}><div className="rounded-3" style={{ width: "100%", height: 44, backgroundColor: "#f8fafc", border: "1px solid #f1f5f9" }} /></Col>
+                  <Col md={6}><div className="rounded-3" style={{ width: "100%", height: 44, backgroundColor: "#f8fafc", border: "1px solid #f1f5f9" }} /></Col>
+                </Row>
+              ))}
+            </div>
           </Card.Body>
         </Card>
       </Col>
@@ -158,24 +121,18 @@ const UserProfile = ({ role }) => {
   const [pwSaving, setPwSaving] = useState(false);
   const [pwSuccess, setPwSuccess] = useState("");
 
-  /* ── Fetch ── */
-  useEffect(() => {
-    fetchProfile();
-  }, [role]);
+  useEffect(() => { fetchProfile(); }, [role]);
 
   const fetchProfile = async () => {
     setLoading(true);
     setError("");
     try {
       const promises = [profileService.getOwnProfile()];
-      if (role === "employee")
-        promises.push(profileService.getEmployeeProfile());
-      if (role === "technician")
-        promises.push(profileService.getTechnicianProfile());
+      if (role === "employee") promises.push(profileService.getEmployeeProfile());
+      if (role === "technician") promises.push(profileService.getTechnicianProfile());
 
       const results = await Promise.allSettled(promises);
 
-      // User profile (always first)
       if (results[0].status === "fulfilled") {
         const userData = results[0].value.data;
         setProfile(userData);
@@ -185,26 +142,17 @@ const UserProfile = ({ role }) => {
           email: userData.email || "",
           phone_number: userData.phone_number || "",
         });
-        // FIX: Update localStorage so navbar shows fresh data
         const stored = JSON.parse(localStorage.getItem("user") || "{}");
-        localStorage.setItem(
-          "user",
-          JSON.stringify({ ...stored, ...userData }),
-        );
+        localStorage.setItem("user", JSON.stringify({ ...stored, ...userData }));
       } else {
         setError("Failed to load profile.");
       }
 
-       // Role profile (second, optional) — ViewSet returns list, extract first item
       if (results[1]?.status === "fulfilled") {
         const raw = results[1].value;
-        if (Array.isArray(raw)) {
-          setRoleProfile(raw[0] || null);
-        } else if (raw?.results) {
-          setRoleProfile(raw.results[0] || null);
-        } else {
-          setRoleProfile(raw);
-        }
+        if (Array.isArray(raw)) setRoleProfile(raw[0] || null);
+        else if (raw?.results) setRoleProfile(raw.results[0] || null);
+        else setRoleProfile(raw);
       }
     } catch (err) {
       setError("Failed to load profile.");
@@ -213,11 +161,7 @@ const UserProfile = ({ role }) => {
     }
   };
 
-  /* ── Edit / Save ── */
-  const handleEdit = () => {
-    setFieldErrors({});
-    setEditing(true);
-  };
+  const handleEdit = () => { setFieldErrors({}); setEditing(true); };
 
   const handleCancel = () => {
     if (profile) {
@@ -233,13 +177,10 @@ const UserProfile = ({ role }) => {
   };
 
   const handleSave = async () => {
-    setSaving(true);
-    setFieldErrors("");
-    setSuccess("");
+    setSaving(true); setFieldErrors(""); setSuccess("");
     try {
       const res = await profileService.updateOwnProfile(formData);
       setProfile(res.data);
-      // Update localStorage for navbar
       const stored = JSON.parse(localStorage.getItem("user") || "{}");
       localStorage.setItem("user", JSON.stringify({ ...stored, ...res.data }));
       setEditing(false);
@@ -247,34 +188,22 @@ const UserProfile = ({ role }) => {
       setTimeout(() => setSuccess(""), 3000);
     } catch (err) {
       const e = err.response?.data?.error;
-      if (e && typeof e === "object") {
-        setFieldErrors(e);
-      } else {
-        setFieldErrors({
-          detail: [typeof e === "string" ? e : "Failed to update profile."],
-        });
-      }
+      if (e && typeof e === "object") setFieldErrors(e);
+      else setFieldErrors({ detail: [typeof e === "string" ? e : "Failed to update profile."] });
     } finally {
       setSaving(false);
     }
   };
 
-  /* ── Image Upload ── */
   const handleImageClick = () => fileInputRef.current?.click();
 
   const handleImageChange = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (!file.type.startsWith("image/")) {
-      setError("Please select a valid image file.");
-      return;
-    }
-    if (file.size > 5 * 1024 * 1024) {
-      setError("Image must be under 5 MB.");
-      return;
-    }
-    setUploading(true);
-    setError("");
+    if (!file.type.startsWith("image/")) { setError("Please select a valid image file."); return; }
+    if (file.size > 5 * 1024 * 1024) { setError("Image must be under 5 MB."); return; }
+    
+    setUploading(true); setError("");
     const fd = new FormData();
     fd.append("profile_image", file);
     try {
@@ -290,46 +219,33 @@ const UserProfile = ({ role }) => {
     }
   };
 
-  /* ── Password Change ── */
   const openPwModal = () => {
     setPwData({ current_password: "", new_password: "", confirm_password: "" });
-    setPwErrors({});
-    setPwSuccess("");
-    setShowPwModal(true);
+    setPwErrors({}); setPwSuccess(""); setShowPwModal(true);
   };
 
   const handlePwChange = async () => {
-    setPwSaving(true);
-    setPwErrors({});
-    setPwSuccess("");
+    setPwSaving(true); setPwErrors({}); setPwSuccess("");
     try {
       await profileService.changePassword(pwData);
       setPwSuccess("Password changed successfully.");
       setShowPwModal(false);
     } catch (err) {
       const e = err.response?.data?.error;
-      if (e && typeof e === "object") {
-        setPwErrors(e);
-      } else {
-        setPwErrors({
-          detail: [typeof e === "string" ? e : "Failed to change password."],
-        });
-      }
+      if (e && typeof e === "object") setPwErrors(e);
+      else setPwErrors({ detail: [typeof e === "string" ? e : "Failed to change password."] });
     } finally {
       setPwSaving(false);
     }
   };
 
-  /* ── Render ── */
   if (loading) return <Skeleton />;
   if (error && !profile) {
     return (
-      <div>
+      <div className="p-4">
         <h4 className="fw-bold mb-3">Profile</h4>
-        <Alert variant="danger">{error}</Alert>
-        <Button variant="primary" onClick={fetchProfile}>
-          Retry
-        </Button>
+        <Alert variant="danger" className="border-0 rounded-3 shadow-sm">{error}</Alert>
+        <Button variant="primary" onClick={fetchProfile} className="rounded-pill px-4 shadow-sm border-0">Retry</Button>
       </div>
     );
   }
@@ -337,382 +253,312 @@ const UserProfile = ({ role }) => {
 
   const imageUrl = getImageUrl(profile.profile_image);
   const roleInfo = ROLE_LABELS[profile.role] || ROLE_LABELS[role];
-
-  // Field error helper
   const fe = (field) => fieldErrors[field]?.[0];
 
+  // Reusable style for read-only data fields to look like structured metadata
+  const readOnlyFieldStyle = {
+    backgroundColor: "#fff",
+    border: "1px solid #e2e8f0",
+    color: "#0f172a",
+    fontWeight: "500",
+    fontSize: "0.92rem"
+  };
+
   return (
-    <div>
+    <div className="p-3 p-md-4" style={{ backgroundColor: "#f8fafc", minHeight: "100vh" }}>
+      
       {/* Header */}
-      <div className="mb-4">
-        <h4 className="fw-bold mb-1">
-          <FaUser className="me-2 text-primary" />
-          Profile
-        </h4>
-        <p className="text-muted mb-0">Manage your account information.</p>
+      <div className="d-flex justify-content-between align-items-start mb-4">
+        <div className="d-flex align-items-center gap-3">
+          <div className="d-flex align-items-center justify-content-center rounded-2" style={{ width: 44, height: 44, backgroundColor: "#0f172a" }}>
+            <FaUser style={{ fontSize: "1rem", color: "#fff" }} />
+          </div>
+          <div>
+            <h4 className="mb-0 fw-bolder" style={{ color: "#0f172a", letterSpacing: "-0.03em", fontSize: "1.3rem" }}>Profile</h4>
+            <p className="text-muted mb-0" style={{ fontSize: "0.85rem" }}>View and manage your personal account details</p>
+          </div>
+        </div>
       </div>
 
-      {/* Success */}
-      {success && (
-        <Alert variant="success" dismissible onClose={() => setSuccess("")}>
-          {success}
-        </Alert>
-      )}
-      {/* Error */}
-      {error && profile && (
-        <Alert variant="danger" dismissible onClose={() => setError("")}>
-          {error}
-        </Alert>
-      )}
+      {/* Alerts */}
+      <div className="mb-4" style={{ maxWidth: '600px' }}>
+        {success && (
+          <Alert variant="success" dismissible onClose={() => setSuccess("")} className="border-0 rounded-3 shadow-sm d-flex align-items-center py-2 px-3">
+            <div className="bg-success bg-opacity-10 rounded-circle p-1 me-3"><FaSave size={12} className="text-success" /></div>
+            <span className="fw-medium" style={{fontSize: "0.88rem"}}>{success}</span>
+          </Alert>
+        )}
+        {error && profile && (
+          <Alert variant="danger" dismissible onClose={() => setError("")} className="border-0 rounded-3 shadow-sm">{error}</Alert>
+        )}
+      </div>
 
       <Row className="g-4">
-        {/* ── Left: Image Card ── */}
-        <Col lg={4}>
-          <Card className="border-0 shadow-sm">
-            <Card.Body className="text-center py-4">
-              <div className="position-relative d-inline-block mb-3">
-                {imageUrl ? (
-                  <img
-                    src={imageUrl}
-                    alt="Profile"
-                    className="rounded-circle"
-                    style={{
-                      width: 120,
-                      height: 120,
-                      objectFit: "cover",
-                      border: "4px solid #e2e8f0",
-                    }}
-                  />
-                ) : (
-                  <FaUserCircle style={{ fontSize: 120, color: "#cbd5e1" }} />
-                )}
+        {/* ── Left: Identity Card ── */}
+        <Col xl={4} lg={5}>
+          <Card className="border-0 shadow-sm rounded-4 overflow-hidden" style={{ border: "1px solid #f1f5f9" }}>
+            {/* Dark Corporate Banner */}
+            <div style={{ height: 100, background: "linear-gradient(135deg, #0f172a 0%, #1e293b 100%)" }} className="position-relative">
+              <div className="position-absolute top-0 end-0 p-3 opacity-50">
+                <FaShieldAlt size={24} color="#fff" />
+              </div>
+            </div>
+            
+            <Card.Body className="text-center pb-4 pt-0">
+              {/* Avatar with Ring */}
+              <div className="position-relative d-inline-block mt-n6 mb-3">
+                <div className="rounded-circle shadow-lg" style={{ 
+                    width: 112, height: 112, 
+                    border: "4px solid #0f172a", 
+                    backgroundColor: "#fff", 
+                    padding: 3,
+                    boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.1)"
+                }}>
+                  {imageUrl ? (
+                    <img src={imageUrl} alt="Profile" className="rounded-circle w-100 h-100" style={{ objectFit: "cover" }} />
+                  ) : (
+                    <div className="rounded-circle w-100 h-100 d-flex align-items-center justify-content-center" style={{ backgroundColor: "#f1f5f9" }}>
+                      <FaUserCircle style={{ fontSize: 70, color: "#94a3b8" }} />
+                    </div>
+                  )}
+                </div>
+                
                 <button
                   onClick={handleImageClick}
-                  className="position-absolute bottom-0 end-0 btn btn-sm btn-primary rounded-circle shadow-sm"
-                  style={{ width: 36, height: 36, padding: 0 }}
+                  className="position-absolute bottom-0 end-0 bg-white rounded-circle shadow border border-2 d-flex align-items-center justify-content-center"
+                  style={{ width: 32, height: 32, padding: 0, borderColor: "#fff" }}
                   disabled={uploading}
                   type="button"
                 >
-                  {uploading ? <Spinner size="sm" /> : <FaCamera size={14} />}
+                  {uploading ? <Spinner size="sm" /> : <FaCamera size={12} color="#0f172a" />}
                 </button>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*"
-                  onChange={handleImageChange}
-                  style={{ display: "none" }}
-                />
+                <input ref={fileInputRef} type="file" accept="image/*" onChange={handleImageChange} style={{ display: "none" }} />
               </div>
-              <h5 className="fw-bold mb-1">
+
+              <h5 className="fw-bolder mb-1" style={{ color: "#0f172a", fontSize: "1.15rem" }}>
                 {profile.first_name} {profile.last_name}
               </h5>
-              <p className="text-muted mb-2" style={{ fontSize: "0.85rem" }}>
+              <p className="text-muted mb-3" style={{ fontSize: "0.85rem", fontFamily: "monospace" }}>
                 @{profile.username}
               </p>
-              <Badge bg={roleInfo.color} className="px-3 py-1 mb-2">
-                {roleInfo.label}
-              </Badge>
-              <div className="mt-3 pt-3 border-top">
-                <div className="d-flex justify-content-between mb-2">
-                  <span className="text-muted small">
-                    <FaShieldAlt className="me-1" />
-                    Status
-                  </span>
-                  <Badge bg={profile.is_active ? "success" : "danger"}>
-                    {profile.is_active ? "Active" : "Inactive"}
-                  </Badge>
-                </div>
-                <div className="d-flex justify-content-between">
-                  <span className="text-muted small">
-                    <FaCalendar className="me-1" />
-                    Joined
-                  </span>
-                  <span className="small fw-medium">
-                    {formatDate(profile.created_at)}
-                  </span>
-                </div>
+              
+              <div className="d-inline-block px-3 py-1 rounded-pill mb-4" style={{ backgroundColor: "#f1f5f9", border: "1px solid #e2e8f0" }}>
+                <span className="fw-semibold" style={{ fontSize: "0.8rem", color: "#334155" }}>{roleInfo.label}</span>
+              </div>
+
+              {/* Meta Grid */}
+              <div className="text-start mt-3 pt-3 border-top" style={{ borderColor: "#f1f5f9 !important" }}>
+                <Row className="g-3">
+                  <Col xs={6}>
+                    <div className="p-2 rounded-3" style={{ backgroundColor: "#f8fafc" }}>
+                      <div className="text-uppercase d-flex align-items-center gap-1 mb-1" style={{ fontSize: "0.65rem", color: "#94a3b8", fontWeight: "700", letterSpacing: "0.05em" }}>
+                        <FaShieldAlt size={9} /> Status
+                      </div>
+                      <Badge bg={profile.is_active ? "success" : "danger"} pill className="px-2 py-1" style={{ fontSize: "0.72rem", fontWeight: "600" }}>
+                        {profile.is_active ? "Active" : "Inactive"}
+                      </Badge>
+                    </div>
+                  </Col>
+                  <Col xs={6}>
+                    <div className="p-2 rounded-3" style={{ backgroundColor: "#f8fafc" }}>
+                      <div className="text-uppercase d-flex align-items-center gap-1 mb-1" style={{ fontSize: "0.65rem", color: "#94a3b8", fontWeight: "700", letterSpacing: "0.05em" }}>
+                        <FaCalendar size={9} /> Joined
+                      </div>
+                      <div className="fw-semibold text-truncate" style={{ fontSize: "0.82rem", color: "#334155" }}>
+                        {formatDate(profile.created_at)}
+                      </div>
+                    </div>
+                  </Col>
+                </Row>
               </div>
             </Card.Body>
           </Card>
         </Col>
 
-        {/* ── Right: Form + Info ── */}
-        <Col lg={8}>
+        {/* ── Right: Data & Configuration ── */}
+        <Col xl={8} lg={7}>
           {/* Personal Information */}
-          <Card className="border-0 shadow-sm mb-4">
-            <Card.Header className="bg-white border-bottom pt-3 pb-0 d-flex justify-content-between align-items-center">
-              <h6 className="fw-bold mb-0">
-                <FaUser className="me-2 text-primary" />
+          <Card className="border-0 shadow-sm rounded-4 mb-4" style={{ border: "1px solid #f1f5f9" }}>
+            <Card.Header className="bg-white border-0 pt-4 pb-2 px-4 d-flex justify-content-between align-items-center">
+              <h6 className="mb-0 text-uppercase" style={{ fontSize: "0.72rem", color: "#94a3b8", fontWeight: "800", letterSpacing: "0.08em" }}>
                 Personal Information
               </h6>
               {!editing ? (
-                <Button
-                  variant="outline-primary"
-                  size="sm"
-                  onClick={handleEdit}
-                  type="button"
-                >
-                  <FaEdit className="me-1" />
-                  Edit
+                <Button variant="light" size="sm" onClick={handleEdit} type="button" className="rounded-pill px-3 border shadow-sm" style={{ fontSize: "0.82rem", fontWeight: "600", color: "#0f172a" }}>
+                  <FaEdit className="me-1" size={11} /> Edit
                 </Button>
               ) : (
-                <div>
-                  <Button
-                    variant="success"
-                    size="sm"
-                    className="me-1"
-                    onClick={handleSave}
-                    disabled={saving}
-                    type="button"
-                  >
-                    {saving ? (
-                      <Spinner size="sm" className="me-1" />
-                    ) : (
-                      <FaSave className="me-1" />
-                    )}
-                    Save
+                <div className="d-flex gap-2">
+                  <Button variant="dark" size="sm" onClick={handleSave} disabled={saving} type="button" className="rounded-pill px-3 border-0 shadow-sm" style={{ fontSize: "0.82rem", fontWeight: "600" }}>
+                    {saving ? <Spinner size="sm" className="me-1" /> : <FaSave className="me-1" size={11} />} Save
                   </Button>
-                  <Button
-                    variant="outline-secondary"
-                    size="sm"
-                    onClick={handleCancel}
-                    type="button"
-                  >
-                    <FaTimes className="me-1" />
+                  <Button variant="light" size="sm" onClick={handleCancel} type="button" className="rounded-pill px-3 border" style={{ fontSize: "0.82rem" }}>
                     Cancel
                   </Button>
                 </div>
               )}
             </Card.Header>
-            <Card.Body className="p-4">
-              {fe("detail") && (
-                <Alert variant="danger" className="py-2 small">
-                  {fe("detail")}
-                </Alert>
-              )}
-              <Row className="g-3">
+            <Card.Body className="px-4 pb-4">
+              {fe("detail") && <Alert variant="danger" className="py-2 small border-0 rounded-3 shadow-sm">{fe("detail")}</Alert>}
+              <Row className="g-3 mt-1">
                 <Col md={6}>
                   <Form.Group>
-                    <Form.Label className="text-muted small fw-semibold">
-                      <FaUser className="me-1" />
-                      First Name
-                    </Form.Label>
+                    <Form.Label className="text-uppercase mb-2" style={{ fontSize: "0.68rem", color: "#94a3b8", fontWeight: "700", letterSpacing: "0.05em" }}>First Name</Form.Label>
                     <Form.Control
                       value={formData.first_name}
-                      onChange={(e) =>
-                        setFormData({ ...formData, first_name: e.target.value })
-                      }
+                      onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
                       disabled={!editing}
                       isInvalid={!!fe("first_name")}
-                      className="py-2"
+                      className="py-2 rounded-3"
+                      style={!editing ? readOnlyFieldStyle : { fontSize: "0.92rem" }}
                     />
-                    <Form.Control.Feedback type="invalid">
-                      {fe("first_name")}
-                    </Form.Control.Feedback>
+                    <Form.Control.Feedback type="invalid">{fe("first_name")}</Form.Control.Feedback>
                   </Form.Group>
                 </Col>
                 <Col md={6}>
                   <Form.Group>
-                    <Form.Label className="text-muted small fw-semibold">
-                      <FaUser className="me-1" />
-                      Last Name
-                    </Form.Label>
+                    <Form.Label className="text-uppercase mb-2" style={{ fontSize: "0.68rem", color: "#94a3b8", fontWeight: "700", letterSpacing: "0.05em" }}>Last Name</Form.Label>
                     <Form.Control
                       value={formData.last_name}
-                      onChange={(e) =>
-                        setFormData({ ...formData, last_name: e.target.value })
-                      }
+                      onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
                       disabled={!editing}
                       isInvalid={!!fe("last_name")}
-                      className="py-2"
+                      className="py-2 rounded-3"
+                      style={!editing ? readOnlyFieldStyle : { fontSize: "0.92rem" }}
                     />
-                    <Form.Control.Feedback type="invalid">
-                      {fe("last_name")}
-                    </Form.Control.Feedback>
+                    <Form.Control.Feedback type="invalid">{fe("last_name")}</Form.Control.Feedback>
                   </Form.Group>
                 </Col>
                 <Col md={6}>
                   <Form.Group>
-                    <Form.Label className="text-muted small fw-semibold">
-                      <FaEnvelope className="me-1" />
-                      Email
-                    </Form.Label>
+                    <Form.Label className="text-uppercase mb-2" style={{ fontSize: "0.68rem", color: "#94a3b8", fontWeight: "700", letterSpacing: "0.05em" }}>Email Address</Form.Label>
                     <Form.Control
                       type="email"
                       value={formData.email}
-                      onChange={(e) =>
-                        setFormData({ ...formData, email: e.target.value })
-                      }
+                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                       disabled={!editing}
                       isInvalid={!!fe("email")}
-                      className="py-2"
+                      className="py-2 rounded-3"
+                      style={!editing ? readOnlyFieldStyle : { fontSize: "0.92rem" }}
                     />
-                    <Form.Control.Feedback type="invalid">
-                      {fe("email")}
-                    </Form.Control.Feedback>
+                    <Form.Control.Feedback type="invalid">{fe("email")}</Form.Control.Feedback>
                   </Form.Group>
                 </Col>
                 <Col md={6}>
                   <Form.Group>
-                    <Form.Label className="text-muted small fw-semibold">
-                      <FaPhone className="me-1" />
-                      Phone Number
-                    </Form.Label>
+                    <Form.Label className="text-uppercase mb-2" style={{ fontSize: "0.68rem", color: "#94a3b8", fontWeight: "700", letterSpacing: "0.05em" }}>Phone Number</Form.Label>
                     <Form.Control
                       value={formData.phone_number || ""}
-                      onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          phone_number: e.target.value,
-                        })
-                      }
+                      onChange={(e) => setFormData({ ...formData, phone_number: e.target.value })}
                       disabled={!editing}
                       isInvalid={!!fe("phone_number")}
-                      className="py-2"
+                      className="py-2 rounded-3"
                       placeholder="Not provided"
+                      style={!editing ? readOnlyFieldStyle : { fontSize: "0.92rem" }}
                     />
-                    <Form.Control.Feedback type="invalid">
-                      {fe("phone_number")}
-                    </Form.Control.Feedback>
+                    <Form.Control.Feedback type="invalid">{fe("phone_number")}</Form.Control.Feedback>
+                  </Form.Group>
+                </Col>
+                
+                {/* System Fields (Strictly Read-Only styling) */}
+                <Col md={6}>
+                  <Form.Group>
+                    <Form.Label className="text-uppercase mb-2" style={{ fontSize: "0.68rem", color: "#94a3b8", fontWeight: "700", letterSpacing: "0.05em" }}>Username</Form.Label>
+                    <div className="py-2 px-3 rounded-3 d-flex align-items-center" style={{ backgroundColor: "#f8fafc", border: "1px solid #f1f5f9", height: "38px", fontSize: "0.92rem", color: "#64748b" }}>
+                      {profile.username}
+                    </div>
                   </Form.Group>
                 </Col>
                 <Col md={6}>
                   <Form.Group>
-                    <Form.Label className="text-muted small fw-semibold">
-                      Username
-                    </Form.Label>
-                    <Form.Control
-                      value={profile.username}
-                      disabled
-                      className="py-2 bg-light"
-                    />
-                  </Form.Group>
-                </Col>
-                <Col md={6}>
-                  <Form.Group>
-                    <Form.Label className="text-muted small fw-semibold">
-                      Role
-                    </Form.Label>
-                    <Form.Control
-                      value={roleInfo.label}
-                      disabled
-                      className="py-2 bg-light"
-                    />
+                    <Form.Label className="text-uppercase mb-2" style={{ fontSize: "0.68rem", color: "#94a3b8", fontWeight: "700", letterSpacing: "0.05em" }}>System Role</Form.Label>
+                    <div className="py-2 px-3 rounded-3 d-flex align-items-center" style={{ backgroundColor: "#f8fafc", border: "1px solid #f1f5f9", height: "38px" }}>
+                       <Badge bg={roleInfo.color} pill className="px-2 py-1" style={{ fontSize: "0.75rem", fontWeight: "600" }}>{roleInfo.label}</Badge>
+                    </div>
                   </Form.Group>
                 </Col>
               </Row>
             </Card.Body>
           </Card>
 
-          {/* Role-Specific Info */}
+          {/* Role Specific Metadata */}
           {role === "employee" && roleProfile && (
-            <Card className="border-0 shadow-sm mb-4">
-              <Card.Header className="bg-white border-bottom pt-3 pb-0">
-                <h6 className="fw-bold mb-0">
-                  <FaIdBadge className="me-2 text-primary" />
-                  Employee Information
-                </h6>
+            <Card className="border-0 shadow-sm rounded-4 mb-4" style={{ border: "1px solid #f1f5f9" }}>
+              <Card.Header className="bg-white border-0 pt-4 pb-2 px-4">
+                <h6 className="mb-0 text-uppercase" style={{ fontSize: "0.72rem", color: "#94a3b8", fontWeight: "800", letterSpacing: "0.08em" }}>Employee Metadata</h6>
               </Card.Header>
-              <Card.Body className="p-4">
+              <Card.Body className="p-4 pt-2">
                 <Row className="g-3">
-                  <Col md={4}>
-                    <Form.Label className="text-muted small fw-semibold">
-                      <FaIdBadge className="me-1" />
-                      Employee ID
-                    </Form.Label>
-                    <div className="fw-medium py-2">
-                      {roleProfile.employee_id || "—"}
-                    </div>
-                  </Col>
-                  <Col md={4}>
-                    <Form.Label className="text-muted small fw-semibold">
-                      <FaBuilding className="me-1" />
-                      Department
-                    </Form.Label>
-                    <div className="fw-medium py-2">
-                      {roleProfile.department_name || "Not Assigned"}
-                    </div>
-                  </Col>
-                  <Col md={4}>
-                    <Form.Label className="text-muted small fw-semibold">
-                      <FaBriefcase className="me-1" />
-                      Designation
-                    </Form.Label>
-                    <div className="fw-medium py-2">
-                      {roleProfile.designation || "—"}
-                    </div>
-                  </Col>
+                  {[
+                    { icon: <FaIdBadge size={13} />, label: "Employee ID", val: roleProfile.employee_id || "—" },
+                    { icon: <FaBuilding size={13} />, label: "Department", val: roleProfile.department_name || "Unassigned" },
+                    { icon: <FaBriefcase size={13} />, label: "Designation", val: roleProfile.designation || "—" },
+                  ].map((item, idx) => (
+                    <Col key={idx}>
+                      <div className="p-3 rounded-3 h-100" style={{ backgroundColor: "#f8fafc", border: "1px solid #f1f5f9" }}>
+                        <div className="text-muted d-flex align-items-center gap-1 mb-2" style={{ fontSize: "0.68rem", fontWeight: "700", letterSpacing: "0.05em", textTransform: "uppercase" }}>
+                          {item.icon} {item.label}
+                        </div>
+                        <div className="fw-bold text-dark" style={{ fontSize: "0.95rem" }}>{item.val}</div>
+                      </div>
+                    </Col>
+                  ))}
                 </Row>
               </Card.Body>
             </Card>
           )}
 
           {role === "technician" && roleProfile && (
-            <Card className="border-0 shadow-sm mb-4">
-              <Card.Header className="bg-white border-bottom pt-3 pb-0">
-                <h6 className="fw-bold mb-0">
-                  <FaIdBadge className="me-2 text-primary" />
-                  Technician Information
-                </h6>
+            <Card className="border-0 shadow-sm rounded-4 mb-4" style={{ border: "1px solid #f1f5f9" }}>
+              <Card.Header className="bg-white border-0 pt-4 pb-2 px-4">
+                <h6 className="mb-0 text-uppercase" style={{ fontSize: "0.72rem", color: "#94a3b8", fontWeight: "800", letterSpacing: "0.08em" }}>Technician Metadata</h6>
               </Card.Header>
-              <Card.Body className="p-4">
+              <Card.Body className="p-4 pt-2">
                 <Row className="g-3">
-                  <Col md={4}>
-                    <Form.Label className="text-muted small fw-semibold">
-                      <FaIdBadge className="me-1" />
-                      Technician ID
-                    </Form.Label>
-                    <div className="fw-medium py-2">
-                      {roleProfile.technician_id || "—"}
-                    </div>
-                  </Col>
-                  <Col md={4}>
-                    <Form.Label className="text-muted small fw-semibold">
-                      <FaBuilding className="me-1" />
-                      Department
-                    </Form.Label>
-                    <div className="fw-medium py-2">
-                      {roleProfile.department_name || "Not Assigned"}
-                    </div>
-                  </Col>
-                  <Col md={4}>
-                    <Form.Label className="text-muted small fw-semibold">
-                      <FaCog className="me-1" />
-                      Specialization
-                    </Form.Label>
-                    <div className="fw-medium py-2">
-                      {roleProfile.specialization || "—"}
-                    </div>
-                  </Col>
+                  {[
+                    { icon: <FaIdBadge size={13} />, label: "Technician ID", val: roleProfile.technician_id || "—" },
+                    { icon: <FaBuilding size={13} />, label: "Department", val: roleProfile.department_name || "Unassigned" },
+                    { icon: <FaCog size={13} />, label: "Specialization", val: roleProfile.specialization || "—" },
+                  ].map((item, idx) => (
+                    <Col key={idx}>
+                      <div className="p-3 rounded-3 h-100" style={{ backgroundColor: "#f8fafc", border: "1px solid #f1f5f9" }}>
+                        <div className="text-muted d-flex align-items-center gap-1 mb-2" style={{ fontSize: "0.68rem", fontWeight: "700", letterSpacing: "0.05em", textTransform: "uppercase" }}>
+                          {item.icon} {item.label}
+                        </div>
+                        <div className="fw-bold text-dark" style={{ fontSize: "0.95rem" }}>{item.val}</div>
+                      </div>
+                    </Col>
+                  ))}
                 </Row>
               </Card.Body>
             </Card>
           )}
 
-          {/* Security */}
-          <Card className="border-0 shadow-sm">
-            <Card.Header className="bg-white border-bottom pt-3 pb-0">
-              <h6 className="fw-bold mb-0">
-                <FaLock className="me-2 text-primary" />
-                Security
-              </h6>
+          {/* Security Zone */}
+          <Card className="border-0 shadow-sm rounded-4 overflow-hidden" style={{ border: "1px solid #f1f5f9" }}>
+            <Card.Header className="bg-white border-0 pt-4 pb-2 px-4">
+              <h6 className="mb-0 text-uppercase" style={{ fontSize: "0.72rem", color: "#94a3b8", fontWeight: "800", letterSpacing: "0.08em" }}>Security</h6>
             </Card.Header>
-            <Card.Body className="p-4">
-              <div className="d-flex justify-content-between align-items-center">
-                <div>
-                  <div className="fw-medium">Password</div>
-                  <div className="text-muted small">
-                    Change your account password
+            <Card.Body className="px-4 pb-4">
+              <div className="d-flex justify-content-between align-items-center p-3 rounded-3 border" style={{ borderColor: "#fecaca", backgroundColor: "#fff5f5" }}>
+                <div className="d-flex align-items-center gap-3">
+                  <div className="d-flex align-items-center justify-content-center rounded-2" style={{ width: 40, height: 40, backgroundColor: "#fee2e2" }}>
+                    <FaLock className="text-danger" size={15} />
+                  </div>
+                  <div>
+                    <div className="fw-bold text-dark" style={{ fontSize: "0.9rem" }}>Password Authentication</div>
+                    <div className="text-muted" style={{ fontSize: "0.8rem" }}>Manage credentials used to access your account</div>
                   </div>
                 </div>
                 <Button
-                  variant="outline-primary"
+                  variant="outline-danger"
                   size="sm"
                   onClick={openPwModal}
                   type="button"
+                  className="rounded-pill px-3"
+                  style={{ fontWeight: "600", fontSize: "0.82rem" }}
                 >
-                  <FaLock className="me-1" />
-                  Change Password
+                  Update
                 </Button>
               </div>
             </Card.Body>
@@ -720,102 +566,77 @@ const UserProfile = ({ role }) => {
         </Col>
       </Row>
 
-      {/* ── Password Modal ── */}
-      <Modal show={showPwModal} onHide={() => setShowPwModal(false)} centered>
-        <Modal.Header closeButton className="border-bottom-0 pb-0">
-          <Modal.Title className="fw-bold h6">
-            <FaLock className="me-2 text-primary" />
-            Change Password
-          </Modal.Title>
-        </Modal.Header>
-        <Modal.Body>
-          {pwSuccess && (
-            <Alert variant="success" className="py-2 small">
-              {pwSuccess}
-            </Alert>
-          )}
-          {fe("detail") && (
-            <Alert
-              variant="danger"
-              className="py-2 small"
-              onClick={() => setPwErrors({})}
-              dismissible
-            >
-              {fe("detail")}
-            </Alert>
-          )}
-          <Form.Group className="mb-3">
-            <Form.Label className="fw-semibold small">
-              Current Password
-            </Form.Label>
-            <Form.Control
-              type="password"
-              value={pwData.current_password}
-              onChange={(e) =>
-                setPwData({ ...pwData, current_password: e.target.value })
-              }
-              isInvalid={!!pwErrors.current_password}
-              className="py-2"
-              placeholder="Enter current password"
-            />
-            <Form.Control.Feedback type="invalid">
-              {pwErrors.current_password?.[0]}
-            </Form.Control.Feedback>
-          </Form.Group>
-          <Form.Group className="mb-3">
-            <Form.Label className="fw-semibold small">New Password</Form.Label>
-            <Form.Control
-              type="password"
-              value={pwData.new_password}
-              onChange={(e) =>
-                setPwData({ ...pwData, new_password: e.target.value })
-              }
-              isInvalid={!!pwErrors.new_password}
-              className="py-2"
-              placeholder="Enter new password"
-            />
-            <Form.Control.Feedback type="invalid">
-              {pwErrors.new_password?.[0]}
-            </Form.Control.Feedback>
-          </Form.Group>
-          <Form.Group>
-            <Form.Label className="fw-semibold small">
-              Confirm New Password
-            </Form.Label>
-            <Form.Control
-              type="password"
-              value={pwData.confirm_password}
-              onChange={(e) =>
-                setPwData({ ...pwData, confirm_password: e.target.value })
-              }
-              isInvalid={!!pwErrors.confirm_password}
-              className="py-2"
-              placeholder="Confirm new password"
-            />
-            <Form.Control.Feedback type="invalid">
-              {pwErrors.confirm_password?.[0]}
-            </Form.Control.Feedback>
-          </Form.Group>
-        </Modal.Body>
-        <Modal.Footer className="border-top-0 pt-0">
-          <Button
-            variant="outline-secondary"
-            size="sm"
-            onClick={() => setShowPwModal(false)}
-            type="button"
-          >
-            Cancel
-          </Button>
-          <Button
-            variant="primary"
-            size="sm"
-            onClick={handlePwChange}
-            disabled={pwSaving}
-            type="button"
-          >
-            {pwSaving ? <Spinner size="sm" className="me-1" /> : null}Change Password
-          </Button>
-        </Modal.Footer>
+      {/* ── Password Modal (Strict Corporate Style) ── */}
+      <Modal show={showPwModal} onHide={() => setShowPwModal(false)} centered contentClassName="border-0 shadow-lg">
+        <div className="p-4 p-md-5 rounded-4" style={{ background: "#fff" }}>
+          <Modal.Header closeButton className="border-0 pb-0 px-0 pt-0">
+            <Modal.Title className="fw-bold d-flex align-items-center gap-2" style={{ fontSize: "1rem", color: "#0f172a" }}>
+              <div className="d-flex align-items-center justify-content-center rounded-2" style={{ width: 34, height: 34, backgroundColor: "#fee2e2" }}>
+                <FaLock className="text-danger" size={14} />
+              </div>
+              Update Password
+            </Modal.Title>
+          </Modal.Header>
+          <Modal.Body className="px-0 py-4">
+            {pwSuccess && (
+              <Alert variant="success" className="py-2 small border-0 rounded-3 d-flex align-items-center">
+                <FaSave className="me-2 text-success" />{pwSuccess}
+              </Alert>
+            )}
+            {pwErrors.detail && (
+              <Alert variant="danger" className="py-2 small border-0 rounded-3" onClick={() => setPwErrors({})} dismissible>
+                {pwErrors.detail[0]}
+              </Alert>
+            )}
+            <Form.Group className="mb-3">
+              <Form.Label className="fw-bold text-dark" style={{ fontSize: "0.82rem" }}>Current Password</Form.Label>
+              <Form.Control
+                type="password"
+                value={pwData.current_password}
+                onChange={(e) => setPwData({ ...pwData, current_password: e.target.value })}
+                isInvalid={!!pwErrors.current_password}
+                className="py-2 rounded-3"
+                placeholder="Enter current password"
+                style={{ border: "1px solid #e2e8f0", fontSize: "0.9rem" }}
+              />
+              <Form.Control.Feedback type="invalid">{pwErrors.current_password?.[0]}</Form.Control.Feedback>
+            </Form.Group>
+            <Form.Group className="mb-3">
+              <Form.Label className="fw-bold text-dark" style={{ fontSize: "0.82rem" }}>New Password</Form.Label>
+              <Form.Control
+                type="password"
+                value={pwData.new_password}
+                onChange={(e) => setPwData({ ...pwData, new_password: e.target.value })}
+                isInvalid={!!pwErrors.new_password}
+                className="py-2 rounded-3"
+                placeholder="Enter new password"
+                style={{ border: "1px solid #e2e8f0", fontSize: "0.9rem" }}
+              />
+              <Form.Control.Feedback type="invalid">{pwErrors.new_password?.[0]}</Form.Control.Feedback>
+            </Form.Group>
+            <Form.Group>
+              <Form.Label className="fw-bold text-dark" style={{ fontSize: "0.82rem" }}>Confirm New Password</Form.Label>
+              <Form.Control
+                type="password"
+                value={pwData.confirm_password}
+                onChange={(e) => setPwData({ ...pwData, confirm_password: e.target.value })}
+                isInvalid={!!pwErrors.confirm_password}
+                className="py-2 rounded-3"
+                placeholder="Confirm new password"
+                style={{ border: "1px solid #e2e8f0", fontSize: "0.9rem" }}
+              />
+              <Form.Control.Feedback type="invalid">{pwErrors.confirm_password?.[0]}</Form.Control.Feedback>
+            </Form.Group>
+          </Modal.Body>
+          <Modal.Footer className="border-0 pt-0 px-0">
+            <Button variant="light" size="sm" onClick={() => setShowPwModal(false)} type="button" className="rounded-pill px-3 border" style={{ fontWeight: "500" }}>
+              Cancel
+            </Button>
+            <Button variant="danger" size="sm" onClick={handlePwChange} disabled={pwSaving} type="button" className="rounded-pill px-4 border-0 shadow-sm" style={{ fontWeight: "600" }}>
+              {pwSaving ? <Spinner size="sm" className="me-2" /> : null}Update Password
+            </Button>
+          </Modal.Footer>
+        </div>
       </Modal>
     </div>
   );

@@ -1,6 +1,5 @@
 import axios from 'axios';
 
-// Read from .env file
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL,
   headers: {
@@ -22,10 +21,10 @@ const processQueue = (error, token = null) => {
   failedQueue = [];
 };
 
-// 1. REQUEST INTERCEPTOR: Attaches token before sending
+// Request interceptor
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('access_token'); // We will change our storage keys to be specific
+    const token = localStorage.getItem('access_token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -34,16 +33,35 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// 2. RESPONSE INTERCEPTOR: Handles expired tokens (401 Errors)
-// Add a response interceptor (Runs AFTER we get a response from backend)
+// Response interceptor
 api.interceptors.response.use(
-  (response) => response, // If successful, just return it
+  (response) => response,
   async (error) => {
     const originalRequest = error.config;
 
-    // ONLY trigger token refresh logic on 401 (Unauthorized / Token Expired)
+    // ============================================
+    // FIX #1: Skip refresh logic for LOGIN endpoint
+    // Login 401 = wrong credentials, NOT expired token
+    // ============================================
+    const isLoginEndpoint = originalRequest.url?.includes('/auth/login/');
+    
+    if (isLoginEndpoint) {
+      // Just pass the error to the component - don't try to refresh
+      return Promise.reject(error);
+    }
+
+    // ============================================
+    // FIX #2: Only try refresh if user was actually logged in
+    // ============================================
     if (error.response?.status === 401 && !originalRequest._retry) {
       
+      const refreshToken = localStorage.getItem('refresh_token');
+      
+      // No refresh token = user wasn't logged in, just reject
+      if (!refreshToken) {
+        return Promise.reject(error);
+      }
+
       if (isRefreshing) {
         return new Promise((resolve, reject) => {
           failedQueue.push({ resolve, reject });
@@ -58,35 +76,40 @@ api.interceptors.response.use(
       originalRequest._retry = true;
       isRefreshing = true;
 
-      const refreshToken = localStorage.getItem('refresh_token');
-
-      if (refreshToken) {
-        try {
-          const response = await axios.post(`${import.meta.env.VITE_API_BASE_URL}/token/refresh/`, {
-            refresh: refreshToken
-          });
-          const newAccessToken = response.data.access;
-          localStorage.setItem('access_token', newAccessToken);
-          originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
-          processQueue(null, newAccessToken);
-          return api(originalRequest);
-        } catch (refreshError) {
-          processQueue(refreshError, null);
-          localStorage.removeItem('access_token');
-          localStorage.removeItem('refresh_token');
-          localStorage.removeItem('user');
-          window.location.href = '/login'; // ONLY LOGOUT ON 401
-          return Promise.reject(refreshError);
-        } finally {
-          isRefreshing = false;
+      try {
+        const response = await axios.post(`${import.meta.env.VITE_API_BASE_URL}/token/refresh/`, {
+          refresh: refreshToken
+        });
+        
+        const newAccessToken = response.data.access;
+        localStorage.setItem('access_token', newAccessToken);
+        originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
+        processQueue(null, newAccessToken);
+        return api(originalRequest);
+        
+      } catch (refreshError) {
+        processQueue(refreshError, null);
+        
+        // Clear auth data
+        localStorage.removeItem('access_token');
+        localStorage.removeItem('refresh_token');
+        localStorage.removeItem('user');
+        
+        // ============================================
+        // FIX #3: Use window.location.replace() instead of href
+        // And only if NOT already on login page
+        // ============================================
+        if (!window.location.pathname.includes('/login')) {
+          window.location.replace('/login');
         }
-      } else {
-        window.location.href = '/login';
+        
+        return Promise.reject(refreshError);
+      } finally {
+        isRefreshing = false;
       }
     }
 
-    // For ALL other errors (400, 403, 404, 500), just reject the promise.
-    // The component will handle displaying the specific error.
+    // All other errors - just reject
     return Promise.reject(error);
   }
 );

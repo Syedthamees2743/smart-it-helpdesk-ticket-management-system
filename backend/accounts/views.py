@@ -5,7 +5,10 @@ from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from django.contrib.auth import get_user_model
 from django.db.models.signals import post_save
 from django.dispatch import receiver
+from django.db.models import Q
+from django.db import transaction
 from .serializers import (
+    AdminCreateUserSerializer,
     RegisterSerializer,
     UserSerializer,
     EmployeeProfileSerializer,
@@ -32,14 +35,13 @@ User = get_user_model()
 class RegisterView(generics.CreateAPIView):
     queryset = User.objects.all()
     serializer_class = RegisterSerializer
-    permission_classes = [permissions.AllowAny]  # Public endpoint
+    permission_classes = [permissions.AllowAny]
 
 
 class CurrentUserView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request):
-        # request.user is automatically set by JWT authentication
         serializer = UserSerializer(request.user)
         return Response(serializer.data)
 
@@ -49,13 +51,9 @@ class LogoutView(APIView):
 
     def post(self, request):
         try:
-            # Get the refresh token from the request body
             refresh_token = request.data["refresh"]
             token = RefreshToken(refresh_token)
-
-            # Blacklist the token
             token.blacklist()
-
             return Response({"message": "Logout successful"}, status=status.HTTP_200_OK)
         except KeyError:
             return Response(
@@ -69,26 +67,111 @@ class LogoutView(APIView):
             )
 
 
-# ==========================================
-# USER MANAGEMENT VIEWS (ADMIN ONLY)
-# ==========================================
-
+# ============================================================
+# UserManagementView
+# ============================================================
 
 class UserManagementView(generics.ListCreateAPIView):
+    """
+    GET  /api/auth/users/  — List all users (admin only)
+    POST /api/auth/users/  — Create a new user (admin only)
+    """
     queryset = User.objects.all().order_by("-date_joined")
-    serializer_class = RegisterSerializer
     permission_classes = [IsAdmin]
 
-    # DAY 12: Enable backend search and filtering (inherits filter_backends from settings.py)
-    search_fields = ("username", "first_name", "last_name", "email")
-    filterset_fields = ("role", "is_active")
-    ordering_fields = ("username", "first_name", "date_joined")
-    ordering = ("-date_joined",)
+    # ========== ADD THIS METHOD ==========
+    def get_queryset(self):
+        qs = super().get_queryset()
+        search = self.request.query_params.get('search', '')
+        role = self.request.query_params.get('role', '')
+        is_active = self.request.query_params.get('is_active', '')
+
+        if search:
+            qs = qs.filter(
+                Q(username__icontains=search) |
+                Q(first_name__icontains=search) |
+                Q(last_name__icontains=search) |
+                Q(email__icontains=search) |
+                Q(phone_number__icontains=search) |
+                Q(role__icontains=search)
+            )
+
+        if role:
+            qs = qs.filter(role=role)
+
+        if is_active:
+            qs = qs.filter(is_active=is_active.lower() == 'true')
+
+        return qs
+    # ====================================
 
     def get_serializer_class(self):
-        if self.request.method == "GET":
+        if self.request.method == 'GET':
             return UserSerializer
-        return RegisterSerializer
+        return AdminCreateUserSerializer
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        try:
+            with transaction.atomic():
+                user = serializer.save()
+
+        except Exception as db_error:
+            error_message = str(db_error).lower()
+
+            if 'unique constraint' in error_message:
+                if 'username' in error_message:
+                    return Response(
+                        {'success': False, 'error': 'A user with this username already exists.'},
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+                elif 'email' in error_message:
+                    return Response(
+                        {'success': False, 'error': 'A user with this email already exists.'},
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+                elif 'phone' in error_message:
+                    return Response(
+                        {'success': False, 'error': 'A user with this phone number already exists.'},
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+                else:
+                    return Response(
+                        {'success': False, 'error': 'A record with these details already exists. Please check username, email, and phone number.'},
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+
+            return Response(
+                {'success': False, 'error': 'Failed to create user. Please check all fields.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Send credential email for Employee/Technician
+        raw_password = getattr(serializer, 'raw_password', None)
+        role = getattr(serializer, 'created_user_role', None)
+
+        email_sent = True
+        email_warning = None
+
+        if raw_password and role and role.lower() in ['employee', 'technician']:
+            from notifications.credentials_email import send_new_user_credentials_email
+            email_sent = send_new_user_credentials_email(user=user, raw_password=raw_password, role=role)
+            if not email_sent:
+                email_warning = "User created successfully, but failed to send the credential email."
+
+        output_serializer = UserSerializer(user, context={'request': request})
+
+        if email_sent:
+            message = "User created successfully. Login credentials have been sent to the user's email."
+        else:
+            message = email_warning
+
+        return Response(
+            {'success': True, 'message': message, 'data': output_serializer.data},
+            status=status.HTTP_201_CREATED
+        )
 
 
 class UserDetailView(generics.RetrieveUpdateDestroyAPIView):
@@ -97,13 +180,58 @@ class UserDetailView(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = [IsAdmin]
 
     def destroy(self, request, *args, **kwargs):
-        # Instead of actually deleting from DB, we just deactivate the user
         user = self.get_object()
-        user.is_active = False
-        user.save()
+
+        if user.id == request.user.id:
+            return Response(
+                {"error": "You cannot delete your own account."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            with transaction.atomic():
+                try:
+                    from tickets.models import Ticket
+                    Ticket.objects.filter(employee=user).update(employee=request.user)
+                    Ticket.objects.filter(assigned_technician=user).update(assigned_technician=None)
+                except Exception:
+                    pass
+
+                try:
+                    from assets.models import AssetAssignment
+                    AssetAssignment.objects.filter(employee=user).delete()
+                except Exception:
+                    pass
+
+                try:
+                    from feedback.models import Feedback
+                    Feedback.objects.filter(user=user).delete()
+                    Feedback.objects.filter(employee=user).delete()
+                except Exception:
+                    pass
+
+                EmployeeProfile.objects.filter(user=user).delete()
+                TechnicianProfile.objects.filter(user=user).delete()
+
+                try:
+                    from notifications.models import Notification, NotificationPreference
+                    Notification.objects.filter(user=user).delete()
+                    NotificationPreference.objects.filter(user=user).delete()
+                except Exception:
+                    pass
+
+                username = user.username
+                user.delete()
+
+        except Exception as e:
+            return Response(
+                {"error": f"Failed to delete user: {str(e)}"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
         return Response(
-            {"message": f"User {user.username} has been deactivated."},
-            status=status.HTTP_200_OK,
+            {"success": True, "message": f"User '{username}' has been permanently deleted. Their tickets have been reassigned to you."},
+            status=status.HTTP_200_OK
         )
 
 
@@ -113,7 +241,7 @@ class ToggleUserStatusView(APIView):
     def patch(self, request, pk):
         try:
             user = User.objects.get(pk=pk)
-            user.is_active = not user.is_active  # Toggle True/False
+            user.is_active = not user.is_active
             user.save()
             status_msg = "activated" if user.is_active else "deactivated"
             return Response(
@@ -125,16 +253,13 @@ class ToggleUserStatusView(APIView):
                 {"error": "User not found"}, status=status.HTTP_404_NOT_FOUND
             )
 
+
 # ==========================================
 # OWN PROFILE UPDATE & CHANGE PASSWORD
 # ==========================================
 
 
 class UpdateOwnProfileView(APIView):
-    """
-    Any logged-in user can update their own first_name, last_name, email, phone_number.
-    Uses request.user — no ID from frontend needed.
-    """
     permission_classes = [permissions.IsAuthenticated]
     parser_classes = [MultiPartParser, FormParser, JSONParser]
 
@@ -144,12 +269,8 @@ class UpdateOwnProfileView(APIView):
 
     def patch(self, request):
         user = request.user
-        # Only allow these 4 fields + profile_image
         allowed_fields = ['first_name', 'last_name', 'email', 'phone_number', 'profile_image']
-        data = {}
-        for field in allowed_fields:
-            if field in request.data:
-                data[field] = request.data[field]
+        data = {field: request.data[field] for field in allowed_fields if field in request.data}
 
         if not data:
             return Response(
@@ -165,9 +286,6 @@ class UpdateOwnProfileView(APIView):
 
 
 class ChangePasswordView(APIView):
-    """
-    Any logged-in user can change their own password.
-    """
     permission_classes = [permissions.IsAuthenticated]
 
     def post(self, request):
@@ -176,28 +294,24 @@ class ChangePasswordView(APIView):
         new_password = request.data.get('new_password')
         confirm_password = request.data.get('confirm_password')
 
-        # Validate all fields present
         if not current_password or not new_password or not confirm_password:
             return Response(
                 {"success": False, "error": {"detail": ["All three password fields are required."]}},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        # Check current password
         if not user.check_password(current_password):
             return Response(
                 {"success": False, "error": {"current_password": ["Current password is incorrect."]}},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        # Check new passwords match
         if new_password != confirm_password:
             return Response(
                 {"success": False, "error": {"confirm_password": ["New passwords do not match."]}},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        # Validate password strength (Django's built-in validators)
         from django.contrib.auth.password_validation import validate_password
         try:
             validate_password(new_password, user=user)
@@ -207,18 +321,17 @@ class ChangePasswordView(APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        # Check not same as old password
         if current_password == new_password:
             return Response(
                 {"success": False, "error": {"new_password": ["New password must be different from current password."]}},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        # Set new password (Django hashes it automatically)
         user.set_password(new_password)
         user.save()
 
         return Response({"success": True, "message": "Password changed successfully."})
+
 
 # ==========================================
 # PROFILE VIEWS
@@ -227,50 +340,34 @@ class ChangePasswordView(APIView):
 
 class EmployeeProfileView(APIView):
     permission_classes = [permissions.IsAuthenticated]
-    parser_classes = [MultiPartParser, FormParser]  # Required for image upload
+    parser_classes = [MultiPartParser, FormParser]
 
     def get(self, request):
-        # If admin, they can pass ?user_id=X to see a specific profile
         if request.user.role == "admin":
             user_id = request.query_params.get("user_id")
             if user_id:
                 try:
                     profile = EmployeeProfile.objects.get(user_id=user_id)
-                    serializer = EmployeeProfileSerializer(profile)
-                    return Response(serializer.data)
+                    return Response(EmployeeProfileSerializer(profile).data)
                 except EmployeeProfile.DoesNotExist:
-                    return Response(
-                        {"error": "Employee profile not found"},
-                        status=status.HTTP_404_NOT_FOUND,
-                    )
+                    return Response({"error": "Employee profile not found"}, status=status.HTTP_404_NOT_FOUND)
 
-        # Normal employee gets their own profile
         try:
             profile = EmployeeProfile.objects.get(user=request.user)
-            serializer = EmployeeProfileSerializer(profile)
-            return Response(serializer.data)
+            return Response(EmployeeProfileSerializer(profile).data)
         except EmployeeProfile.DoesNotExist:
-            return Response(
-                {"error": "Employee profile not found for this user"},
-                status=status.HTTP_404_NOT_FOUND,
-            )
+            return Response({"error": "Employee profile not found for this user"}, status=status.HTTP_404_NOT_FOUND)
 
     def put(self, request):
-        """Update employee profile"""
         try:
             profile = EmployeeProfile.objects.get(user=request.user)
-            serializer = EmployeeProfileSerializer(
-                profile, data=request.data, partial=True
-            )
+            serializer = EmployeeProfileSerializer(profile, data=request.data, partial=True)
             if serializer.is_valid():
                 serializer.save()
                 return Response(serializer.data)
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         except EmployeeProfile.DoesNotExist:
-            return Response(
-                {"error": "Employee profile not found"},
-                status=status.HTTP_404_NOT_FOUND,
-            )
+            return Response({"error": "Employee profile not found"}, status=status.HTTP_404_NOT_FOUND)
 
 
 class TechnicianProfileView(APIView):
@@ -283,40 +380,26 @@ class TechnicianProfileView(APIView):
             if user_id:
                 try:
                     profile = TechnicianProfile.objects.get(user_id=user_id)
-                    serializer = TechnicianProfileSerializer(profile)
-                    return Response(serializer.data)
+                    return Response(TechnicianProfileSerializer(profile).data)
                 except TechnicianProfile.DoesNotExist:
-                    return Response(
-                        {"error": "Technician profile not found"},
-                        status=status.HTTP_404_NOT_FOUND,
-                    )
+                    return Response({"error": "Technician profile not found"}, status=status.HTTP_404_NOT_FOUND)
 
         try:
             profile = TechnicianProfile.objects.get(user=request.user)
-            serializer = TechnicianProfileSerializer(profile)
-            return Response(serializer.data)
+            return Response(TechnicianProfileSerializer(profile).data)
         except TechnicianProfile.DoesNotExist:
-            return Response(
-                {"error": "Technician profile not found for this user"},
-                status=status.HTTP_404_NOT_FOUND,
-            )
+            return Response({"error": "Technician profile not found for this user"}, status=status.HTTP_404_NOT_FOUND)
 
     def put(self, request):
-        """Update technician profile"""
         try:
             profile = TechnicianProfile.objects.get(user=request.user)
-            serializer = TechnicianProfileSerializer(
-                profile, data=request.data, partial=True
-            )
+            serializer = TechnicianProfileSerializer(profile, data=request.data, partial=True)
             if serializer.is_valid():
                 serializer.save()
                 return Response(serializer.data)
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         except TechnicianProfile.DoesNotExist:
-            return Response(
-                {"error": "Technician profile not found"},
-                status=status.HTTP_404_NOT_FOUND,
-            )
+            return Response({"error": "Technician profile not found"}, status=status.HTTP_404_NOT_FOUND)
 
 
 class UpdateProfileImageView(APIView):
@@ -324,53 +407,27 @@ class UpdateProfileImageView(APIView):
     parser_classes = [MultiPartParser, FormParser]
 
     def put(self, request):
-        user = request.user
-        # Get the image from the request (key should be 'profile_image')
         if "profile_image" not in request.data:
-            return Response(
-                {"error": "No image provided"}, status=status.HTTP_400_BAD_REQUEST
-            )
-
-        user.profile_image = request.data["profile_image"]
-        user.save()
-
-        serializer = UserSerializer(user)
-        return Response(serializer.data, status=status.HTTP_200_OK)
-
-
-# ==========================================
-# UPGRADED PROFILE VIEWSETS (CORRECTED)
-# ==========================================
+            return Response({"error": "No image provided"}, status=status.HTTP_400_BAD_REQUEST)
+        request.user.profile_image = request.data["profile_image"]
+        request.user.save()
+        return Response(UserSerializer(request.user).data, status=status.HTTP_200_OK)
 
 
 class EmployeeProfileViewSet(viewsets.ModelViewSet):
-    """
-    Employee can view and update their OWN profile.
-    """
-
     serializer_class = EmployeeProfileSerializer
     permission_classes = [permissions.IsAuthenticated]
     parser_classes = [MultiPartParser, FormParser, JSONParser]
-
-    # FIX 1: Explicitly tell Django which HTTP methods are allowed.
-    # We remove 'post' (create) and 'delete' (destroy).
     http_method_names = ["get", "put", "patch"]
 
-    # FIX 2: Only return the profile of the logged-in user.
     def get_queryset(self):
         return EmployeeProfile.objects.filter(user=self.request.user)
 
 
 class TechnicianProfileViewSet(viewsets.ModelViewSet):
-    """
-    Technician can view and update their OWN profile.
-    """
-
     serializer_class = TechnicianProfileSerializer
     permission_classes = [permissions.IsAuthenticated]
     parser_classes = [MultiPartParser, FormParser, JSONParser]
-
-    # Only allow viewing and updating
     http_method_names = ["get", "put", "patch"]
 
     def get_queryset(self):
@@ -378,10 +435,6 @@ class TechnicianProfileViewSet(viewsets.ModelViewSet):
 
 
 class UserRoleProfileView(APIView):
-    """
-    Admin can view and update employee/technician profile fields
-    like department, employee_id, designation, specialization.
-    """
     permission_classes = [IsAdmin]
     parser_classes = [MultiPartParser, FormParser, JSONParser]
 
@@ -393,18 +446,15 @@ class UserRoleProfileView(APIView):
 
         if user.role == 'employee':
             try:
-                profile = EmployeeProfile.objects.get(user=user)
-                return Response({"success": True, "data": EmployeeProfileSerializer(profile).data})
+                return Response({"success": True, "data": EmployeeProfileSerializer(EmployeeProfile.objects.get(user=user)).data})
             except EmployeeProfile.DoesNotExist:
                 return Response({"success": True, "data": None})
         elif user.role == 'technician':
             try:
-                profile = TechnicianProfile.objects.get(user=user)
-                return Response({"success": True, "data": TechnicianProfileSerializer(profile).data})
+                return Response({"success": True, "data": TechnicianProfileSerializer(TechnicianProfile.objects.get(user=user)).data})
             except TechnicianProfile.DoesNotExist:
                 return Response({"success": True, "data": None})
-        else:
-            return Response({"success": True, "data": None, "message": "Admin has no role profile"})
+        return Response({"success": True, "data": None, "message": "Admin has no role profile"})
 
     def patch(self, request, pk):
         try:
@@ -416,7 +466,6 @@ class UserRoleProfileView(APIView):
             try:
                 profile = EmployeeProfile.objects.get(user=user)
             except EmployeeProfile.DoesNotExist:
-                # Auto-create if missing
                 profile = EmployeeProfile.objects.create(user=user)
             serializer = EmployeeProfileSerializer(profile, data=request.data, partial=True)
         elif user.role == 'technician':
@@ -433,10 +482,6 @@ class UserRoleProfileView(APIView):
             return Response({"success": True, "data": serializer.data})
         return Response({"success": False, "error": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
 
-    
-# ==========================================
-# AUTO-CREATE PROFILE ON USER CREATION
-# ==========================================
 
 @receiver(post_save, sender=User)
 def create_user_profile(sender, instance, created, **kwargs):

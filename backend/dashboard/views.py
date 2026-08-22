@@ -33,10 +33,10 @@ class AdminDashboardAPIView(APIView):
         data = {
             "users": {
                 "total_employees": User.objects.filter(
-                    role="employee", is_active=True
+                    role="employee"
                 ).count(),
                 "total_technicians": User.objects.filter(
-                    role="technician", is_active=True
+                    role="technician"
                 ).count(),
                 "total_departments": Department.objects.count(),
             },

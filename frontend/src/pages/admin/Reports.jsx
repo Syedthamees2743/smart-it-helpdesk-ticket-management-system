@@ -142,30 +142,34 @@ const Reports = () => {
   const [technicians, setTechnicians] = useState([]);
 
   /* ── Fetch dropdown options on mount ── */
-  useEffect(() => {
+    useEffect(() => {
     const fetchDropdowns = async () => {
       try {
         const endpoints = [
           { key: 'departments', url: '/departments/' },
           { key: 'categories', url: '/tickets/categories/' },
-          {
-            key: 'technicians',
-            url: '/users/',
-            params: { role: 'technician' },
-          },
+          { key: 'technicians', url: '/users/' },
         ];
 
         const results = await Promise.allSettled(
-          endpoints.map((ep) =>
-            api.get(ep.url, { params: ep.params || {} })
-          )
+          endpoints.map((ep) => api.get(ep.url))
         );
 
         const resp = (idx) => {
           const r = results[idx];
           if (r.status !== 'fulfilled') return [];
           const d = r.value.data;
-          return Array.isArray(d) ? d : d.results || [];
+          const list = Array.isArray(d) ? d : d.results || [];
+          // Filter technicians client-side in case API doesn't support ?role= filter
+          if (idx === 2) {
+            return list.filter(
+              (u) =>
+                u.role === 'technician' ||
+                u.role_key === 'technician' ||
+                (u.is_technician === true)
+            );
+          }
+          return list;
         };
 
         setDepartments(resp(0));

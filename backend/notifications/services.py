@@ -1,15 +1,17 @@
 """
-Notification Service - Sends actual emails via Django SMTP
+Notification Service - Sends professional HTML emails via Django SMTP
+Enhanced with reusable HTML email template.
 """
 
 from django.core.mail import send_mail
 from django.conf import settings
+from .email_service import send_service_desk_email
 
 
 def send_email_notification(subject, message, recipient_list):
     """
-    Reusable function to send emails.
-    recipient_list must be a list of emails, e.g., ['user@example.com']
+    Legacy function — kept for backward compatibility.
+    Any code still calling this gets plain-text emails.
     """
     try:
         send_mail(
@@ -26,58 +28,132 @@ def send_email_notification(subject, message, recipient_list):
 
 def send_ticket_assigned_notification(ticket):
     if ticket.assigned_technician and ticket.assigned_technician.email:
-        subject = f"[IT Desk] New Ticket Assigned: {ticket.ticket_number}"
-        message = f"Hi {ticket.assigned_technician.get_full_name()},\n\nA new ticket has been assigned to you.\n\nTicket: {ticket.ticket_number}\nTitle: {ticket.title}\nPriority: {ticket.priority.upper()}\n\nPlease log in to view details."
-        send_email_notification(subject, message, [ticket.assigned_technician.email])
+        tech = ticket.assigned_technician
+        send_service_desk_email(
+            recipient=tech.email,
+            subject=f"[IT Desk] New Ticket Assigned: {ticket.ticket_number}",
+            title="New Ticket Assigned",
+            message=f"A new support ticket has been assigned to you.\n\nTitle: {ticket.title}",
+            recipient_name=tech.get_full_name(),
+            ticket_number=ticket.ticket_number,
+            status=ticket.get_status_display(),
+            priority=ticket.get_priority_display(),
+        )
 
 
 def send_status_update_notification(ticket, old_status, new_status):
     if ticket.employee and ticket.employee.email:
-        subject = f"[IT Desk] Update on Ticket {ticket.ticket_number}"
-        message = f"Hi {ticket.employee.get_full_name()},\n\nYour ticket status has been updated.\n\nTicket: {ticket.ticket_number}\nChanged from: {old_status.upper()} -> {new_status.upper()}\n\nThank you."
-        send_email_notification(subject, message, [ticket.employee.email])
+        emp = ticket.employee
+        send_service_desk_email(
+            recipient=emp.email,
+            subject=f"[IT Desk] Update on Ticket {ticket.ticket_number}",
+            title="Ticket Status Updated",
+            message=(
+                f"Your support ticket status has been changed.\n\n"
+                f"From: {old_status.replace('_', ' ').title()}\n"
+                f"To: {new_status.replace('_', ' ').title()}"
+            ),
+            recipient_name=emp.get_full_name(),
+            ticket_number=ticket.ticket_number,
+            status=new_status.replace('_', ' ').title(),
+            priority=ticket.get_priority_display(),
+        )
 
 
 def send_ticket_resolved_notification(ticket):
     if ticket.employee and ticket.employee.email:
-        subject = f"[IT Desk] Ticket Resolved: {ticket.ticket_number}"
-        message = f"Hi {ticket.employee.get_full_name()},\n\nYour ticket has been resolved by {ticket.assigned_technician.get_full_name()}.\n\nPlease log in to review and close the ticket, or reopen it if the issue persists."
-        send_email_notification(subject, message, [ticket.employee.email])
+        emp = ticket.employee
+        tech_name = (
+            ticket.assigned_technician.get_full_name()
+            if ticket.assigned_technician
+            else "a technician"
+        )
+        send_service_desk_email(
+            recipient=emp.email,
+            subject=f"[IT Desk] Ticket Resolved: {ticket.ticket_number}",
+            title="Ticket Resolved",
+            message=(
+                f"Your ticket has been resolved by {tech_name}.\n\n"
+                f"Please log in to review and close the ticket, "
+                f"or reopen it if the issue persists."
+            ),
+            recipient_name=emp.get_full_name(),
+            ticket_number=ticket.ticket_number,
+            status="Resolved",
+            priority=ticket.get_priority_display(),
+        )
 
 
 def send_ticket_reopened_notification(ticket):
     if ticket.assigned_technician and ticket.assigned_technician.email:
-        subject = f"[IT Desk] Ticket Reopened: {ticket.ticket_number}"
-        message = f"Hi {ticket.assigned_technician.get_full_name()},\n\nTicket {ticket.ticket_number} has been reopened by the employee.\nReason: {ticket.reopen_reason}\n\nPlease take action."
-        send_email_notification(subject, message, [ticket.assigned_technician.email])
+        tech = ticket.assigned_technician
+        reason = ticket.reopen_reason or "No reason provided."
+        send_service_desk_email(
+            recipient=tech.email,
+            subject=f"[IT Desk] Ticket Reopened: {ticket.ticket_number}",
+            title="Ticket Reopened",
+            message=(
+                f"Ticket {ticket.ticket_number} has been reopened by the employee.\n\n"
+                f"Reason: {reason}"
+            ),
+            recipient_name=tech.get_full_name(),
+            ticket_number=ticket.ticket_number,
+            status="Reopened",
+            priority=ticket.get_priority_display(),
+        )
 
 
 def send_ticket_closed_notification(ticket):
-    subject = f"[IT Desk] Ticket Closed: {ticket.ticket_number}"
-    message = f"Ticket {ticket.ticket_number} has been successfully closed."
     emails = []
-    if ticket.employee and ticket.employee.email: emails.append(ticket.employee.email)
-    if ticket.assigned_technician and ticket.assigned_technician.email: emails.append(ticket.assigned_technician.email)
+    if ticket.employee and ticket.employee.email:
+        emails.append(ticket.employee.email)
+    if ticket.assigned_technician and ticket.assigned_technician.email:
+        emails.append(ticket.assigned_technician.email)
     if emails:
-        send_email_notification(subject, message, emails)
+        send_service_desk_email(
+            recipient=emails,
+            subject=f"[IT Desk] Ticket Closed: {ticket.ticket_number}",
+            title="Ticket Closed",
+            message="This ticket has been successfully closed.",
+            ticket_number=ticket.ticket_number,
+            status="Closed",
+            priority=ticket.get_priority_display(),
+        )
 
 
 def send_asset_assigned_notification(assignment):
     if assignment.employee and assignment.employee.email:
-        subject = f"[IT Desk] Asset Assigned to You: {assignment.asset.asset_code}"
-        message = f"Hi {assignment.employee.get_full_name()},\n\nAn asset has been assigned to you:\n\nAsset: {assignment.asset.asset_name} ({assignment.asset.asset_code})\nDate: {assignment.assigned_date}\n\nPlease take care of it."
-        send_email_notification(subject, message, [assignment.employee.email])
+        emp = assignment.employee
+        send_service_desk_email(
+            recipient=emp.email,
+            subject=f"[IT Desk] Asset Assigned to You: {assignment.asset.asset_code}",
+            title="Asset Assigned",
+            message=(
+                f"An IT asset has been assigned to you.\n\n"
+                f"Asset: {assignment.asset.asset_name} ({assignment.asset.asset_code})\n"
+                f"Assigned Date: {assignment.assigned_date}"
+            ),
+            recipient_name=emp.get_full_name(),
+        )
 
 
 def send_asset_returned_notification(assignment):
     if assignment.employee and assignment.employee.email:
-        subject = f"[IT Desk] Asset Return Confirmed: {assignment.asset.asset_code}"
-        message = f"Hi {assignment.employee.get_full_name()},\n\nThe return of asset {assignment.asset.asset_name} ({assignment.asset.asset_code}) has been recorded in the system."
-        send_email_notification(subject, message, [assignment.employee.email])
+        emp = assignment.employee
+        send_service_desk_email(
+            recipient=emp.email,
+            subject=f"[IT Desk] Asset Return Confirmed: {assignment.asset.asset_code}",
+            title="Asset Return Confirmed",
+            message=(
+                f"The return of asset {assignment.asset.asset_name} "
+                f"({assignment.asset.asset_code}) has been recorded in the system."
+            ),
+            recipient_name=emp.get_full_name(),
+        )
 
 
 # ============================================================
-# IN-APP NOTIFICATION HELPER
+# IN-APP NOTIFICATION HELPER — UNCHANGED
 # ============================================================
 
 def create_notification(user, title, message, notification_type='general', ticket=None):

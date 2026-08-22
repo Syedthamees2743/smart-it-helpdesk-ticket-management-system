@@ -316,12 +316,18 @@ const AdminDashboard = () => {
 
       {/* ════════════ KPI CARDS ════════════ */}
       <Row className="g-3 mb-4">
-        <Col xs={12} sm={6} lg={3}>
+                <Col xs={12} sm={6} lg={3}>
           <StatCard
             icon={<FaUsers size={24} />}
             title="Total Employees"
             value={kpis.total_employees}
             color="secondary"
+            subtitle={
+              kpis.inactive_employees > 0
+                ? `${kpis.inactive_employees} inactive`
+                : null
+            }
+            subtitleColor="text-danger"
           />
         </Col>
         <Col xs={12} sm={6} lg={3}>
@@ -330,6 +336,12 @@ const AdminDashboard = () => {
             title="Total Technicians"
             value={kpis.total_technicians}
             color="primary"
+            subtitle={
+              kpis.inactive_technicians > 0
+                ? `${kpis.inactive_technicians} inactive`
+                : null
+            }
+            subtitleColor="text-danger"
           />
         </Col>
         <Col xs={12} sm={6} lg={3}>

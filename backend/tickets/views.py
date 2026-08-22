@@ -28,17 +28,13 @@ from notifications.services import (
     send_ticket_resolved_notification,
     send_ticket_reopened_notification,
     send_ticket_closed_notification,
-    create_notification,  # DAY 10: Added in-app notification helper
+    create_notification,
 )
 
 User = get_user_model()
 
 
 class TicketViewSet(viewsets.ModelViewSet):
-    """
-    Master ViewSet for Tickets with Workflow Actions.
-    """
-
     parser_classes = [MultiPartParser, FormParser, JSONParser]
     search_fields = ("ticket_number", "title", "description")
     filterset_fields = (
@@ -70,9 +66,15 @@ class TicketViewSet(viewsets.ModelViewSet):
         return Ticket.objects.none()
 
     def perform_create(self, serializer):
-        ticket = serializer.save(employee=self.request.user)
+        user = self.request.user
+        # Employee: auto-set department from profile, ignore frontend value
+        if user.role == "employee":
+            profile = getattr(user, 'employee_profile', None)
+            dept = profile.department if profile else None
+            ticket = serializer.save(employee=user, department=dept)
+        else:
+            ticket = serializer.save(employee=user)
 
-        # DAY 10: Notify employee
         create_notification(
             user=ticket.employee,
             title="Ticket Created",
@@ -80,7 +82,6 @@ class TicketViewSet(viewsets.ModelViewSet):
             notification_type="ticket_created",
             ticket=ticket,
         )
-        # DAY 10: Notify all admins
         admins = User.objects.filter(role="admin")
         for admin in admins:
             create_notification(
@@ -108,9 +109,45 @@ class TicketViewSet(viewsets.ModelViewSet):
             status=status.HTTP_200_OK,
         )
 
-    # ==========================================
-    # WORKFLOW ACTIONS
-    # ==========================================
+    # ── DROPDOWN LOOKUP ENDPOINTS ──
+
+    @action(detail=False, methods=["get"], url_path="technicians-dropdown")
+    def technicians_dropdown(self, request):
+        """Return technicians with profile info for dropdowns."""
+        technicians = User.objects.filter(
+            role="technician"
+        ).select_related('technician_profile', 'technician_profile__department')
+        data = []
+        for t in technicians:
+            profile = getattr(t, 'technician_profile', None)
+            data.append({
+                'id': t.id,
+                'name': t.get_full_name(),
+                'technician_id': profile.technician_id if profile else None,
+                'department': profile.department.name if profile and profile.department else None,
+                'specialization': profile.specialization if profile else None,
+            })
+        return Response(data)
+
+    @action(detail=False, methods=["get"], url_path="employees-dropdown")
+    def employees_dropdown(self, request):
+        """Return employees with profile info for dropdowns."""
+        employees = User.objects.filter(
+            role="employee"
+        ).select_related('employee_profile', 'employee_profile__department')
+        data = []
+        for e in employees:
+            profile = getattr(e, 'employee_profile', None)
+            data.append({
+                'id': e.id,
+                'name': e.get_full_name(),
+                'employee_id': profile.employee_id if profile else None,
+                'department': profile.department.name if profile and profile.department else None,
+                'designation': profile.designation if profile else None,
+            })
+        return Response(data)
+
+    # ── WORKFLOW ACTIONS ──
 
     @action(detail=True, methods=["post"], url_path="assign")
     def assign_ticket(self, request, pk=None):
@@ -141,11 +178,9 @@ class TicketViewSet(viewsets.ModelViewSet):
             ticket.status = "assigned"
         ticket.save()
 
-        # Email notifications (existing)
         send_ticket_assigned_notification(ticket)
         send_status_update_notification(ticket, old_status, ticket.status)
 
-        # DAY 10: In-app notification for technician
         create_notification(
             user=technician,
             title="Ticket Assigned",
@@ -153,7 +188,6 @@ class TicketViewSet(viewsets.ModelViewSet):
             notification_type="ticket_assigned",
             ticket=ticket,
         )
-        # DAY 10: In-app notification for employee
         create_notification(
             user=ticket.employee,
             title="Technician Assigned",
@@ -191,16 +225,13 @@ class TicketViewSet(viewsets.ModelViewSet):
                 or allowed_transitions[old_status] != new_status
             ):
                 raise ValidationError(
-                    {
-                        "error": f"Technicians can only change: Assigned → In Progress → Resolved."
-                    }
+                    {"error": f"Technicians can only change: Assigned → In Progress → Resolved."}
                 )
 
             if new_status == "resolved":
                 ticket.resolved_at = timezone.now()
                 send_ticket_resolved_notification(ticket)
 
-                # DAY 10: In-app notification for employee when resolved
                 create_notification(
                     user=ticket.employee,
                     title="Ticket Resolved",
@@ -209,7 +240,6 @@ class TicketViewSet(viewsets.ModelViewSet):
                     ticket=ticket,
                 )
 
-            # DAY 10: In-app notification when technician starts working
             if new_status == "in_progress":
                 create_notification(
                     user=ticket.employee,
@@ -241,9 +271,7 @@ class TicketViewSet(viewsets.ModelViewSet):
         ticket = self.get_object()
         if ticket.status != "resolved":
             raise ValidationError(
-                {
-                    "error": "Only RESOLVED tickets can be reopened. Closed tickets cannot be reopened."
-                }
+                {"error": "Only RESOLVED tickets can be reopened. Closed tickets cannot be reopened."}
             )
         if ticket.employee != request.user:
             raise PermissionDenied("You can only reopen your own tickets.")
@@ -257,10 +285,8 @@ class TicketViewSet(viewsets.ModelViewSet):
         ticket.resolved_at = None
         ticket.save()
 
-        # Email notification (existing)
         send_ticket_reopened_notification(ticket)
 
-        # DAY 10: In-app notification for all admins
         admins = User.objects.filter(role="admin")
         for admin in admins:
             create_notification(
@@ -270,7 +296,6 @@ class TicketViewSet(viewsets.ModelViewSet):
                 notification_type="ticket_reopened",
                 ticket=ticket,
             )
-        # DAY 10: In-app notification for assigned technician
         if ticket.assigned_technician:
             create_notification(
                 user=ticket.assigned_technician,
@@ -300,10 +325,8 @@ class TicketViewSet(viewsets.ModelViewSet):
         ticket.status = "closed"
         ticket.save()
 
-        # Email notification (existing)
         send_ticket_closed_notification(ticket)
 
-        # DAY 10: In-app notification for technician
         if ticket.assigned_technician:
             create_notification(
                 user=ticket.assigned_technician,
@@ -327,8 +350,6 @@ class IssueCategoryViewSet(viewsets.ModelViewSet):
     serializer_class = IssueCategorySerializer
     permission_classes = [permissions.IsAuthenticated]
 
-
-# --- TICKET COMMENT VIEWS ---
 
 from .serializers import TicketCommentSerializer, TicketCommentListSerializer
 
@@ -363,7 +384,6 @@ class TicketCommentViewSet(viewsets.ModelViewSet):
 
         comment = serializer.save(user=user, ticket=ticket)
 
-        # DAY 10: Notify the other party about the comment
         if user.role == "technician" and ticket.employee:
             create_notification(
                 user=ticket.employee,
@@ -381,7 +401,6 @@ class TicketCommentViewSet(viewsets.ModelViewSet):
                 ticket=ticket,
             )
         elif user.role == "admin":
-            # If admin comments, notify both employee and technician
             if ticket.employee and ticket.employee != user:
                 create_notification(
                     user=ticket.employee,
@@ -401,11 +420,6 @@ class TicketCommentViewSet(viewsets.ModelViewSet):
 
 
 class AIAnalyzeComplaintView(APIView):
-    """
-    POST /api/tickets/ai/analyze-complaint/
-    Employee AI Complaint Assistant.
-    Analyzes complaint title+description and suggests category, priority, and related FAQs.
-    """
     permission_classes = [IsEmployee]
 
     def post(self, request):
@@ -419,17 +433,10 @@ class AIAnalyzeComplaintView(APIView):
             )
 
         result = ai_analyze_complaint(title, description)
-
-        # Always return 200 — frontend handles success/error display
         return Response(result, status=status.HTTP_200_OK)
 
 
 class AITroubleshootView(APIView):
-    """
-    POST /api/tickets/ai/troubleshoot/
-    Technician AI Troubleshooting Assistant.
-    Analyzes an assigned ticket and suggests troubleshooting steps.
-    """
     permission_classes = [IsTechnician]
 
     def post(self, request):
@@ -451,7 +458,6 @@ class AITroubleshootView(APIView):
                 status=status.HTTP_404_NOT_FOUND
             )
 
-        # Security: technician can only analyze tickets assigned to them
         if ticket.assigned_technician != request.user:
             return Response(
                 {'success': False, 'error': 'You can only analyze tickets assigned to you.'},
@@ -459,5 +465,4 @@ class AITroubleshootView(APIView):
             )
 
         result = ai_troubleshoot_ticket(ticket)
-
         return Response(result, status=status.HTTP_200_OK)

@@ -1,6 +1,7 @@
 import { useState, useEffect, useContext } from 'react';
 import { Card, Button, Row, Col, Pagination } from 'react-bootstrap';
 import { FaPlus, FaTimes, FaUsers } from 'react-icons/fa';
+import { toast } from "react-toastify";
 import { AuthContext } from '../../context/AuthContext';
 import { getUsers, createUser, updateUser, deleteUser, toggleUserStatus } from '../../services/userService';
 
@@ -93,14 +94,15 @@ const UserManagement = () => {
     fetchUsers();
   };
 
-  const handleToggleStatus = async () => {
+    const handleToggleStatus = async () => {
     setActionLoading(true);
     try {
-      await toggleUserStatus(confirmAction.user.id);
+      const res = await toggleUserStatus(confirmAction.user.id);
       setShowConfirmModal(false);
       fetchUsers();
+      toast.success(res.data?.message || "User status updated successfully.");
     } catch (err) {
-      alert(err.response?.data?.error || "Failed to change status.");
+      toast.error(err.response?.data?.error || "Failed to change user status.");
     } finally {
       setActionLoading(false);
     }
@@ -109,11 +111,16 @@ const UserManagement = () => {
   const handleDelete = async () => {
     setActionLoading(true);
     try {
-      await deleteUser(confirmAction.user.id);
+      const res = await deleteUser(confirmAction.user.id);
       setShowConfirmModal(false);
       fetchUsers();
+      toast.success(res.data?.message || "User deleted successfully.");
     } catch (err) {
-      alert(err.response?.data?.detail || "Cannot delete user. They might have related tickets/assets.");
+      toast.error(
+        err.response?.data?.error ||
+        err.response?.data?.detail ||
+        "Cannot delete user. They might have related tickets, assets, or feedbacks."
+      );
     } finally {
       setActionLoading(false);
     }

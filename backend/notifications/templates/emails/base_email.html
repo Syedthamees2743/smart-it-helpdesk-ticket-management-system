@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <title>{{ title }}</title>
+  <!--[if mso]>
+  <style type="text/css">
+    table {border-collapse: collapse; mso-table-lspace: 0pt; mso-table-rspace: 0pt;}
+    td {font-family: Arial, sans-serif;}
+  </style>
+  <![endif]-->
+</head>
+<body style="margin:0; padding:0; background-color:#eef2f7; font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif; -webkit-font-smoothing:antialiased; -webkit-text-size-adjust:100%; -ms-text-size-adjust:100%;">
+
+  <!-- Outer wrapper -->
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#eef2f7;">
+    <tr>
+      <td align="center" style="padding:40px 16px;">
+
+        <!-- Inner container -->
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:580px; background-color:#ffffff; border-radius:16px; overflow:hidden; box-shadow:0 1px 3px rgba(0,0,0,0.04), 0 8px 24px rgba(0,0,0,0.06);">
+
+          <!-- ═══════════════════════════════════════════ -->
+          <!--                    HEADER                   -->
+          <!-- ═══════════════════════════════════════════ -->
+          <tr>
+            <td style="background-color:#0f172a; padding:0;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td style="padding:28px 32px 24px 32px; text-align:center;">
+
+                    <!-- Logo icon -->
+                    <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:0 auto 14px auto;">
+                      <tr>
+                        <td style="background:linear-gradient(135deg,#6366f1,#8b5cf6); width:44px; height:44px; border-radius:12px; text-align:center; vertical-align:middle; font-size:16px; color:#ffffff; font-weight:800; letter-spacing:0.5px; box-shadow:0 4px 12px rgba(99,102,241,0.35);">
+                          IT
+                        </td>
+                      </tr>
+                    </table>
+
+                    <!-- Brand name -->
+                    <h1 style="margin:0; font-size:18px; font-weight:700; color:#f8fafc; letter-spacing:0.4px; line-height:1.2;">
+                      Smart IT Service Desk
+                    </h1>
+                    <p style="margin:5px 0 0 0; font-size:11px; color:#64748b; letter-spacing:1px; text-transform:uppercase; font-weight:500;">
+                      IT Support Management
+                    </p>
+
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Accent bar -->
+          <tr>
+            <td style="height:3px; background:linear-gradient(90deg,#6366f1 0%,#8b5cf6 50%,#6366f1 100%); font-size:0; line-height:0;">&nbsp;</td>
+          </tr>
+
+          <!-- ═══════════════════════════════════════════ -->
+          <!--                 MAIN CONTENT                -->
+          <!-- ═══════════════════════════════════════════ -->
+          <tr>
+            <td style="padding:36px 32px 32px 32px;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+
+                <!-- Notification title -->
+                <tr>
+                  <td style="padding-bottom:6px;">
+                    <h2 style="margin:0; font-size:21px; font-weight:700; color:#0f172a; line-height:1.3;">
+                      {{ title }}
+                    </h2>
+                  </td>
+                </tr>
+
+                <!-- Thin divider under title -->
+                <tr>
+                  <td style="padding-bottom:18px;">
+                    <table role="presentation" width="40" cellpadding="0" cellspacing="0" border="0">
+                      <tr>
+                        <td style="height:3px; background-color:#6366f1; border-radius:2px; font-size:0; line-height:0;">&nbsp;</td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+
+                <!-- Greeting -->
+                <tr>
+                  <td style="padding-bottom:14px;">
+                    <p style="margin:0; font-size:15px; color:#334155; line-height:1.6;">
+                      Hello {% if recipient_name %}{{ recipient_name }}{% else %}there{% endif %},
+                    </p>
+                  </td>
+                </tr>
+
+                <!-- Message body -->
+                <tr>
+                  <td style="padding-bottom:28px;">
+                    <p style="margin:0; font-size:14px; color:#475569; line-height:1.75; white-space:pre-line;">
+                      {{ message }}
+                    </p>
+                  </td>
+                </tr>
+
+                <!-- ═══════════════════════════════════ -->
+                <!--         TICKET DETAILS CARD         -->
+                <!-- ═══════════════════════════════════ -->
+                {% if ticket_number or status or priority %}
+                <tr>
+                  <td style="padding-bottom:24px;">
+                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border:1px solid #e2e8f0; border-radius:12px; overflow:hidden;">
+
+                      <!-- Card header -->
+                      <tr>
+                        <td style="background-color:#f8fafc; padding:11px 20px; border-bottom:1px solid #e2e8f0;">
+                          <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+                            <tr>
+                              <td style="font-size:11px; font-weight:700; color:#64748b; text-transform:uppercase; letter-spacing:0.8px;">
+                                Ticket Details
+                              </td>
+                            </tr>
+                          </table>
+                        </td>
+                      </tr>
+
+                      <!-- Ticket Number -->
+                      {% if ticket_number %}
+                      <tr>
+                        <td style="padding:14px 20px; border-bottom:1px solid #f1f5f9;">
+                          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                            <tr>
+                              <td width="130" valign="top" style="font-size:13px; color:#64748b; font-weight:500; padding-top:1px;">
+                                Ticket No.
+                              </td>
+                              <td style="font-size:14px; color:#0f172a; font-weight:700; letter-spacing:0.3px;">
+                                {{ ticket_number }}
+                              </td>
+                            </tr>
+                          </table>
+                        </td>
+                      </tr>
+                      {% endif %}
+
+                      <!-- Status -->
+                      {% if status %}
+                      <tr>
+                        <td style="padding:14px 20px; border-bottom:1px solid #f1f5f9;">
+                          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                            <tr>
+                              <td width="130" valign="middle" style="font-size:13px; color:#64748b; font-weight:500;">
+                                Status
+                              </td>
+                              <td valign="middle">
+                                {% if status|lower == 'open' %}
+                                <span style="display:inline-block; padding:5px 14px; border-radius:6px; font-size:12px; font-weight:600; color:#0369a1; background-color:#e0f2fe; border:1px solid #bae6fd;">
+                                  &#9679;&nbsp;{{ status }}
+                                </span>
+                                {% elif status|lower == 'assigned' %}
+                                <span style="display:inline-block; padding:5px 14px; border-radius:6px; font-size:12px; font-weight:600; color:#7c3aed; background-color:#ede9fe; border:1px solid #ddd6fe;">
+                                  &#9679;&nbsp;{{ status }}
+                                </span>
+                                {% elif status|lower == 'in progress' %}
+                                <span style="display:inline-block; padding:5px 14px; border-radius:6px; font-size:12px; font-weight:600; color:#b45309; background-color:#fef3c7; border:1px solid #fde68a;">
+                                  &#9679;&nbsp;{{ status }}
+                                </span>
+                                {% elif status|lower == 'resolved' %}
+                                <span style="display:inline-block; padding:5px 14px; border-radius:6px; font-size:12px; font-weight:600; color:#047857; background-color:#d1fae5; border:1px solid #a7f3d0;">
+                                  &#9679;&nbsp;{{ status }}
+                                </span>
+                                {% elif status|lower == 'reopened' %}
+                                <span style="display:inline-block; padding:5px 14px; border-radius:6px; font-size:12px; font-weight:600; color:#dc2626; background-color:#fee2e2; border:1px solid #fecaca;">
+                                  &#9679;&nbsp;{{ status }}
+                                </span>
+                                {% elif status|lower == 'closed' %}
+                                <span style="display:inline-block; padding:5px 14px; border-radius:6px; font-size:12px; font-weight:600; color:#4b5563; background-color:#f3f4f6; border:1px solid #d1d5db;">
+                                  &#9679;&nbsp;{{ status }}
+                                </span>
+                                {% else %}
+                                <span style="display:inline-block; padding:5px 14px; border-radius:6px; font-size:12px; font-weight:600; color:#334155; background-color:#e2e8f0; border:1px solid #cbd5e1;">
+                                  &#9679;&nbsp;{{ status }}
+                                </span>
+                                {% endif %}
+                              </td>
+                            </tr>
+                          </table>
+                        </td>
+                      </tr>
+                      {% endif %}
+
+                      <!-- Priority -->
+                      {% if priority %}
+                      <tr>
+                        <td style="padding:14px 20px;">
+                          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                            <tr>
+                              <td width="130" valign="middle" style="font-size:13px; color:#64748b; font-weight:500;">
+                                Priority
+                              </td>
+                              <td valign="middle">
+                                {% if priority|lower == 'low' %}
+                                <span style="display:inline-block; padding:5px 14px; border-radius:6px; font-size:12px; font-weight:600; color:#047857; background-color:#d1fae5; border:1px solid #a7f3d0;">
+                                  &#9650;&nbsp;{{ priority }}
+                                </span>
+                                {% elif priority|lower == 'medium' %}
+                                <span style="display:inline-block; padding:5px 14px; border-radius:6px; font-size:12px; font-weight:600; color:#b45309; background-color:#fef3c7; border:1px solid #fde68a;">
+                                  &#9650;&#9650;&nbsp;{{ priority }}
+                                </span>
+                                {% elif priority|lower == 'high' %}
+                                <span style="display:inline-block; padding:5px 14px; border-radius:6px; font-size:12px; font-weight:600; color:#dc2626; background-color:#fee2e2; border:1px solid #fecaca;">
+                                  &#9650;&#9650;&#9650;&nbsp;{{ priority }}
+                                </span>
+                                {% elif priority|lower == 'critical' %}
+                                <span style="display:inline-block; padding:5px 14px; border-radius:6px; font-size:12px; font-weight:700; color:#ffffff; background-color:#dc2626; border:1px solid #b91c1c;">
+                                  &#9888;&nbsp;{{ priority }}
+                                </span>
+                                {% else %}
+                                <span style="display:inline-block; padding:5px 14px; border-radius:6px; font-size:12px; font-weight:600; color:#334155; background-color:#e2e8f0; border:1px solid #cbd5e1;">
+                                  {{ priority }}
+                                </span>
+                                {% endif %}
+                              </td>
+                            </tr>
+                          </table>
+                        </td>
+                      </tr>
+                      {% endif %}
+
+                    </table>
+                  </td>
+                </tr>
+                {% endif %}
+
+                <!-- ═══════════════════════════════════ -->
+                <!--         PEOPLE INFO CARDS           -->
+                <!-- ═══════════════════════════════════ -->
+                {% if employee_name or employee_id or technician_name or technician_id %}
+                <tr>
+                  <td style="padding-bottom:24px;">
+                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                      <tr>
+                        {% if employee_name or employee_id %}
+                        <!-- Employee Card -->
+                        {% if technician_name or technician_id %}
+                        <td width="48%" valign="top" style="padding-right:8px;">
+                        {% else %}
+                        <td width="100%" valign="top" style="padding-right:0;">
+                        {% endif %}
+                          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border:1px solid #e2e8f0; border-radius:12px; overflow:hidden;">
+                            <!-- Card header -->
+                            <tr>
+                              <td style="background-color:#f8fafc; padding:9px 16px; border-bottom:1px solid #e2e8f0;">
+                                <span style="font-size:10px; font-weight:700; color:#64748b; text-transform:uppercase; letter-spacing:0.8px;">
+                                  Employee
+                                </span>
+                              </td>
+                            </tr>
+                            <!-- Name -->
+                            {% if employee_name %}
+                            <tr>
+                              <td style="padding:12px 16px 4px 16px;">
+                                <span style="font-size:14px; font-weight:600; color:#0f172a; line-height:1.3;">
+                                  {{ employee_name }}
+                                </span>
+                              </td>
+                            </tr>
+                            {% endif %}
+                            <!-- ID & Department -->
+                            {% if employee_id %}
+                            <tr>
+                              <td style="padding:0 16px 12px 16px;">
+                                <span style="font-size:12px; color:#64748b; font-weight:500;">
+                                  {{ employee_id }}{% if employee_department %} &middot; {{ employee_department }}{% endif %}
+                                </span>
+                              </td>
+                            </tr>
+                            {% endif %}
+                          </table>
+                        </td>
+                        {% endif %}
+
+                        {% if technician_name or technician_id %}
+                        <!-- Technician Card -->
+                        {% if employee_name or employee_id %}
+                        <td width="48%" valign="top" style="padding-left:8px;">
+                        {% else %}
+                        <td width="100%" valign="top" style="padding-left:0;">
+                        {% endif %}
+                          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border:1px solid #e2e8f0; border-radius:12px; overflow:hidden;">
+                            <!-- Card header -->
+                            <tr>
+                              <td style="background-color:#f8fafc; padding:9px 16px; border-bottom:1px solid #e2e8f0;">
+                                <span style="font-size:10px; font-weight:700; color:#64748b; text-transform:uppercase; letter-spacing:0.8px;">
+                                  Technician
+                                </span>
+                              </td>
+                            </tr>
+                            <!-- Name -->
+                            {% if technician_name %}
+                            <tr>
+                              <td style="padding:12px 16px 4px 16px;">
+                                <span style="font-size:14px; font-weight:600; color:#0f172a; line-height:1.3;">
+                                  {{ technician_name }}
+                                </span>
+                              </td>
+                            </tr>
+                            {% endif %}
+                            <!-- ID & Department -->
+                            {% if technician_id %}
+                            <tr>
+                              <td style="padding:0 16px 12px 16px;">
+                                <span style="font-size:12px; color:#64748b; font-weight:500;">
+                                  {{ technician_id }}{% if technician_department %} &middot; {{ technician_department }}{% endif %}
+                                </span>
+                              </td>
+                            </tr>
+                            {% endif %}
+                          </table>
+                        </td>
+                        {% endif %}
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+                {% endif %}
+
+                <!-- ═══════════════════════════════════ -->
+                <!--          UPDATED TIMESTAMP          -->
+                <!-- ═══════════════════════════════════ -->
+                {% if updated_at %}
+                <tr>
+                  <td style="padding-bottom:28px; text-align:center;">
+                    <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:0 auto;">
+                      <tr>
+                        <td style="font-size:11px; color:#94a3b8; font-weight:500; letter-spacing:0.3px;">
+                          <span style="color:#cbd5e1;">&#9201;</span>&nbsp; Updated: {{ updated_at }}
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+                {% endif %}
+
+                <!-- ═══════════════════════════════════ -->
+                <!--            CTA BUTTON               -->
+                <!-- ═══════════════════════════════════ -->
+                {% if action_url %}
+                <tr>
+                  <td style="padding-bottom:32px; text-align:center;">
+                    <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:0 auto;">
+                      <tr>
+                        <td style="background:linear-gradient(135deg,#6366f1,#8b5cf6); border-radius:10px; box-shadow:0 4px 14px rgba(99,102,241,0.35);">
+                          <a href="{{ action_url }}" target="_blank" style="display:inline-block; padding:13px 36px; font-size:14px; font-weight:600; color:#ffffff; text-decoration:none; font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif; letter-spacing:0.2px;">
+                            {% if action_text %}{{ action_text }}{% else %}View Ticket{% endif %}&nbsp;&nbsp;&rarr;
+                          </a>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+                {% endif %}
+
+                <!-- ═══════════════════════════════════ -->
+                <!--              CLOSING                -->
+                <!-- ═══════════════════════════════════ -->
+                <tr>
+                  <td style="padding-top:16px; border-top:1px solid #f1f5f9;">
+                    <p style="margin:0 0 4px 0; font-size:14px; color:#475569; line-height:1.5;">
+                      Thank you,
+                    </p>
+                    <p style="margin:0; font-size:14px; color:#0f172a; font-weight:700;">
+                      IT Service Desk Team
+                    </p>
+                  </td>
+                </tr>
+
+              </table>
+            </td>
+          </tr>
+
+          <!-- ═══════════════════════════════════════════ -->
+          <!--                   FOOTER                   -->
+          <!-- ═══════════════════════════════════════════ -->
+          <tr>
+            <td style="background-color:#f8fafc; padding:24px 32px; border-top:1px solid #e2e8f0;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td align="center">
+                    <!-- Footer brand -->
+                    <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:0 auto 10px auto;">
+                      <tr>
+                        <td style="background:linear-gradient(135deg,#6366f1,#8b5cf6); width:24px; height:24px; border-radius:6px; text-align:center; vertical-align:middle; font-size:9px; color:#ffffff; font-weight:800; letter-spacing:0.3px;">
+                          IT
+                        </td>
+                        <td style="padding-left:8px; font-size:12px; font-weight:700; color:#334155; letter-spacing:0.2px;">
+                          Smart IT Service Desk
+                        </td>
+                      </tr>
+                    </table>
+                    <!-- Disclaimer -->
+                    <p style="margin:0 0 6px 0; font-size:11px; color:#94a3b8; line-height:1.6; text-align:center;">
+                      This is an automated notification from your IT Service Desk system.<br />
+                      Please do not reply to this email.
+                    </p>
+                    <!-- Copyright -->
+                    <p style="margin:0; font-size:10px; color:#cbd5e1; text-align:center;">
+                      &copy; {% now "Y" %} Smart IT Service Desk. All rights reserved.
+                    </p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+        </table>
+        <!-- End inner container -->
+
+      </td>
+    </tr>
+  </table>
+
+</body>
+</html>

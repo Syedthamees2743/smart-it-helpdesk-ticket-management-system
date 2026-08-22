@@ -36,7 +36,13 @@ const normalizeFAQResponse = (data) => {
 };
 
 const getFAQs = async (params = {}) => {
-  const response = await api.get('/faqs/', { params: { page_size: 1000, ...params } });
+  const response = await api.get('/faqs/', { params });
+  return normalizeFAQResponse(response.data);
+};
+
+// ⭐ NEW - For pagination next/prev URL
+const getFAQsByUrl = async (url) => {
+  const response = await api.get(url);
   return normalizeFAQResponse(response.data);
 };
 
@@ -62,6 +68,7 @@ const deleteFAQ = async (id) => {
 
 const faqService = {
   getFAQs,
+  getFAQsByUrl,  // ⭐ NEW
   getFAQ,
   createFAQ,
   updateFAQ,

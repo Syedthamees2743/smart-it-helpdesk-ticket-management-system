@@ -1,5 +1,7 @@
 import { Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "./context/AuthContext";
+import { ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 import ProtectedRoute from "./routes/ProtectedRoute";
 import Login from "./pages/auth/Login";
 import SettingsPage from "./components/settings/SettingsPage";
@@ -142,6 +144,18 @@ function App() {
   return (
     <AuthProvider>
       <AppRoutes />
+      <ToastContainer
+        position="top-right"
+        autoClose={4000}
+        hideProgressBar={false}
+        newestOnTop
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+        theme="colored"
+      />
     </AuthProvider>
   );
 }

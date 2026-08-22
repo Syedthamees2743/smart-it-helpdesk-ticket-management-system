@@ -27,8 +27,11 @@ const TicketManagement = () => {
 
   useEffect(() => {
     getCategories().then((res) => setCategories(res.data?.results || res.data || [])).catch(() => {});
-    api.get("/auth/users/", { params: { role: "technician" } }).then((res) => setTechnicians(res.data?.results || res.data || [])).catch(() => {});
-    api.get("/departments/departments/", { params: { page_size: 100 } }).then((res) => setDepartments(res.data?.results || res.data || [])).catch(() => {});
+    api.get("/tickets/technicians-dropdown/").then((res) => {
+      const list = Array.isArray(res.data) ? res.data : [];
+      setTechnicians(list);
+    }).catch(() => {});
+    api.get("/departments/", { params: { page_size: 100 } }).then((res) => setDepartments(res.data?.results || res.data || [])).catch(() => {});
   }, []);
 
   const totalPages = Math.ceil(totalCount / PAGE_SIZE);
@@ -99,6 +102,31 @@ const TicketManagement = () => {
     <Badge className={`badge-priority-${p.toLowerCase()}`}>{p}</Badge>
   );
 
+  const techLabel = (t) => {
+    if (!t.technician_name || t.technician_name === "None") return <span className="text-muted">Unassigned</span>;
+    const id = t.technician_id ? `  ${t.technician_id}` : "";
+    const dept = t.technician_department ? ` - ${t.technician_department}` : "";
+    const sub = [id, dept].filter(Boolean).join("");
+    return (
+      <div>
+        <div>{t.technician_name}</div>
+        {sub && <div className="text-muted" style={{ fontSize: "0.72rem", lineHeight: 1.2 }}>{sub}</div>}
+      </div>
+    );
+  };
+
+  const empLabel = (t) => {
+    const id = t.employee_id ? ` ${t.employee_id}` : "";
+    const dept = t.employee_department ? ` - ${t.employee_department}` : "";
+    const sub = [id, dept].filter(Boolean).join("");
+    return (
+      <div>
+        <div>{t.employee_name || "-"}</div>
+        {sub && <div className="text-muted" style={{ fontSize: "0.72rem", lineHeight: 1.2 }}>{sub}</div>}
+      </div>
+    );
+  };
+
   return (
     <div>
       <div className="mb-4">
@@ -145,7 +173,11 @@ const TicketManagement = () => {
             <Col md={2}>
               <Form.Select value={techFilter} onChange={e => setTechFilter(e.target.value)}>
                 <option value="">All Technicians</option>
-                {technicians.map(t => <option key={t.id} value={t.id}>{t.first_name} {t.last_name}</option>)}
+                {technicians.map(t => (
+                  <option key={t.id} value={t.id}>
+                    {t.name}{t.technician_id ? ` (${t.technician_id})` : ""}{t.department ? ` — ${t.department}` : ""}
+                  </option>
+                ))}
               </Form.Select>
             </Col>
           </Row>
@@ -196,45 +228,47 @@ const TicketManagement = () => {
             </div>
           ) : (
             <>
-              <Table hover responsive className="align-middle" style={{ fontSize: "0.85rem" }}>
-                <thead className="table-light">
-                  <tr>
-                    <th>Ticket #</th>
-                    <th>Employee</th>
-                    <th>Title</th>
-                    <th>Priority</th>
-                    <th>Technician</th>
-                    <th>Status</th>
-                    <th>SLA</th>
-                    <th>Created</th>
-                    <th>Action</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {tickets.map((t) => (
-                    <tr key={t.id}>
-                      <td className="fw-medium">{t.ticket_number}</td>
-                      <td>{t.employee_name || "-"}</td>
-                      <td>{t.title}</td>
-                      <td>{getPriorityBadge(t.priority)}</td>
-                      <td>{t.technician_name || "Unassigned"}</td>
-                      <td>{getStatusBadge(t.status)}</td>
-                      <td>
-                        {t.sla_status === "Breached"
-                          ? <Badge bg="danger">Breached</Badge>
-                          : <Badge bg="success">Ok</Badge>
-                        }
-                      </td>
-                      <td className="text-muted">{new Date(t.created_at).toLocaleDateString()}</td>
-                      <td>
-                        <Button size="sm" variant="outline-primary" onClick={() => navigate(`/admin/tickets/${t.id}`)}>
-                          View
-                        </Button>
-                      </td>
+              <div className="table-responsive">
+                <Table hover responsive className="align-middle" style={{ fontSize: "0.85rem" }}>
+                  <thead className="table-light">
+                    <tr>
+                      <th>Tickets</th>
+                      <th>Employee</th>
+                      <th>Title</th>
+                      <th>Priority</th>
+                      <th>Technician</th>
+                      <th>Status</th>
+                      <th>SLA</th>
+                      <th>Created</th>
+                      <th>Action</th>
                     </tr>
-                  ))}
-                </tbody>
-              </Table>
+                  </thead>
+                  <tbody>
+                    {tickets.map((t) => (
+                      <tr key={t.id}>
+                        <td className="fw-medium">{t.ticket_number}</td>
+                        <td style={{ minWidth: "140px" }}>{empLabel(t)}</td>
+                        <td>{t.title}</td>
+                        <td>{getPriorityBadge(t.priority)}</td>
+                        <td style={{ minWidth: "160px" }}>{techLabel(t)}</td>
+                        <td>{getStatusBadge(t.status)}</td>
+                        <td>
+                          {t.sla_status === "Breached"
+                            ? <Badge bg="danger">Breached</Badge>
+                            : <Badge bg="success">Ok</Badge>
+                          }
+                        </td>
+                        <td className="text-muted">{new Date(t.created_at).toLocaleDateString()}</td>
+                        <td>
+                          <Button size="sm" variant="outline-primary" onClick={() => navigate(`/admin/tickets/${t.id}`)}>
+                            View
+                          </Button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </Table>
+              </div>
 
               <div className="d-flex justify-content-between align-items-center pt-3 border-top">
                 <div className="text-muted small">

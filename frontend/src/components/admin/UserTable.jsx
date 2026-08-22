@@ -8,6 +8,32 @@ const UserTable = ({ users, loading, onEdit, onToggleStatus, onDelete, onManageP
     return <Badge bg={variant} className="text-uppercase">{role}</Badge>;
   };
 
+  const getIdentitySubtext = (user) => {
+    if (user.role === 'employee') {
+      const id = user.employee_id ? user.employee_id : "";
+      const dept = user.employee_department ? user.employee_department : "";
+      const sub = [id, dept].filter(Boolean).join(" - ");
+      if (!sub) return null;
+      return (
+        <div className="text-muted" style={{ fontSize: "0.72rem", lineHeight: 1.2 }}>
+          {sub}
+        </div>
+      );
+    }
+    if (user.role === 'technician') {
+      const id = user.technician_id ? user.technician_id : "";
+      const dept = user.technician_department ? user.technician_department : "";
+      const sub = [id, dept].filter(Boolean).join(" - ");
+      if (!sub) return null;
+      return (
+        <div className="text-muted" style={{ fontSize: "0.72rem", lineHeight: 1.2 }}>
+          {sub}
+        </div>
+      );
+    }
+    return null;
+  };
+
   if (loading) {
     return (
       <div className="text-center py-5">
@@ -37,9 +63,10 @@ const UserTable = ({ users, loading, onEdit, onToggleStatus, onDelete, onManageP
           <th>Email</th>
           <th>Phone</th>
           <th>Role</th>
+          <th>Department</th>
           <th>Status</th>
           <th>Created</th>
-          <th style={{width: '185px'}}>Actions</th>
+          <th style={{ width: '185px' }}>Actions</th>
         </tr>
       </thead>
       <tbody>
@@ -55,7 +82,10 @@ const UserTable = ({ users, loading, onEdit, onToggleStatus, onDelete, onManageP
                   </span>
                 )}
                 <div>
-                  <div className="fw-medium">{user.first_name} {user.last_name}</div>
+                  <div className="fw-medium">
+                    {user.first_name} {user.last_name}
+                    {getIdentitySubtext(user)}
+                  </div>
                   <small className="text-muted">@{user.username}</small>
                 </div>
               </div>
@@ -63,6 +93,11 @@ const UserTable = ({ users, loading, onEdit, onToggleStatus, onDelete, onManageP
             <td>{user.email}</td>
             <td>{user.phone_number || '-'}</td>
             <td>{getRoleBadge(user.role)}</td>
+            <td>
+              {user.employee_department || user.technician_department || (
+                <span className="text-muted">—</span>
+              )}
+            </td>
             <td>
               <Badge bg={user.is_active ? 'success' : 'secondary'}>
                 {user.is_active ? 'Active' : 'Inactive'}

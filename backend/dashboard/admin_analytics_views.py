@@ -60,8 +60,10 @@ class AdminAnalyticsAPIView(APIView):
         # ═══════════════════════════════════════
         # KPIs
         # ═══════════════════════════════════════
-        total_employees = User.objects.filter(role='employee', is_active=True).count()
-        total_technicians = User.objects.filter(role='technician', is_active=True).count()
+        total_employees = User.objects.filter(role='employee').count()
+        total_technicians = User.objects.filter(role='technician').count()
+        inactive_employees = User.objects.filter(role='employee', is_active=False).count()
+        inactive_technicians = User.objects.filter(role='technician', is_active=False).count()
 
         total_tickets = Ticket.objects.count()
         open_tickets = Ticket.objects.filter(status='open').count()
@@ -332,6 +334,8 @@ class AdminAnalyticsAPIView(APIView):
                 'kpis': {
                     'total_employees': total_employees,
                     'total_technicians': total_technicians,
+                    'inactive_employees': inactive_employees,
+                    'inactive_technicians': inactive_technicians,
                     'total_tickets': total_tickets,
                     'open_tickets': open_tickets,
                     'assigned_tickets': assigned_tickets,

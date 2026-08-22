@@ -1,7 +1,5 @@
 """
 Views for generating and downloading PDF Reports
-Enhanced with complete columns, filters, error handling,
-and new Employee Summary report.
 """
 
 import datetime
@@ -28,7 +26,6 @@ from .utils import generate_pdf_report
 
 
 def _parse_date(date_str):
-    """Return a date object or None if the string is invalid."""
     if not date_str:
         return None
     try:
@@ -38,7 +35,6 @@ def _parse_date(date_str):
 
 
 def _get_filters(request):
-    """Extract filter parameters from query string."""
     p = request.query_params
     return {
         "start_date": p.get("start_date") or "",
@@ -52,7 +48,6 @@ def _get_filters(request):
 
 
 def _apply_ticket_filters(qs, f):
-    """Apply shared filters to a ticket queryset."""
     start = _parse_date(f["start_date"])
     end = _parse_date(f["end_date"])
     if start:
@@ -73,7 +68,6 @@ def _apply_ticket_filters(qs, f):
 
 
 def _apply_asset_filters(qs, f):
-    """Apply relevant filters to an asset queryset."""
     start = _parse_date(f["start_date"])
     end = _parse_date(f["end_date"])
     if f["status"]:
@@ -88,7 +82,6 @@ def _apply_asset_filters(qs, f):
 
 
 def _build_subtitle(filters):
-    """Human-readable subtitle from active filters."""
     parts = []
     if filters["start_date"] and filters["end_date"]:
         parts.append(f"Date Range: {filters['start_date']} to {filters['end_date']}")
@@ -112,7 +105,6 @@ def _build_subtitle(filters):
             parts.append(f"Category: {cat.name}")
     if filters["technician"]:
         from django.contrib.auth import get_user_model
-
         User = get_user_model()
         tech = User.objects.filter(id=filters["technician"]).first()
         if tech:
@@ -121,7 +113,6 @@ def _build_subtitle(filters):
 
 
 def _format_duration(td):
-    """Format a timedelta as 'Xd Xh Xm'."""
     if not td:
         return "N/A"
     total_sec = int(td.total_seconds())
@@ -141,7 +132,6 @@ def _format_duration(td):
 
 
 def _sla_status(ticket, now=None):
-    """Return SLA status string for a single ticket."""
     if now is None:
         now = timezone.now()
     if not ticket.sla_deadline:
@@ -154,14 +144,39 @@ def _sla_status(ticket, now=None):
 
 
 def _resolution_time(ticket):
-    """Formatted resolution time or N/A."""
     if ticket.resolved_at and ticket.created_at:
         return _format_duration(ticket.resolved_at - ticket.created_at)
     return "N/A"
 
 
+def _get_employee_label(user):
+    """Return 'Name (EMP-001)' or just 'Name'."""
+    profile = getattr(user, 'employee_profile', None)
+    if profile and profile.employee_id:
+        return f"{user.get_full_name()} ({profile.employee_id})"
+    return user.get_full_name()
+
+
+def _get_technician_label(user):
+    """Return 'Name (TECH-004)' or just 'Name' or 'Unassigned'."""
+    if not user:
+        return "Unassigned"
+    profile = getattr(user, 'technician_profile', None)
+    if profile and profile.technician_id:
+        return f"{user.get_full_name()} ({profile.technician_id})"
+    return user.get_full_name()
+
+
+def _get_dept_name(ticket):
+    if ticket.department:
+        return ticket.department.name
+    profile = getattr(ticket.employee, 'employee_profile', None)
+    if profile and profile.department:
+        return profile.department.name
+    return "N/A"
+
+
 def _safe_pdf(view_fn):
-    """Decorator: catch exceptions and return clean JSON error."""
     def wrapper(self, request, *args, **kwargs):
         try:
             return view_fn(self, request, *args, **kwargs)
@@ -186,7 +201,8 @@ class AllTicketsPDFView(APIView):
         filters = _get_filters(request)
         qs = _apply_ticket_filters(
             Ticket.objects.select_related(
-                "employee", "assigned_technician", "department", "category"
+                "employee", "assigned_technician", "department", "category",
+                "employee__employee_profile", "assigned_technician__technician_profile",
             ),
             filters,
         ).order_by("-created_at")
@@ -195,11 +211,13 @@ class AllTicketsPDFView(APIView):
         headers = [
             "Ticket #",
             "Employee",
+            "Employee ID",
             "Department",
             "Category",
             "Priority",
             "Status",
             "Technician",
+            "Technician ID",
             "Created",
             "Updated",
             "SLA Status",
@@ -207,25 +225,23 @@ class AllTicketsPDFView(APIView):
         ]
         data = []
         for t in qs:
-            data.append(
-                [
-                    t.ticket_number,
-                    t.employee.get_full_name(),
-                    t.department.name if t.department else "N/A",
-                    t.category.name if t.category else "N/A",
-                    t.priority.upper(),
-                    t.status.replace("_", " ").title(),
-                    (
-                        t.assigned_technician.get_full_name()
-                        if t.assigned_technician
-                        else "Unassigned"
-                    ),
-                    t.created_at.strftime("%Y-%m-%d %H:%M"),
-                    t.updated_at.strftime("%Y-%m-%d %H:%M"),
-                    _sla_status(t, now),
-                    _resolution_time(t),
-                ]
-            )
+            emp_profile = getattr(t.employee, 'employee_profile', None)
+            tech_profile = getattr(t.assigned_technician, 'technician_profile', None) if t.assigned_technician else None
+            data.append([
+                t.ticket_number,
+                t.employee.get_full_name(),
+                emp_profile.employee_id if emp_profile else "N/A",
+                _get_dept_name(t),
+                t.category.name if t.category else "N/A",
+                t.priority.upper(),
+                t.status.replace("_", " ").title(),
+                _get_technician_label(t.assigned_technician),
+                tech_profile.technician_id if tech_profile else "N/A",
+                t.created_at.strftime("%Y-%m-%d %H:%M"),
+                t.updated_at.strftime("%Y-%m-%d %H:%M"),
+                _sla_status(t, now),
+                _resolution_time(t),
+            ])
 
         return generate_pdf_report(
             title="IT Service Desk \u2014 Complete Ticket Report",
@@ -250,7 +266,7 @@ class TechnicianPerformancePDFView(APIView):
         filters = _get_filters(request)
         tickets = _apply_ticket_filters(
             Ticket.objects.filter(assigned_technician__isnull=False).select_related(
-                "assigned_technician"
+                "assigned_technician", "assigned_technician__technician_profile"
             ).prefetch_related("feedbacks"),
             filters,
         )
@@ -259,6 +275,8 @@ class TechnicianPerformancePDFView(APIView):
         bucket = defaultdict(
             lambda: {
                 "name": "",
+                "tech_id": "",
+                "department": "",
                 "total": 0,
                 "resolved": 0,
                 "open": 0,
@@ -272,8 +290,11 @@ class TechnicianPerformancePDFView(APIView):
 
         for t in tickets:
             tech = t.assigned_technician
+            tech_profile = getattr(tech, 'technician_profile', None)
             b = bucket[tech.id]
             b["name"] = tech.get_full_name()
+            b["tech_id"] = tech_profile.technician_id if tech_profile else "N/A"
+            b["department"] = tech_profile.department.name if tech_profile and tech_profile.department else "N/A"
             b["total"] += 1
 
             if t.status in ("resolved", "closed"):
@@ -300,6 +321,8 @@ class TechnicianPerformancePDFView(APIView):
 
         headers = [
             "Technician",
+            "Technician ID",
+            "Department",
             "Assigned",
             "Resolved",
             "Open",
@@ -332,6 +355,8 @@ class TechnicianPerformancePDFView(APIView):
             data.append(
                 [
                     b["name"],
+                    b["tech_id"],
+                    b["department"],
                     str(b["total"]),
                     str(b["resolved"]),
                     str(b["open"]),
@@ -367,7 +392,7 @@ class AssetPDFView(APIView):
         filters = _get_filters(request)
         assets = _apply_asset_filters(
             Asset.objects.select_related("category").prefetch_related(
-                "assignments__employee"
+                "assignments__employee", "assignments__employee__employee_profile"
             ),
             filters,
         ).order_by("asset_code")
@@ -379,6 +404,8 @@ class AssetPDFView(APIView):
             "Brand",
             "Model",
             "Assigned To",
+            "Employee ID",
+            "Department",
             "Status",
             "Purchase Date",
             "Warranty Expiry",
@@ -390,11 +417,16 @@ class AssetPDFView(APIView):
                 if asn.status == "active":
                     active = asn
                     break
-            assigned_to = (
+            emp_name = (
                 active.employee.get_full_name()
                 if active and active.employee
                 else "Unassigned"
             )
+            emp_profile = getattr(active.employee, 'employee_profile', None) if active and active.employee else None
+            emp_id = emp_profile.employee_id if emp_profile else "N/A"
+            emp_dept = ""
+            if emp_profile and emp_profile.department:
+                emp_dept = emp_profile.department.name
             data.append(
                 [
                     a.asset_code,
@@ -402,18 +434,12 @@ class AssetPDFView(APIView):
                     a.category.name if a.category else "N/A",
                     a.brand or "N/A",
                     a.model or "N/A",
-                    assigned_to,
+                    emp_name,
+                    emp_id,
+                    emp_dept or "N/A",
                     a.status.replace("_", " ").title(),
-                    (
-                        a.purchase_date.strftime("%Y-%m-%d")
-                        if a.purchase_date
-                        else "N/A"
-                    ),
-                    (
-                        a.warranty_expiry.strftime("%Y-%m-%d")
-                        if a.warranty_expiry
-                        else "N/A"
-                    ),
+                    a.purchase_date.strftime("%Y-%m-%d") if a.purchase_date else "N/A",
+                    a.warranty_expiry.strftime("%Y-%m-%d") if a.warranty_expiry else "N/A",
                 ]
             )
 
@@ -439,10 +465,11 @@ class FeedbackPDFView(APIView):
     def get(self, request):
         filters = _get_filters(request)
         qs = Feedback.objects.select_related(
-            "ticket", "employee", "ticket__assigned_technician"
+            "ticket", "employee", "ticket__assigned_technician",
+            "employee__employee_profile",
+            "ticket__assigned_technician__technician_profile",
         ).order_by("-created_at")
 
-        # Apply filters through ticket relation
         start = _parse_date(filters["start_date"])
         end = _parse_date(filters["end_date"])
         if start:
@@ -467,6 +494,8 @@ class FeedbackPDFView(APIView):
         headers = [
             "Ticket #",
             "Employee",
+            "Employee ID",
+            "Department",
             "Technician",
             "Rating",
             "Review",
@@ -474,6 +503,9 @@ class FeedbackPDFView(APIView):
         ]
         data = []
         for fb in feedbacks:
+            emp_profile = getattr(fb.employee, 'employee_profile', None)
+            tech = fb.ticket.assigned_technician
+            tech_profile = getattr(tech, 'technician_profile', None) if tech else None
             review = fb.review or "No review"
             if len(review) > 80:
                 review = review[:77] + "..."
@@ -481,11 +513,9 @@ class FeedbackPDFView(APIView):
                 [
                     fb.ticket.ticket_number,
                     fb.employee.get_full_name(),
-                    (
-                        fb.ticket.assigned_technician.get_full_name()
-                        if fb.ticket.assigned_technician
-                        else "Unassigned"
-                    ),
+                    emp_profile.employee_id if emp_profile else "N/A",
+                    emp_profile.department.name if emp_profile and emp_profile.department else "N/A",
+                    _get_technician_label(tech),
                     f"{fb.rating}/5",
                     review,
                     fb.created_at.strftime("%Y-%m-%d"),
@@ -521,7 +551,10 @@ class SLAPDFView(APIView):
     def get(self, request):
         filters = _get_filters(request)
         qs = _apply_ticket_filters(
-            Ticket.objects.select_related("employee", "assigned_technician"),
+            Ticket.objects.select_related(
+                "employee", "assigned_technician",
+                "employee__employee_profile",
+            ),
             filters,
         ).order_by("-created_at")
 
@@ -532,6 +565,9 @@ class SLAPDFView(APIView):
 
         headers = [
             "Ticket #",
+            "Employee",
+            "Employee ID",
+            "Department",
             "Priority",
             "Created",
             "SLA Deadline",
@@ -549,21 +585,17 @@ class SLAPDFView(APIView):
             else:
                 pending_count += 1
 
+            emp_profile = getattr(t.employee, 'employee_profile', None)
             data.append(
                 [
                     t.ticket_number,
+                    t.employee.get_full_name(),
+                    emp_profile.employee_id if emp_profile else "N/A",
+                    _get_dept_name(t),
                     t.priority.upper(),
                     t.created_at.strftime("%Y-%m-%d %H:%M"),
-                    (
-                        t.sla_deadline.strftime("%Y-%m-%d %H:%M")
-                        if t.sla_deadline
-                        else "N/A"
-                    ),
-                    (
-                        t.resolved_at.strftime("%Y-%m-%d %H:%M")
-                        if t.resolved_at
-                        else "N/A"
-                    ),
+                    t.sla_deadline.strftime("%Y-%m-%d %H:%M") if t.sla_deadline else "N/A",
+                    t.resolved_at.strftime("%Y-%m-%d %H:%M") if t.resolved_at else "N/A",
                     _resolution_time(t),
                     ss,
                 ]
@@ -591,7 +623,7 @@ class SLAPDFView(APIView):
 
 
 # ════════════════════════════════════════════════════════════════
-# 6. EMPLOYEE / TICKET SUMMARY REPORT  (NEW)
+# 6. EMPLOYEE / TICKET SUMMARY REPORT
 # ════════════════════════════════════════════════════════════════
 
 
@@ -602,15 +634,17 @@ class EmployeeSummaryPDFView(APIView):
     def get(self, request):
         filters = _get_filters(request)
         qs = _apply_ticket_filters(
-            Ticket.objects.select_related("employee", "department").prefetch_related(
-                "feedbacks"
-            ),
+            Ticket.objects.select_related(
+                "employee", "department",
+                "employee__employee_profile",
+            ).prefetch_related("feedbacks"),
             filters,
         )
 
         bucket = defaultdict(
             lambda: {
                 "name": "",
+                "emp_id": "",
                 "department": "",
                 "total": 0,
                 "open": 0,
@@ -628,9 +662,11 @@ class EmployeeSummaryPDFView(APIView):
             emp = t.employee
             b = bucket[emp.id]
             b["name"] = emp.get_full_name()
-            # Keep the first (most recent) department seen
-            if not b["department"]:
-                b["department"] = t.department.name if t.department else "N/A"
+            profile = getattr(emp, 'employee_profile', None)
+            if profile:
+                b["emp_id"] = profile.employee_id
+                if not b["department"]:
+                    b["department"] = profile.department.name if profile.department else "N/A"
             b["total"] += 1
 
             if t.status in ("open", "reopened"):
@@ -656,6 +692,7 @@ class EmployeeSummaryPDFView(APIView):
 
         headers = [
             "Employee",
+            "Employee ID",
             "Department",
             "Total",
             "Open",
@@ -688,7 +725,8 @@ class EmployeeSummaryPDFView(APIView):
             data.append(
                 [
                     b["name"],
-                    b["department"],
+                    b["emp_id"] or "N/A",
+                    b["department"] or "N/A",
                     str(b["total"]),
                     str(b["open"]),
                     str(b["in_progress"]),

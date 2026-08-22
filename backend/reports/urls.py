@@ -7,4 +7,5 @@ urlpatterns = [
     path('asset-pdf/', views.AssetPDFView.as_view(), name='asset-pdf'),
     path('feedback-pdf/', views.FeedbackPDFView.as_view(), name='feedback-pdf'),
     path('sla-pdf/', views.SLAPDFView.as_view(), name='sla-pdf'),
+    path('employee-summary-pdf/', views.EmployeeSummaryPDFView.as_view(), name='employee-summary-pdf'),
 ]

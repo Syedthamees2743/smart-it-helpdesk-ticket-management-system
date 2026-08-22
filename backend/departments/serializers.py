@@ -1,16 +1,15 @@
-"""
-Serializers for Department Module
-"""
-
+# serializers.py - No change needed, __all__ includes new field
 from rest_framework import serializers
 from .models import Department
 
 
 class DepartmentSerializer(serializers.ModelSerializer):
-    """
-    Converts Department model data to JSON and vice-versa.
-    """
+    department_type_display = serializers.CharField(
+        source='get_department_type_display', 
+        read_only=True
+    )
+    
     class Meta:
         model = Department
-        fields = '__all__' # Includes id, name, description, status, created_at
-        read_only_fields = ('created_at',) # Admin shouldn't manually set creation date
+        fields = '__all__'
+        read_only_fields = ('created_at',)

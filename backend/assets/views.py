@@ -1,14 +1,16 @@
+# views.py
 from rest_framework import status, permissions
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.exceptions import ValidationError
 from rest_framework import viewsets
+from rest_framework.pagination import PageNumberPagination
 from django.utils import timezone
 from django.contrib.auth import get_user_model
 from notifications.services import (
     send_asset_assigned_notification,
     send_asset_returned_notification,
-    create_notification,  # DAY 10: Added in-app notification helper
+    create_notification,
 )
 from .models import AssetCategory, Asset, AssetAssignment
 from .serializers import (
@@ -16,10 +18,23 @@ from .serializers import (
     AssetListSerializer,
     AssetDetailSerializer,
     AssetAssignmentListSerializer,
+    AssetAssignmentDetailSerializer,  # ⭐ NEW
 )
 from accounts.permissions import IsAdmin, IsAdminOrReadOnly
 
 User = get_user_model()
+
+
+class CategoryPagination(PageNumberPagination):
+    page_size = 10
+    page_size_query_param = "page_size"
+    max_page_size = 100
+
+
+class AssetPagination(PageNumberPagination):
+    page_size = 20
+    page_size_query_param = "page_size"
+    max_page_size = 100
 
 
 class AssetCategoryViewSet(viewsets.ModelViewSet):
@@ -27,12 +42,13 @@ class AssetCategoryViewSet(viewsets.ModelViewSet):
     serializer_class = AssetCategorySerializer
     permission_classes = [IsAdminOrReadOnly]
     search_fields = ("name",)
-    ordering_fields = ("name",)
+    ordering_fields = ("name", "created_at")
+    pagination_class = CategoryPagination
 
 
 class AssetViewSet(viewsets.ModelViewSet):
     queryset = Asset.objects.all()
-
+    pagination_class = AssetPagination
     search_fields = ("asset_code", "asset_name", "brand", "model", "serial_number")
     filterset_fields = ("status", "category")
     ordering_fields = ("asset_code", "created_at", "status")
@@ -53,26 +69,34 @@ class AssetViewSet(viewsets.ModelViewSet):
 
 
 class AssetAssignmentViewSet(viewsets.ReadOnlyModelViewSet):
-    serializer_class = AssetAssignmentListSerializer
     permission_classes = [permissions.IsAuthenticated]
+    pagination_class = AssetPagination
 
     def get_queryset(self):
         user = self.request.user
-
         if user.role.lower() == "admin":
             return AssetAssignment.objects.select_related(
-                "asset", "employee", "asset__category",
+                "asset",
+                "asset__category",
+                "employee",
+                "employee__employee_profile",
+                "employee__employee_profile__department",
             ).all()
-
         if user.role.lower() == "employee":
             return AssetAssignment.objects.select_related(
-                "asset", "employee", "asset__category",
-            ).filter(
-                employee=user,
-                status="active",
-            )
-
+                "asset",
+                "asset__category",
+                "employee",
+                "employee__employee_profile",
+                "employee__employee_profile__department",
+            ).filter(employee=user, status="active")
         return AssetAssignment.objects.none()
+
+    # ⭐ Use detail serializer for single item view
+    def get_serializer_class(self):
+        if self.action == "retrieve":
+            return AssetAssignmentDetailSerializer
+        return AssetAssignmentListSerializer
 
 
 class AssetManagementViewSet(viewsets.ViewSet):
@@ -84,10 +108,9 @@ class AssetManagementViewSet(viewsets.ViewSet):
                 {"detail": "Only admins can manage asset assignments."},
                 status=status.HTTP_403_FORBIDDEN,
             )
-
         return Response(
             {
-                "message": "Invalid request. Please use POST /api/assets/manage/assign/ or POST /api/assets/manage/return/"
+                "message": "Use POST /api/assets/manage/assign/ or POST /api/assets/manage/return/"
             },
             status=status.HTTP_405_METHOD_NOT_ALLOWED,
         )
@@ -107,7 +130,9 @@ class AssetManagementViewSet(viewsets.ViewSet):
 
         if asset.status != "available":
             raise ValidationError(
-                {"error": f"Asset is currently '{asset.status}'. Only 'available' assets can be assigned."}
+                {
+                    "error": f"Asset is currently '{asset.status}'. Only 'available' assets can be assigned."
+                }
             )
 
         try:
@@ -126,13 +151,11 @@ class AssetManagementViewSet(viewsets.ViewSet):
         asset.status = "assigned"
         asset.save()
 
-        # Email notification (existing)
         try:
             send_asset_assigned_notification(assignment)
         except Exception as e:
-            print(f"Email failed, but asset was assigned: {e}")
+            print(f"Email failed: {e}")
 
-        # DAY 10: In-app notification for employee
         create_notification(
             user=employee,
             title="Asset Assigned",
@@ -143,7 +166,7 @@ class AssetManagementViewSet(viewsets.ViewSet):
         return Response(
             {
                 "success": True,
-                "message": f"Asset {asset.asset_code} assigned to {employee.get_full_name()}."
+                "message": f"Asset {asset.asset_code} assigned to {employee.get_full_name()}.",
             },
             status=status.HTTP_200_OK,
         )
@@ -151,29 +174,27 @@ class AssetManagementViewSet(viewsets.ViewSet):
     @action(detail=False, methods=["post"], url_path="return")
     def return_asset(self, request):
         asset_id = request.data.get("asset_id")
-
         if not asset_id:
             raise ValidationError({"error": "asset_id is required."})
 
         try:
             assignment = AssetAssignment.objects.get(asset_id=asset_id, status="active")
         except AssetAssignment.DoesNotExist:
-            raise ValidationError({"error": "Active assignment not found for this asset."})
+            raise ValidationError(
+                {"error": "Active assignment not found for this asset."}
+            )
 
         assignment.status = "returned"
         assignment.return_date = timezone.now().date()
         assignment.save()
-
         assignment.asset.status = "available"
         assignment.asset.save()
 
-        # Email notification (existing)
         try:
             send_asset_returned_notification(assignment)
         except Exception as e:
-            print(f"Email failed, but asset was returned: {e}")
+            print(f"Email failed: {e}")
 
-        # DAY 10: In-app notification for employee
         create_notification(
             user=assignment.employee,
             title="Asset Returned",
@@ -184,7 +205,7 @@ class AssetManagementViewSet(viewsets.ViewSet):
         return Response(
             {
                 "success": True,
-                "message": f"Asset {assignment.asset.asset_code} returned successfully."
+                "message": f"Asset {assignment.asset.asset_code} returned successfully.",
             },
             status=status.HTTP_200_OK,
         )

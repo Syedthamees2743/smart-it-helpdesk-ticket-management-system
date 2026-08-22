@@ -1,7 +1,7 @@
 """
 AI Support Insights Service for Admin — Enhanced Version.
-Collects REAL PostgreSQL statistics with trend comparison
-and sends to Hugging Face for deep analysis.
+Collects REAL PostgreSQL statistics with trend comparison,
+user capacity analysis, and sends to Hugging Face for deep analysis.
 """
 
 import json
@@ -9,7 +9,7 @@ from datetime import timedelta
 from django.conf import settings
 from django.utils import timezone
 from django.contrib.auth import get_user_model
-from django.db.models import Count, Q, F, Count
+from django.db.models import Count, Q, F
 
 from tickets.models import Ticket
 
@@ -17,10 +17,19 @@ User = get_user_model()
 
 
 def collect_support_statistics():
-    """Collect real aggregated statistics with trend comparison."""
+    """Collect real aggregated statistics with trend comparison and user capacity."""
     now = timezone.now()
     thirty_days_ago = now - timedelta(days=30)
     sixty_days_ago = now - timedelta(days=60)
+
+    # ── User Capacity Data ──
+    total_employees = User.objects.filter(role='employee').count()
+    active_employees = User.objects.filter(role='employee', is_active=True).count()
+    inactive_employees = total_employees - active_employees
+
+    total_technicians = User.objects.filter(role='technician').count()
+    active_technicians = User.objects.filter(role='technician', is_active=True).count()
+    inactive_technicians = total_technicians - active_technicians
 
     # ── Current Period (last 30 days) ──
     current_qs = Ticket.objects.filter(created_at__gte=thirty_days_ago)
@@ -43,6 +52,7 @@ def collect_support_statistics():
     in_progress_tickets = Ticket.objects.filter(status='in_progress').count()
     resolved_tickets = Ticket.objects.filter(status='resolved').count()
     reopened_tickets = Ticket.objects.filter(status='reopened').count()
+    closed_tickets = Ticket.objects.filter(status='closed').count()
 
     # ── Priority Breakdown ──
     priority_counts = Ticket.objects.values('priority').annotate(count=Count('id'))
@@ -105,6 +115,7 @@ def collect_support_statistics():
     ]
 
     overloaded_techs = [t for t in technician_workload if t['active_tickets'] >= 8]
+    zero_workload_techs = [t for t in technician_workload if t['active_tickets'] == 0 and t['resolved'] == 0]
 
     # ── Average Resolution Time ──
     resolved_qs = Ticket.objects.filter(resolved_at__isnull=False)
@@ -121,6 +132,10 @@ def collect_support_statistics():
         priority__in=['critical', 'high']
     ).count()
 
+    # ── Tickets per employee ratio ──
+    tickets_per_employee = round(all_tickets / active_employees, 1) if active_employees > 0 else None
+    tickets_per_technician = round(all_tickets / active_technicians, 1) if active_technicians > 0 else None
+
     # ── Trend percentage ──
     trend_pct = None
     if previous_total > 0:
@@ -129,12 +144,25 @@ def collect_support_statistics():
         trend_pct = 100.0
 
     stats = {
+        'user_capacity': {
+            'total_employees': total_employees,
+            'active_employees': active_employees,
+            'inactive_employees': inactive_employees,
+            'total_technicians': total_technicians,
+            'active_technicians': active_technicians,
+            'inactive_technicians': inactive_technicians,
+            'tickets_per_employee': tickets_per_employee,
+            'tickets_per_technician': tickets_per_technician,
+            'overloaded_technicians': len(overloaded_techs),
+            'idle_technicians': len(zero_workload_techs),
+        },
         'all_time': {
             'total_tickets': all_tickets,
             'open_tickets': open_tickets,
             'in_progress_tickets': in_progress_tickets,
             'resolved_tickets': resolved_tickets,
             'reopened_tickets': reopened_tickets,
+            'closed_tickets': closed_tickets,
         },
         'current_period': {
             'total': current_total,
@@ -155,9 +183,11 @@ def collect_support_statistics():
             'approaching_deadline': sla_approaching,
             'met': sla_met,
             'total_resolved': sla_total,
+            'success_pct': round((sla_met / sla_total) * 100, 1) if sla_total > 0 else None,
         },
         'technician_workload': technician_workload,
         'overloaded_technicians': overloaded_techs,
+        'idle_technicians': zero_workload_techs,
         'urgent_open_tickets': urgent_open,
         'avg_resolution_hours': avg_resolution_hours,
     }
@@ -178,12 +208,14 @@ Your analysis MUST be:
 3. CATEGORIZED — organize insights into clear areas
 4. CONCISE — keep each insight to 1-2 sentences maximum
 5. HONEST — if data is low/zero, say so clearly
+6. CONTEXTUAL — consider user_capacity data when making recommendations
 
 Categorize your insights into these types:
 - SLA_RISK: SLA breaches or approaching deadlines
-- WORKLOAD: Technician capacity issues
-- TREND: Volume changes (up/down)
-- PRIORITY: Critical/high priority concerns
+- WORKLOAD: Technician capacity and distribution issues
+- TREND: Volume changes (up/down) over time
+- PRIORITY: Critical/high priority ticket concerns
+- USER_MGMT: Employee/technician count issues, inactive users, capacity gaps
 - RECOMMENDATION: Specific actions the admin should take
 
 Respond with ONLY valid JSON:
@@ -192,19 +224,24 @@ Respond with ONLY valid JSON:
   "insights": [
     {"type": "SLA_RISK", "text": "Specific SLA insight with numbers"},
     {"type": "WORKLOAD", "text": "Specific workload insight"},
-    {"type": "TREND", "text": "Specific trend with percentage if available"},
+    {"type": "USER_MGMT", "text": "Specific user management insight"},
+    {"type": "TREND", "text": "Specific trend with percentage"},
     {"type": "PRIORITY", "text": "Specific priority concern"},
-    {"type": "RECOMMENDATION", "text": "Specific recommended action"},
-    {"type": "RECOMMENDATION", "text": "Another recommended action"}
+    {"type": "RECOMMENDATION", "text": "Specific recommended action"}
   ]
 }
 
 Rules:
 - Use EXACT numbers from the data (e.g., "3 tickets" not "several tickets")
+- Check user_capacity section: if inactive_employees > 0, mention it
+- If overloaded_technicians > 0, flag workload imbalance
+- If idle_technicians > 0 and overloaded_technicians > 0, suggest rebalancing
+- If active_technicians == 0 but open_tickets > 0, this is CRITICAL — no one to handle tickets
+- If tickets_per_technician is very high (>20), suggest hiring
 - If a category has no data, skip it
-- Include 4-7 insights total
-- Prioritize SLA risks and urgent items first
-- Do NOT mention individual employee/technician names in recommendations for privacy"""
+- Include 5-8 insights total
+- Prioritize CRITICAL issues first (no technicians, SLA breaches, overloaded staff)
+- Do NOT mention individual employee/technician names for privacy"""
         },
         {
             "role": "user",
@@ -221,7 +258,7 @@ def parse_ai_response(content):
         # Remove Qwen3 <think/> blocks
         while '<think' in text:
             think_start = text.find('<think')
-            think_end = text.find('</think')
+            think_end = text.find('</think>')
             if think_end == -1:
                 text = text[:think_start].strip()
             else:
@@ -269,6 +306,13 @@ def parse_ai_response(content):
                     'icon': 'users',
                     'color': '#f59e0b',
                 })
+            if 'inactive' in lower_text or 'user' in lower_text or 'employee' in lower_text:
+                insights.append({
+                    'type': 'USER_MGMT',
+                    'text': 'Inactive user accounts should be reviewed — deactivate unused accounts or reactivate needed ones to maintain full team capacity.',
+                    'icon': 'user-slash',
+                    'color': '#64748b',
+                })
             if 'trend' in lower_text or 'growing' in lower_text or 'increasing' in lower_text or 'rising' in lower_text:
                 insights.append({
                     'type': 'TREND',
@@ -286,7 +330,7 @@ def parse_ai_response(content):
 
             return {
                 'summary': summary,
-                'insights': insights[:7],
+                'insights': insights[:8],
             }
 
         summary = str(data.get('summary', '')).strip()
@@ -295,13 +339,13 @@ def parse_ai_response(content):
         if not isinstance(raw_insights, list):
             raw_insights = [raw_insights]
 
-        # Categorize and validate insights
-        valid_types = ['SLA_RISK', 'WORKLOAD', 'TREND', 'PRIORITY', 'RECOMMENDATION']
+        valid_types = ['SLA_RISK', 'WORKLOAD', 'TREND', 'PRIORITY', 'USER_MGMT', 'RECOMMENDATION']
         type_icons = {
             'SLA_RISK': 'shield',
             'WORKLOAD': 'users',
             'TREND': 'chart-line',
             'PRIORITY': 'exclamation-triangle',
+            'USER_MGMT': 'user-slash',
             'RECOMMENDATION': 'lightbulb',
         }
         type_colors = {
@@ -309,6 +353,7 @@ def parse_ai_response(content):
             'WORKLOAD': '#f59e0b',
             'TREND': '#3b82f6',
             'PRIORITY': '#ef4444',
+            'USER_MGMT': '#64748b',
             'RECOMMENDATION': '#8b5cf6',
         }
 
@@ -333,16 +378,14 @@ def parse_ai_response(content):
                 })
 
         if not summary and not insights:
-            print(f"[AI INSIGHTS PARSE ERROR] Empty response")
             return None
 
         return {
             'summary': summary or 'Support operations overview generated.',
-            'insights': insights[:7],
+            'insights': insights[:8],
         }
 
     except (json.JSONDecodeError, KeyError, TypeError, ValueError) as e:
-        print(f"[AI INSIGHTS PARSE ERROR] {type(e).__name__}: {e}")
         return None
 
 
@@ -368,7 +411,7 @@ def generate_insights():
         completion = client.chat.completions.create(
             model=model,
             messages=messages,
-            max_tokens=600,
+            max_tokens=700,
             temperature=0.4,
         )
 
@@ -379,8 +422,6 @@ def generate_insights():
         combined = ai_text.strip()
         if len(combined) < 10:
             combined = reasoning.strip()
-
-        print(f"[AI INSIGHTS RAW] {repr(ai_text[:400])}")
 
         if not combined or len(combined) < 10:
             return {
@@ -402,7 +443,6 @@ def generate_insights():
         }
 
     except Exception as e:
-        print(f"[AI INSIGHTS ERROR] {type(e).__name__}: {e}")
         error_msg = str(e)
 
         if 'loading' in error_msg.lower() or '503' in error_msg:
