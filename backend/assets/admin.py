@@ -1,16 +1,9 @@
-"""
-Admin configuration for assets app
-"""
-
 from django.contrib import admin
 from .models import AssetCategory, Asset, AssetAssignment
 
 
 @admin.register(AssetCategory)
 class AssetCategoryAdmin(admin.ModelAdmin):
-    """
-    Admin configuration for AssetCategory model.
-    """
     
     list_display = ('name', 'description')
     list_display_links = ('name',)
@@ -26,9 +19,6 @@ class AssetCategoryAdmin(admin.ModelAdmin):
 
 @admin.register(Asset)
 class AssetAdmin(admin.ModelAdmin):
-    """
-    Admin configuration for Asset model.
-    """
     
     list_display = (
         'asset_code',

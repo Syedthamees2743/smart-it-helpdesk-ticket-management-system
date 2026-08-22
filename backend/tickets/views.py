@@ -1,7 +1,3 @@
-"""
-Views for Ticket Module - Complete Workflow
-"""
-
 from rest_framework import viewsets, status, permissions
 from rest_framework.decorators import action, APIView
 from rest_framework.response import Response

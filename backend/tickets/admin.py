@@ -1,16 +1,9 @@
-"""
-Admin configuration for tickets app
-"""
-
 from django.contrib import admin
 from .models import IssueCategory, Ticket, TicketComment
 
 
 @admin.register(IssueCategory)
 class IssueCategoryAdmin(admin.ModelAdmin):
-    """
-    Admin configuration for IssueCategory model.
-    """
     
     list_display = ('name', 'description')
     list_display_links = ('name',)
@@ -26,10 +19,6 @@ class IssueCategoryAdmin(admin.ModelAdmin):
 
 @admin.register(Ticket)
 class TicketAdmin(admin.ModelAdmin):
-    """
-    Admin configuration for Ticket model.
-    """
-    
     list_display = (
         'ticket_number',
         'title',
@@ -87,7 +76,7 @@ class TicketAdmin(admin.ModelAdmin):
         }),
         ('Timestamps', {
             'fields': ('created_at', 'updated_at'),
-            'classes': ('collapse',)  # Collapsed by default
+            'classes': ('collapse',)
         }),
     )
     
@@ -96,9 +85,6 @@ class TicketAdmin(admin.ModelAdmin):
 
 @admin.register(TicketComment)
 class TicketCommentAdmin(admin.ModelAdmin):
-    """
-    Admin configuration for TicketComment model.
-    """
     
     list_display = (
         'ticket',
@@ -125,7 +111,6 @@ class TicketCommentAdmin(admin.ModelAdmin):
     
     ordering = ('-created_at',)
     
-    # Show preview of comment (first 100 characters)
     def comment_preview(self, obj):
         return obj.comment[:100] + ('...' if len(obj.comment) > 100 else '')
     comment_preview.short_description = 'Comment'

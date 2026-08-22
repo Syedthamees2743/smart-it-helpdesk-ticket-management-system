@@ -1,12 +1,9 @@
-"""
-FAQ models for Smart IT Service Desk
-"""
+
 
 from django.db import models
 from django.conf import settings
 
 
-# Category choices — used everywhere, defined once here
 FAQ_CATEGORY_CHOICES = (
     ('Hardware', 'Hardware'),
     ('Software', 'Software'),
@@ -17,7 +14,6 @@ FAQ_CATEGORY_CHOICES = (
     ('General', 'General'),
 )
 
-# Status choices
 FAQ_STATUS_CHOICES = (
     ('active', 'Active'),
     ('inactive', 'Inactive'),
@@ -25,9 +21,6 @@ FAQ_STATUS_CHOICES = (
 
 
 class FAQ(models.Model):
-    """
-    Frequently Asked Questions for self-service help.
-    """
     
     question = models.CharField(
         max_length=500,

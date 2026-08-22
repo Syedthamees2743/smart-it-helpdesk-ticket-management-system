@@ -1,13 +1,8 @@
-"""
-URL patterns for Authentication and User Management
-"""
-
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from . import views
 
-# Create a router for the Profile ViewSets
 profile_router = DefaultRouter()
 profile_router.register(r'employee', views.EmployeeProfileViewSet, basename='employee-profile')
 profile_router.register(r'technician', views.TechnicianProfileViewSet, basename='technician-profile')

@@ -1,14 +1,9 @@
-"""
-Serializers for Notification Module
-"""
-
 from rest_framework import serializers
 from .models import Notification
 from .models import NotificationPreference
 
 
 class NotificationListSerializer(serializers.ModelSerializer):
-    """Used to list notifications for a user."""
     ticket_number = serializers.StringRelatedField(source='ticket', read_only=True)
 
     class Meta:
@@ -18,17 +13,14 @@ class NotificationListSerializer(serializers.ModelSerializer):
 
 
 class NotificationUnreadCountSerializer(serializers.Serializer):
-    """Returns the unread count."""
     unread_count = serializers.IntegerField()
 
 
 class MarkReadSerializer(serializers.Serializer):
-    """Validates mark-read request."""
     notification_id = serializers.IntegerField()
 
 
 class NotificationPreferenceSerializer(serializers.ModelSerializer):
-    """Serializer for notification preferences."""
 
     class Meta:
         model = NotificationPreference

@@ -1,7 +1,3 @@
-"""
-Serializers for Ticket Module
-"""
-
 from rest_framework import serializers
 from django.utils import timezone
 from .models import Ticket, IssueCategory
@@ -10,7 +6,6 @@ import datetime
 
 
 class TicketListSerializer(serializers.ModelSerializer):
-    """Used for listing tickets."""
     employee_name = serializers.StringRelatedField(source='employee', read_only=True)
     employee_id = serializers.SerializerMethodField()
     employee_department = serializers.SerializerMethodField()
@@ -154,7 +149,6 @@ class TicketDetailSerializer(serializers.ModelSerializer):
 
 
 class TicketCreateUpdateSerializer(serializers.ModelSerializer):
-    """Used for creating a ticket."""
     class Meta:
         model = Ticket
         fields = ('title', 'description', 'department', 'category', 'screenshot', 'priority')

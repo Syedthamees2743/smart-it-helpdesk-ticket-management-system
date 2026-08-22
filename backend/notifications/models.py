@@ -1,7 +1,3 @@
-"""
-Notification models for Smart IT Service Desk
-"""
-
 from django.db import models
 from django.conf import settings
 
@@ -22,10 +18,6 @@ NOTIFICATION_TYPE_CHOICES = (
 
 
 class Notification(models.Model):
-    """
-    In-app notification for a user.
-    Each notification is tied to one user.
-    """
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
@@ -80,10 +72,6 @@ class Notification(models.Model):
         ordering = ['-created_at']
 
 class NotificationPreference(models.Model):
-    """
-    Per-user notification preferences.
-    Auto-created on first access via get_or_create.
-    """
     user = models.OneToOneField(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
@@ -92,7 +80,6 @@ class NotificationPreference(models.Model):
         help_text='The user who owns these preferences'
     )
 
-    # Master toggle — if False, no emails are sent regardless of other toggles
     email_notifications = models.BooleanField(
         default=True,
         verbose_name='Email Notifications',
