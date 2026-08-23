@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="margin: 0; padding: 20px; background-color: #f5f5f5; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+    <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+        <div style="background: linear-gradient(135deg, #742a2a 0%, #c53030 100%); padding: 30px; text-align: center;">
+            <h1 style="color: #ffffff; margin: 0;">🛠️ Smart IT Service Desk</h1>
+        </div>
+        <div style="padding: 30px;">
+            <div style="display: inline-block; background-color: #fed7d7; color: #742a2a; padding: 5px 15px; border-radius: 20px; font-weight: 600; margin-bottom: 20px;">✗ NOT APPROVED</div>
+            <h2 style="color: #742a2a; margin-top: 0;">Your Account Request Update</h2>
+            <p>Hello {{ user.first_name }},</p>
+            <p>Your account registration request has been reviewed. Unfortunately, your request could not be approved at this time.</p>
+            <div style="background-color: #fff5f5; border-left: 4px solid #c53030; padding: 15px; margin: 20px 0;">
+                <p style="margin: 5px 0; color: #742a2a;"><strong>Reason:</strong></p>
+                <p style="margin: 5px 0; color: #742a2a;">{{ reason }}</p>
+            </div>
+            <p>If you believe this decision was made in error, please contact your IT department or system administrator.</p>
+        </div>
+        <div style="background-color: #f7fafc; padding: 20px; text-align: center; color: #718096; font-size: 12px;">
+            <p>© Smart IT Service Desk. All rights reserved.</p>
+            <p>This is an automated message. Please do not reply to this email.</p>
+        </div>
+    </div>
+</body>
+</html>

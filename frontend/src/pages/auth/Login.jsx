@@ -3,7 +3,6 @@ import {
   Form,
   Button,
   InputGroup,
-  Alert,
   Spinner
 } from 'react-bootstrap';
 
@@ -16,11 +15,13 @@ import {
   FaCheckCircle,
   FaShieldAlt,
   FaServer,
-  FaExclamationTriangle
+  FaExclamationTriangle,
+  FaUserPlus,
+  FaUserCog
 } from 'react-icons/fa';
 
 import { useAuth } from '../../context/AuthContext';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 
 import '../../styles/login.css';
 
@@ -33,8 +34,8 @@ const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [focusedField, setFocusedField] = useState(null);
 
-  // Prevent double submission
   const isSubmitting = useRef(false);
 
   const { login } = useAuth();
@@ -47,7 +48,7 @@ const Login = () => {
       ...formData,
       [e.target.name]: e.target.value,
     });
-    // Clear error when user types
+
     if (error) {
       setError('');
     }
@@ -55,9 +56,8 @@ const Login = () => {
 
   const onSubmit = async (e) => {
     e.preventDefault();
-    e.stopPropagation(); // Prevent any event bubbling
+    e.stopPropagation();
 
-    // Prevent double click
     if (isSubmitting.current) return;
     isSubmitting.current = true;
 
@@ -82,30 +82,24 @@ const Login = () => {
         setError('User role not found. Please contact administrator.');
       }
     } catch (err) {
-      // Better error extraction
-      let errorMsg = 'Invalid username or password. Please try again.';
-      
-      if (err?.response?.data) {
-        const data = err.response.data;
-        if (data.detail) {
-          errorMsg = data.detail;
-        } else if (data.message) {
-          errorMsg = data.message;
-        } else if (data.non_field_errors) {
-          errorMsg = Array.isArray(data.non_field_errors) 
-            ? data.non_field_errors[0] 
-            : data.non_field_errors;
-        } else if (data.error) {
-          errorMsg = data.error;
+      if (err.response?.data?.detail) {
+        setError(err.response.data.detail);
+      } else if (err.response?.data?.error) {
+        setError(err.response.data.error);
+      } else if (err.response?.data?.non_field_errors) {
+        const field_errors = err.response.data.non_field_errors;
+        if (Array.isArray(field_errors)) {
+          setError(field_errors.join(', '));
+        } else {
+          setError(String(field_errors));
         }
-      } else if (err?.detail) {
-        errorMsg = err.detail;
+      } else {
+        setError(
+          'Login failed. Please check your credentials and try again.'
+        );
       }
-      
-      setError(errorMsg);
     } finally {
       setLoading(false);
-      // Delay before allowing next submission
       setTimeout(() => {
         isSubmitting.current = false;
       }, 500);
@@ -114,7 +108,7 @@ const Login = () => {
 
   return (
     <div className="itsm-login-page">
-      {/* Background - Floating Orbs */}
+      {/* Background */}
       <div className="login-background">
         <div className="floating-orb orb-one"></div>
         <div className="floating-orb orb-two"></div>
@@ -123,53 +117,63 @@ const Login = () => {
       </div>
 
       <div className="login-container">
-        {/* DESKTOP BRAND SECTION */}
+
+        {/* Desktop Brand Section */}
         <div className="login-brand-section">
           <div className="brand-content">
             <div className="brand-logo">
               <FaHeadset />
             </div>
+
             <h1>
               Smart IT
               <span>Service Desk</span>
             </h1>
+
             <p className="brand-description">
               A centralized platform for managing IT support,
               service requests and technical issues.
             </p>
+
             <div className="feature-list">
-              <div className="feature-item">
-                <FaCheckCircle />
-                <span>Smart Ticket Management</span>
-              </div>
-              <div className="feature-item">
-                <FaCheckCircle />
-                <span>Faster Issue Resolution</span>
-              </div>
-              <div className="feature-item">
-                <FaCheckCircle />
-                <span>SLA & Performance Monitoring</span>
-              </div>
-              <div className="feature-item">
-                <FaCheckCircle />
-                <span>Centralized IT Support</span>
-              </div>
+              {[
+                { icon: <FaCheckCircle />, title: 'Smart Ticket Management', desc: 'Automated routing and prioritization' },
+                { icon: <FaCheckCircle />, title: 'Faster Issue Resolution', desc: 'Streamlined workflows and escalations' },
+                { icon: <FaCheckCircle />, title: 'SLA & Performance Monitoring', desc: 'Real-time tracking and reporting' },
+                { icon: <FaCheckCircle />, title: 'Centralized IT Support', desc: 'Single pane of glass for all requests' },
+              ].map((feature, index) => (
+                <div
+                  className="feature-item"
+                  key={index}
+                  style={{ animationDelay: `${0.3 + index * 0.1}s` }}
+                >
+                  {feature.icon}
+                  <div>
+                    <strong>{feature.title}</strong>
+                    <small>{feature.desc}</small>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
+
           <div className="brand-footer">
             IT Service Management Platform
           </div>
         </div>
 
-        {/* MOBILE BRAND SECTION */}
+        {/* Mobile Brand Section */}
         <div className="mobile-brand-section">
           <div className="mobile-brand-logo">
             <FaHeadset />
           </div>
+
           <h1>
             Smart IT <span>Service Desk</span>
           </h1>
+
           <p>IT Support Management Platform</p>
+
           <div className="mobile-features">
             <div className="mobile-feature">
               <FaCheckCircle />
@@ -186,18 +190,22 @@ const Login = () => {
           </div>
         </div>
 
-        {/* LOGIN FORM */}
+        {/* Login Form */}
         <div className="login-form-section">
           <div className={`login-card ${error ? 'shake-error' : ''}`}>
+
             <div className="login-header">
               <div className="mobile-logo">
                 <FaHeadset />
               </div>
+
               <h2>Welcome Back</h2>
-              <p>Sign in to access your service desk</p>
+              <p>
+                Sign in to access your service desk
+              </p>
             </div>
 
-            {/* Error - NO auto dismiss, stays until user closes or types */}
+            {/* Error */}
             {error && (
               <div className="login-error-box">
                 <div className="error-icon-wrap">
@@ -206,7 +214,7 @@ const Login = () => {
                 <div className="error-text-content">
                   {error}
                 </div>
-                <button 
+                <button
                   type="button"
                   className="error-dismiss-btn"
                   onClick={(e) => {
@@ -214,6 +222,7 @@ const Login = () => {
                     e.stopPropagation();
                     setError('');
                   }}
+                  aria-label="Dismiss error"
                 >
                   ✕
                 </button>
@@ -221,18 +230,29 @@ const Login = () => {
             )}
 
             <Form onSubmit={onSubmit} noValidate>
+
               {/* Username */}
-              <Form.Group className={`login-form-group ${error ? 'has-error' : ''}`}>
-                <Form.Label>Username</Form.Label>
-                <InputGroup className={`login-input-group ${error ? 'input-error-state' : ''}`}>
+              <Form.Group
+                className={`login-form-group ${error ? 'has-error' : ''}`}
+              >
+                <Form.Label>
+                  Username
+                </Form.Label>
+
+                <InputGroup
+                  className={`login-input-group ${error ? 'input-error-state' : ''} ${focusedField === 'username' ? 'input-focused' : ''}`}
+                >
                   <InputGroup.Text>
                     <FaUser />
                   </InputGroup.Text>
+
                   <Form.Control
                     type="text"
                     name="username"
                     value={username}
                     onChange={onChange}
+                    onFocus={() => setFocusedField('username')}
+                    onBlur={() => setFocusedField(null)}
                     placeholder="Enter your username"
                     autoComplete="username"
                     disabled={loading}
@@ -242,33 +262,45 @@ const Login = () => {
               </Form.Group>
 
               {/* Password */}
-              <Form.Group className={`login-form-group ${error ? 'has-error' : ''}`}>
-                <Form.Label>Password</Form.Label>
-                <InputGroup className={`login-input-group ${error ? 'input-error-state' : ''}`}>
+              <Form.Group
+                className={`login-form-group ${error ? 'has-error' : ''}`}
+              >
+                <Form.Label>
+                  Password
+                </Form.Label>
+
+                <InputGroup
+                  className={`login-input-group ${error ? 'input-error-state' : ''} ${focusedField === 'password' ? 'input-focused' : ''}`}
+                >
                   <InputGroup.Text>
                     <FaLock />
                   </InputGroup.Text>
+
                   <Form.Control
                     type={showPassword ? 'text' : 'password'}
                     name="password"
                     value={password}
                     onChange={onChange}
+                    onFocus={() => setFocusedField('password')}
+                    onBlur={() => setFocusedField(null)}
                     placeholder="Enter your password"
                     autoComplete="current-password"
                     disabled={loading}
                   />
+
                   <Button
                     type="button"
                     className="password-toggle"
                     onClick={() => setShowPassword(!showPassword)}
                     disabled={loading}
+                    aria-label={showPassword ? 'Hide password' : 'Show password'}
                   >
                     {showPassword ? <FaEyeSlash /> : <FaEye />}
                   </Button>
                 </InputGroup>
               </Form.Group>
 
-              {/* Login button */}
+              {/* Login Button */}
               <Button
                 type="submit"
                 className="login-submit-btn"
@@ -287,21 +319,40 @@ const Login = () => {
                   'Sign In'
                 )}
               </Button>
+
             </Form>
 
-            {/* Security */}
+            {/* Security Badge */}
             <div className="login-security">
               <FaShieldAlt />
               <span>Secure organizational access</span>
             </div>
 
-            {/* System status */}
+            {/* Signup Section */}
+            <div className="login-signup-section">
+              <div className="signup-divider">
+                <span>New to Service Desk?</span>
+              </div>
+              <div className="signup-buttons">
+                <Link to="/employee/signup" className="signup-link-btn employee-signup-btn">
+                  <FaUserPlus />
+                  <span>Join as Employee</span>
+                </Link>
+                <Link to="/technician/signup" className="signup-link-btn technician-signup-btn">
+                  <FaUserCog />
+                  <span>Join as Technician</span>
+                </Link>
+              </div>
+            </div>
+
+            {/* System Status */}
             <div className="system-status">
               <span className="status-dot"></span>
               <FaServer />
               <span>Service Desk Portal</span>
               <span className="status-text">Online</span>
             </div>
+
           </div>
         </div>
       </div>

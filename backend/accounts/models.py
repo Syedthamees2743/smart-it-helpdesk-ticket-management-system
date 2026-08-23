@@ -4,33 +4,29 @@ Custom User Model for Smart IT Service Desk
 
 from django.contrib.auth.models import AbstractUser
 from django.db import models
+import secrets
+from django.conf import settings
+from django.utils import timezone
+from datetime import timedelta
 
 
-# Role choices for users
 ROLE_CHOICES = (
     ('admin', 'Admin'),
     ('employee', 'Employee'),
     ('technician', 'Technician'),
 )
 
+ACCOUNT_STATUS_CHOICES = (
+    ('pending', 'Pending'),
+    ('approved', 'Approved'),
+    ('rejected', 'Rejected'),
+    ('active', 'Active'),
+)
+
 
 class User(AbstractUser):
     """
     Custom User model that extends Django's AbstractUser.
-
-    AbstractUser already includes:
-    - username
-    - password
-    - first_name
-    - last_name
-    - email
-    - is_staff
-    - is_active
-    - is_superuser
-    - last_login
-    - date_joined
-
-    We add our custom fields below.
     """
 
     role = models.CharField(
@@ -59,14 +55,27 @@ class User(AbstractUser):
 
     created_at = models.DateTimeField(
         auto_now_add=True,
-        verbose_name='Created At',
-        help_text='Timestamp when user was created'
+        verbose_name='Created At'
     )
 
     updated_at = models.DateTimeField(
         auto_now=True,
-        verbose_name='Updated At',
-        help_text='Timestamp when user was last updated'
+        verbose_name='Updated At'
+    )
+
+    account_status = models.CharField(
+        max_length=20,
+        choices=ACCOUNT_STATUS_CHOICES,
+        default='active',
+        verbose_name='Account Status',
+        help_text='Current status of the account'
+    )
+
+    rejection_reason = models.TextField(
+        blank=True,
+        null=True,
+        verbose_name='Rejection Reason',
+        help_text='Reason for account rejection (if applicable)'
     )
 
     class Meta:
@@ -79,9 +88,7 @@ class User(AbstractUser):
 
 
 class EmployeeProfile(models.Model):
-    """
-    Additional profile information for employees.
-    """
+    """Additional profile information for employees."""
 
     user = models.OneToOneField(
         User,
@@ -133,9 +140,7 @@ class EmployeeProfile(models.Model):
 
 
 class TechnicianProfile(models.Model):
-    """
-    Additional profile information for technicians.
-    """
+    """Additional profile information for technicians."""
 
     user = models.OneToOneField(
         User,
@@ -184,3 +189,58 @@ class TechnicianProfile(models.Model):
 
     def __str__(self):
         return f"{self.technician_id or 'N/A'} - {self.user.get_full_name()}"
+
+
+class AccountActivation(models.Model):
+    """Stores activation tokens for approved accounts."""
+
+    user = models.OneToOneField(
+        User,
+        on_delete=models.CASCADE,
+        related_name='activation',
+        verbose_name='User',
+    )
+
+    token = models.CharField(
+        max_length=64,
+        unique=True,
+        verbose_name='Activation Token',
+        help_text='Secure activation token'
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name='Created At'
+    )
+
+    expires_at = models.DateTimeField(
+        verbose_name='Expires At',
+        help_text='When this token expires'
+    )
+
+    used = models.BooleanField(
+        default=False,
+        verbose_name='Used',
+        help_text='Whether this token has been used'
+    )
+
+    class Meta:
+        verbose_name = 'Account Activation'
+        verbose_name_plural = 'Account Activations'
+
+    def save(self, *args, **kwargs):
+        if not self.expires_at:
+            hours = getattr(settings, 'ACTIVATION_TOKEN_EXPIRE_HOURS', 24)
+            self.expires_at = timezone.now() + timedelta(hours=hours)
+        super().save(*args, **kwargs)
+
+    def is_valid(self):
+        """Check if token is still valid. Returns (bool, error_message)."""
+        if self.used:
+            return False, "This activation link has already been used."
+        if timezone.now() > self.expires_at:
+            return False, "This activation link has expired."
+        return True, None
+
+    def __str__(self):
+        return f"Activation for {self.user.get_full_name()}"

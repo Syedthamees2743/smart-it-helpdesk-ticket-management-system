@@ -293,3 +293,392 @@ body {
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
+
+/* =========================================================
+   DASHBOARD LAYOUT
+========================================================= */
+
+.dashboard-layout {
+  font-family:
+    Inter,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+}
+
+
+/* =========================================================
+   TOP NAVBAR
+========================================================= */
+
+.dashboard-navbar {
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+}
+
+.topbar-system-name {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #111827;
+  line-height: 1.2;
+}
+
+.topbar-system-subtitle {
+  margin-top: 3px;
+  font-size: 0.72rem;
+  color: #94a3b8;
+}
+
+
+/* =========================================================
+   MOBILE MENU BUTTON
+========================================================= */
+
+.mobile-menu-button {
+  width: 40px;
+  height: 40px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border: 1px solid #e5e7eb !important;
+  border-radius: 10px !important;
+
+  color: #334155 !important;
+  background: #ffffff !important;
+
+  transition: all 0.2s ease;
+}
+
+.mobile-menu-button:hover {
+  background: #f1f5f9 !important;
+}
+
+
+/* =========================================================
+   NOTIFICATION
+========================================================= */
+
+.notification-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+
+/* =========================================================
+   TOPBAR DIVIDER
+========================================================= */
+
+.topbar-divider {
+  width: 1px;
+  height: 32px;
+  background: #e5e7eb;
+  margin-right: 18px;
+}
+
+
+/* =========================================================
+   USER DROPDOWN
+========================================================= */
+
+.user-dropdown-toggle {
+  display: flex !important;
+  align-items: center;
+  gap: 10px;
+
+  padding: 5px 4px !important;
+
+  color: #111827 !important;
+
+  border: none !important;
+  box-shadow: none !important;
+}
+
+.user-dropdown-toggle::after {
+  display: none !important;
+}
+
+
+/* =========================================================
+   TOPBAR AVATAR
+========================================================= */
+
+.topbar-avatar {
+  width: 42px;
+  height: 42px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 50%;
+
+  background: #e8f0ff;
+  color: #2563eb;
+
+  font-size: 0.85rem;
+  font-weight: 700;
+
+  border: 2px solid #ffffff;
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.12);
+}
+
+
+/* =========================================================
+   USER INFO
+========================================================= */
+
+.user-dropdown-info {
+  min-width: 85px;
+  text-align: left;
+}
+
+.user-dropdown-name {
+  font-size: 0.86rem;
+  font-weight: 700;
+  color: #111827;
+
+  line-height: 1.2;
+}
+
+.user-dropdown-role {
+  margin-top: 3px;
+
+  font-size: 0.66rem;
+  font-weight: 500;
+
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.user-dropdown-arrow {
+  color: #64748b;
+  margin-left: 2px;
+}
+
+
+/* =========================================================
+   USER DROPDOWN MENU
+========================================================= */
+
+.user-dropdown-menu {
+  width: 260px;
+
+  margin-top: 10px !important;
+
+  padding: 8px !important;
+
+  border-radius: 14px !important;
+
+  background: #ffffff;
+
+  box-shadow:
+    0 10px 30px rgba(15, 23, 42, 0.12),
+    0 2px 8px rgba(15, 23, 42, 0.06) !important;
+}
+
+.user-dropdown-menu .dropdown-item {
+  display: flex;
+  align-items: center;
+
+  gap: 10px;
+
+  padding: 10px 12px;
+
+  border-radius: 8px;
+
+  font-size: 0.86rem;
+  color: #334155;
+
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
+}
+
+.user-dropdown-menu .dropdown-item:hover {
+  background: #f1f5f9;
+
+  color: #2563eb;
+}
+
+.dropdown-icon {
+  width: 16px;
+  color: #64748b;
+}
+
+.user-dropdown-menu .dropdown-item:hover .dropdown-icon {
+  color: #2563eb;
+}
+
+
+/* =========================================================
+   DROPDOWN USER HEADER
+========================================================= */
+
+.dropdown-user-header {
+  display: flex;
+  align-items: center;
+
+  gap: 12px;
+
+  padding: 8px 8px 10px;
+}
+
+.dropdown-avatar {
+  width: 42px;
+  height: 42px;
+
+  min-width: 42px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 50%;
+
+  background: #e8f0ff;
+  color: #2563eb;
+
+  font-weight: 700;
+}
+
+.user-role-badge {
+  display: inline-block;
+
+  margin-top: 4px;
+
+  padding: 2px 7px;
+
+  border-radius: 20px;
+
+  background: #eff6ff;
+  color: #2563eb;
+
+  font-size: 0.62rem;
+  font-weight: 600;
+
+  text-transform: uppercase;
+}
+
+
+/* =========================================================
+   LOGOUT
+========================================================= */
+
+.user-dropdown-menu .logout-dropdown-item {
+  color: #dc2626 !important;
+}
+
+.user-dropdown-menu .logout-dropdown-item .dropdown-icon {
+  color: #dc2626;
+}
+
+.user-dropdown-menu .logout-dropdown-item:hover {
+  background: #fef2f2 !important;
+  color: #dc2626 !important;
+}
+
+
+/* =========================================================
+   MOBILE SIDEBAR
+========================================================= */
+
+.mobile-sidebar {
+  border: none !important;
+
+  box-shadow:
+    8px 0 30px rgba(15, 23, 42, 0.12);
+}
+
+.mobile-sidebar-header {
+  background: #111827 !important;
+
+  color: #ffffff !important;
+
+  min-height: 70px;
+
+  border: none !important;
+}
+
+.mobile-logo {
+  width: 36px;
+  height: 36px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 10px;
+
+  background: #2563eb;
+
+  color: #ffffff;
+
+  font-size: 0.85rem;
+  font-weight: 800;
+}
+
+
+/* =========================================================
+   MAIN CONTENT SCROLLBAR
+========================================================= */
+
+.main-content::-webkit-scrollbar {
+  width: 7px;
+}
+
+.main-content::-webkit-scrollbar-track {
+  background: #f8fafc;
+}
+
+.main-content::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 10px;
+}
+
+.main-content::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+
+/* =========================================================
+   RESPONSIVE
+========================================================= */
+
+@media (max-width: 767.98px) {
+
+  .dashboard-navbar {
+    height: 64px !important;
+    min-height: 64px !important;
+  }
+
+  .topbar-avatar {
+    width: 38px;
+    height: 38px;
+  }
+
+  .user-dropdown-menu {
+    width: 240px;
+  }
+
+  .main-content {
+    padding-bottom: 5px;
+  }
+}
+
+
+@media (max-width: 400px) {
+
+  .user-dropdown-menu {
+    width: calc(100vw - 25px);
+    margin-right: 5px;
+  }
+
+  .topbar-avatar {
+    width: 36px;
+    height: 36px;
+  }
+}

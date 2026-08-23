@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
-import { Card, Row, Col, Badge, Button, Form, Spinner, Image, Alert } from 'react-bootstrap';
+import { Card, Row, Col, Badge, Button, Form, Spinner, Image, Alert, Modal } from 'react-bootstrap';
 import { useParams, useNavigate } from 'react-router-dom';
-import { FaArrowLeft, FaPlay, FaCheckCircle, FaComment, FaPaperclip, FaMagic, FaRobot, FaTimes, FaWrench, FaExclamationTriangle, FaLightbulb, FaClipboardList, FaSearch } from 'react-icons/fa';
+import { FaArrowLeft, FaPlay, FaCheckCircle, FaComment, FaPaperclip, FaMagic, FaRobot, FaTimes, FaWrench, FaExclamationTriangle, FaLightbulb, FaClipboardList, FaSearch, FaExpand, FaDownload, FaRedo } from 'react-icons/fa';
 import { getTicketById, getComments, addComment, changeTicketStatus } from '../../services/ticketService';
 import aiService from '../../services/aiService';
 import ConfirmModal from '../../components/admin/ConfirmModal';
+import api from '../../services/api';
 
 const TechnicianTicketDetails = () => {
     const { id } = useParams();
@@ -28,6 +29,65 @@ const TechnicianTicketDetails = () => {
     const [aiResult, setAiResult] = useState(null);
     const [aiError, setAiError] = useState('');
 
+    // ← NEW: Image states
+    const [imageBlobUrl, setImageBlobUrl] = useState(null);
+    const [imageLoading, setImageLoading] = useState(false);
+    const [imageError, setImageError] = useState(false);
+    const [showImageModal, setShowImageModal] = useState(false);
+
+    // ← NEW: Build proxy URL
+    const getMediaProxyUrl = (path) => {
+        if (!path) return null;
+        const baseUrl = 'http://127.0.0.1:8000';
+        let mediaPath = path;
+
+        if (path.startsWith('http://') || path.startsWith('https://')) {
+            const match = path.match(/\/media\/(.+)$/);
+            if (match) {
+                mediaPath = match[1];
+            } else {
+                return path;
+            }
+        } else if (path.startsWith('/media/')) {
+            mediaPath = path.replace(/^\/media\//, '');
+        }
+
+        return `${baseUrl}/api/tickets/media/${mediaPath}`;
+    };
+
+    // ← NEW: Fetch image with auth
+    const fetchImageWithAuth = async (screenshotPath) => {
+        if (!screenshotPath) return;
+
+        const proxyUrl = getMediaProxyUrl(screenshotPath);
+        if (!proxyUrl) return;
+
+        setImageLoading(true);
+        setImageError(false);
+
+        if (imageBlobUrl) {
+            URL.revokeObjectURL(imageBlobUrl);
+            setImageBlobUrl(null);
+        }
+
+        try {
+            const response = await api.get(proxyUrl, {
+                responseType: 'blob',
+            });
+
+            const blob = new Blob([response.data], {
+                type: response.headers['content-type'] || 'image/jpeg'
+            });
+            const blobUrl = URL.createObjectURL(blob);
+            setImageBlobUrl(blobUrl);
+        } catch (err) {
+            console.error("Failed to fetch image:", err);
+            setImageError(true);
+        } finally {
+            setImageLoading(false);
+        }
+    };
+
     // Fetch Data
     const fetchData = async () => {
         setLoading(true);
@@ -45,6 +105,18 @@ const TechnicianTicketDetails = () => {
     };
 
     useEffect(() => { fetchData(); }, [id]);
+
+    // ← NEW: Fetch image when ticket loads
+    useEffect(() => {
+        if (ticket?.screenshot) {
+            fetchImageWithAuth(ticket.screenshot);
+        }
+        return () => {
+            if (imageBlobUrl) {
+                URL.revokeObjectURL(imageBlobUrl);
+            }
+        };
+    }, [ticket?.screenshot]);
 
     // Handle AI Troubleshoot
     const handleAiTroubleshoot = async () => {
@@ -246,7 +318,6 @@ const TechnicianTicketDetails = () => {
                                     </Button>
                                 </div>
 
-                                {/* Possible Issue */}
                                 <div className="mb-3">
                                     <div className="d-flex align-items-center gap-2 mb-1">
                                         <FaExclamationTriangle className="text-warning" style={{ fontSize: '0.85rem' }} />
@@ -257,7 +328,6 @@ const TechnicianTicketDetails = () => {
                                     </div>
                                 </div>
 
-                                {/* Possible Causes */}
                                 {aiResult.possible_causes && aiResult.possible_causes.length > 0 && (
                                     <div className="mb-3">
                                         <div className="d-flex align-items-center gap-2 mb-1">
@@ -272,7 +342,6 @@ const TechnicianTicketDetails = () => {
                                     </div>
                                 )}
 
-                                {/* Troubleshooting Steps */}
                                 {aiResult.troubleshooting_steps && aiResult.troubleshooting_steps.length > 0 && (
                                     <div className="mb-3">
                                         <div className="d-flex align-items-center gap-2 mb-2">
@@ -284,12 +353,7 @@ const TechnicianTicketDetails = () => {
                                                 <div key={idx} className="d-flex align-items-start mb-2">
                                                     <span
                                                         className="rounded-circle d-flex align-items-center justify-content-center me-2 flex-shrink-0 text-white fw-bold"
-                                                        style={{
-                                                            width: 22,
-                                                            height: 22,
-                                                            backgroundColor: '#3b82f6',
-                                                            fontSize: '0.7rem'
-                                                        }}
+                                                        style={{ width: 22, height: 22, backgroundColor: '#3b82f6', fontSize: '0.7rem' }}
                                                     >
                                                         {idx + 1}
                                                     </span>
@@ -300,7 +364,6 @@ const TechnicianTicketDetails = () => {
                                     </div>
                                 )}
 
-                                {/* Suggested Resolution */}
                                 {aiResult.suggested_resolution && (
                                     <div className="p-2 rounded-2" style={{ backgroundColor: '#f0fdf4', borderLeft: '3px solid #22c55e' }}>
                                         <div className="d-flex align-items-center gap-2 mb-1">
@@ -313,7 +376,6 @@ const TechnicianTicketDetails = () => {
                                     </div>
                                 )}
 
-                                {/* Disclaimer */}
                                 <div className="mt-3 pt-2 border-top">
                                     <small className="text-muted" style={{ fontSize: '0.75rem' }}>
                                         <FaRobot className="me-1" />
@@ -330,12 +392,63 @@ const TechnicianTicketDetails = () => {
                             <h6 className="fw-bold border-bottom pb-2 mb-3">Description</h6>
                             <p className="text-muted" style={{ whiteSpace: 'pre-wrap' }}>{ticket.description}</p>
 
+                            {/* === FIXED: Authenticated Image Display === */}
                             {ticket.screenshot && (
                                 <div className="mt-3">
-                                    <FaPaperclip className="me-2" /><strong>Attachment:</strong>
-                                    <div className="mt-2"><Image src={ticket.screenshot} fluid rounded thumbnail style={{ maxHeight: '300px' }} /></div>
+                                    <FaPaperclip className="me-2" />
+                                    <strong>Attachment:</strong>
+                                    <div className="mt-2">
+                                        {imageLoading && (
+                                            <div className="text-center p-4 bg-light rounded">
+                                                <Spinner animation="border" size="sm" className="me-2" />
+                                                Loading image...
+                                            </div>
+                                        )}
+
+                                        {imageError && !imageLoading && (
+                                            <div className="p-3 border rounded bg-light">
+                                                <p className="text-danger mb-2">
+                                                    <FaPaperclip className="me-1" /> Failed to load image
+                                                </p>
+                                                <Button
+                                                    size="sm"
+                                                    variant="outline-primary"
+                                                    onClick={() => fetchImageWithAuth(ticket.screenshot)}
+                                                >
+                                                    <FaRedo className="me-1" /> Retry
+                                                </Button>
+                                            </div>
+                                        )}
+
+                                        {imageBlobUrl && !imageLoading && !imageError && (
+                                            <>
+                                                <Image
+                                                    src={imageBlobUrl}
+                                                    fluid
+                                                    rounded
+                                                    thumbnail
+                                                    style={{ maxHeight: '300px', cursor: 'pointer' }}
+                                                    onClick={() => setShowImageModal(true)}
+                                                />
+                                                <div className="d-flex gap-2 mt-2">
+                                                    <Button size="sm" variant="outline-primary" onClick={() => setShowImageModal(true)}>
+                                                        <FaExpand className="me-1" /> View Full
+                                                    </Button>
+                                                    <Button
+                                                        size="sm"
+                                                        variant="outline-success"
+                                                        href={imageBlobUrl}
+                                                        download="attachment.jpg"
+                                                    >
+                                                        <FaDownload className="me-1" /> Download
+                                                    </Button>
+                                                </div>
+                                            </>
+                                        )}
+                                    </div>
                                 </div>
                             )}
+                            {/* === END FIXED === */}
                         </Card.Body>
                     </Card>
 
@@ -433,6 +546,26 @@ const TechnicianTicketDetails = () => {
                 loading={modalLoading}
                 message={getStatusText()}
             />
+
+            {/* === NEW: Full Image Preview Modal === */}
+            <Modal show={showImageModal} onHide={() => setShowImageModal(false)} size="xl" centered>
+                <Modal.Header closeButton>
+                    <Modal.Title>Attachment Preview</Modal.Title>
+                </Modal.Header>
+                <Modal.Body className="text-center p-3">
+                    {imageBlobUrl && (
+                        <Image src={imageBlobUrl} fluid rounded style={{ maxHeight: "70vh", objectFit: "contain" }} />
+                    )}
+                </Modal.Body>
+                <Modal.Footer>
+                    <Button variant="outline-secondary" onClick={() => setShowImageModal(false)}>Close</Button>
+                    {imageBlobUrl && (
+                        <Button variant="outline-success" href={imageBlobUrl} download="attachment.jpg">
+                            <FaDownload className="me-1" /> Download
+                        </Button>
+                    )}
+                </Modal.Footer>
+            </Modal>
         </div>
     );
 };

@@ -1,0 +1,11 @@
+Smart IT Service Desk - Account Activated
+
+Hello {{ user.first_name }},
+
+Your account has been successfully activated. You can now log in to the Smart IT Service Desk.
+
+Login URL: {{ login_url }}
+
+If you have any issues logging in, please contact your IT department.
+
+Smart IT Service Desk

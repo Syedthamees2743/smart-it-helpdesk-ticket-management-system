@@ -1,0 +1,21 @@
+Smart IT Service Desk - Registration Received
+
+Hello {{ user.first_name }},
+
+Thank you for registering with the Smart IT Service Desk. Your registration request has been received and is pending administrator review.
+
+Registration Details:
+- Name: {{ user.first_name }} {{ user.last_name }}
+- {{ role }} ID: {{ user_id }}
+- Role: {{ role }}
+- Department: {{ department }}
+{% if extra_info %}- {{ extra_info }}{% endif %}
+
+What happens next?
+1. An administrator will review your registration request.
+2. You will receive an email notification once your request is processed.
+3. If approved, you will receive an activation link to set up your password.
+
+This process typically takes 1-2 business days.
+
+Smart IT Service Desk

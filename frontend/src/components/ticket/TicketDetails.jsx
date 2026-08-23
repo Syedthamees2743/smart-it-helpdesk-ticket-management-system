@@ -1,11 +1,9 @@
 import { useState, useEffect, useContext } from "react";
-import { Card, Row, Col, Badge, Button, Form, Spinner, Image } from "react-bootstrap";
+import { Card, Row, Col, Badge, Button, Form, Spinner, Image, Modal } from "react-bootstrap";
 import { useParams, useNavigate } from "react-router-dom";
-import { FaArrowLeft, FaRedo, FaUserPlus, FaComment, FaPaperclip, FaCheckCircle } from "react-icons/fa";
-// === DAY 9 ADDITION: Import feedback modal and icon ===
+import { FaArrowLeft, FaRedo, FaUserPlus, FaComment, FaPaperclip, FaCheckCircle, FaDownload, FaExpand } from "react-icons/fa";
 import { FiMessageSquare } from "react-icons/fi";
 import FeedbackModal from "./FeedbackModal";
-// === END DAY 9 ADDITION ===
 import { AuthContext } from "../../context/AuthContext";
 import { getTicketById, getComments, addComment, assignTicket, reopenTicket, changeTicketStatus } from "../../services/ticketService";
 import ConfirmModal from "../admin/ConfirmModal";
@@ -27,14 +25,70 @@ const TicketDetails = () => {
   const [showAssignModal, setShowAssignModal] = useState(false);
   const [showReopenModal, setShowReopenModal] = useState(false);
   const [modalLoading, setModalLoading] = useState(false);
-  
-  // === DAY 9 ADDITION: Feedback modal state ===
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
-  // === END DAY 9 ADDITION ===
+  const [showImageModal, setShowImageModal] = useState(false);
+  
+  // ← NEW: Store the blob URL for authenticated image
+  const [imageBlobUrl, setImageBlobUrl] = useState(null);
+  const [imageLoading, setImageLoading] = useState(false);
+  const [imageError, setImageError] = useState(false);
 
   const [technicians, setTechnicians] = useState([]);
   const [selectedTech, setSelectedTech] = useState("");
   const [reopenReason, setReopenReason] = useState("");
+
+  // ← NEW: Function to build the proxy URL
+  const getMediaProxyUrl = (path) => {
+    if (!path) return null;
+    const baseUrl = 'http://127.0.0.1:8000';
+    let mediaPath = path;
+    
+    if (path.startsWith('http://') || path.startsWith('https://')) {
+      const match = path.match(/\/media\/(.+)$/);
+      if (match) {
+        mediaPath = match[1];
+      } else {
+        return path;
+      }
+    } else if (path.startsWith('/media/')) {
+      mediaPath = path.replace(/^\/media\//, '');
+    }
+    
+    return `${baseUrl}/api/tickets/media/${mediaPath}`;
+  };
+
+  // ← NEW: Fetch image with auth headers
+  const fetchImageWithAuth = async (screenshotPath) => {
+    if (!screenshotPath) return;
+    
+    const proxyUrl = getMediaProxyUrl(screenshotPath);
+    if (!proxyUrl) return;
+    
+    setImageLoading(true);
+    setImageError(false);
+    
+    // Clean up previous blob URL
+    if (imageBlobUrl) {
+      URL.revokeObjectURL(imageBlobUrl);
+      setImageBlobUrl(null);
+    }
+    
+    try {
+      const response = await api.get(proxyUrl, {
+        responseType: 'blob',
+      });
+      
+      // Create blob URL from response data
+      const blob = new Blob([response.data], { type: response.headers['content-type'] || 'image/jpeg' });
+      const blobUrl = URL.createObjectURL(blob);
+      setImageBlobUrl(blobUrl);
+    } catch (err) {
+      console.error("Failed to fetch image:", err);
+      setImageError(true);
+    } finally {
+      setImageLoading(false);
+    }
+  };
 
   const fetchData = async () => {
     setLoading(true);
@@ -47,6 +101,19 @@ const TicketDetails = () => {
   };
 
   useEffect(() => { fetchData(); }, [id]);
+
+  // ← NEW: Fetch image when ticket loads
+  useEffect(() => {
+    if (ticket?.screenshot) {
+      fetchImageWithAuth(ticket.screenshot);
+    }
+    // Cleanup blob URL on unmount
+    return () => {
+      if (imageBlobUrl) {
+        URL.revokeObjectURL(imageBlobUrl);
+      }
+    };
+  }, [ticket?.screenshot]);
 
   const openAssignModal = async () => {
     try {
@@ -124,12 +191,64 @@ const TicketDetails = () => {
             <Card.Body>
               <h6 className="fw-bold border-bottom pb-2 mb-3">Description</h6>
               <p className="text-muted" style={{ whiteSpace: "pre-wrap" }}>{ticket.description}</p>
+              
+              {/* === FIXED: Authenticated Image Display === */}
               {ticket.screenshot && (
                 <div className="mt-3">
-                  <FaPaperclip className="me-2" /><strong>Attachment:</strong>
-                  <div className="mt-2"><Image src={ticket.screenshot} fluid rounded thumbnail style={{maxHeight: "300px"}} /></div>
+                  <FaPaperclip className="me-2" />
+                  <strong>Attachment:</strong>
+                  <div className="mt-2">
+                    {imageLoading && (
+                      <div className="text-center p-4 bg-light rounded">
+                        <Spinner animation="border" size="sm" className="me-2" />
+                        Loading image...
+                      </div>
+                    )}
+                    
+                    {imageError && !imageLoading && (
+                      <div className="p-3 border rounded bg-light">
+                        <p className="text-danger mb-2">
+                          <FaPaperclip className="me-1" /> Failed to load image
+                        </p>
+                        <Button 
+                          size="sm" 
+                          variant="outline-primary" 
+                          onClick={() => fetchImageWithAuth(ticket.screenshot)}
+                        >
+                          <FaRedo className="me-1" /> Retry
+                        </Button>
+                      </div>
+                    )}
+                    
+                    {imageBlobUrl && !imageLoading && !imageError && (
+                      <>
+                        <Image 
+                          src={imageBlobUrl} 
+                          fluid 
+                          rounded 
+                          thumbnail 
+                          style={{maxHeight: "300px", cursor: "pointer"}} 
+                          onClick={() => setShowImageModal(true)}
+                        />
+                        <div className="d-flex gap-2 mt-2">
+                          <Button size="sm" variant="outline-primary" onClick={() => setShowImageModal(true)}>
+                            <FaExpand className="me-1" /> View Full
+                          </Button>
+                          <Button 
+                            size="sm" 
+                            variant="outline-success" 
+                            href={imageBlobUrl}
+                            download="attachment.jpg"
+                          >
+                            <FaDownload className="me-1" /> Download
+                          </Button>
+                        </div>
+                      </>
+                    )}
+                  </div>
                 </div>
               )}
+              {/* === END FIXED === */}
             </Card.Body>
           </Card>
 
@@ -176,16 +295,12 @@ const TicketDetails = () => {
                 {role === "admin" && (ticket.status === "open" || ticket.status === "reopened") && (
                   <Button variant="primary w-100" onClick={openAssignModal}><FaUserPlus className="me-2" /> Assign Technician</Button>
                 )}
-
                 {(role === "employee" || role === "admin") && ticket.status === "resolved" && (
                   <Button variant="warning w-100" onClick={() => setShowReopenModal(true)}><FaRedo className="me-2" /> Reopen Ticket</Button>
                 )}
-
                 {role === "employee" && ticket.status === "resolved" && (
                   <Button variant="success w-100" onClick={handleCloseTicket}><FaCheckCircle className="me-2" /> Confirm & Close Ticket</Button>
                 )}
-
-                {/* === DAY 9 ADDITION: Feedback card for closed tickets === */}
                 {role === "employee" && ticket.status === "closed" && (
                   <div
                     className="d-flex align-items-center gap-2 p-3 rounded-3 border border-dashed"
@@ -194,16 +309,11 @@ const TicketDetails = () => {
                   >
                     <FiMessageSquare style={{ fontSize: '1.2rem', color: '#f59e0b' }} />
                     <div>
-                      <div className="fw-semibold" style={{ color: '#92400e' }}>
-                        Share Your Feedback
-                      </div>
-                      <div className="text-muted small">
-                        Rate the support you received for this ticket
-                      </div>
+                      <div className="fw-semibold" style={{ color: '#92400e' }}>Share Your Feedback</div>
+                      <div className="text-muted small">Rate the support you received for this ticket</div>
                     </div>
                   </div>
                 )}
-                {/* === END DAY 9 ADDITION === */}
               </div>
             </Card.Body>
           </Card>
@@ -224,20 +334,32 @@ const TicketDetails = () => {
         </Col>
       </Row>
 
+      {/* Modals */}
       <ConfirmModal show={showAssignModal} onHide={() => setShowAssignModal(false)} onConfirm={handleAssign} title="Assign Technician" loading={modalLoading}
         message={<Form.Select value={selectedTech} onChange={(e) => setSelectedTech(e.target.value)} className="mt-2"><option value="">Select a technician...</option>{technicians.map(t => <option key={t.id} value={t.id}>{t.first_name} {t.last_name} (@{t.username})</option>)}</Form.Select>} />
       <ConfirmModal show={showReopenModal} onHide={() => setShowReopenModal(false)} onConfirm={handleReopen} title="Reopen Ticket" loading={modalLoading}
         message={<Form.Control as="textarea" rows={3} placeholder="Why are you reopening this ticket?" value={reopenReason} onChange={(e) => setReopenReason(e.target.value)} />} />
+      {ticket && <FeedbackModal show={showFeedbackModal} onHide={() => setShowFeedbackModal(false)} ticket={ticket} />}
 
-      {/* === DAY 9 ADDITION: Feedback Modal === */}
-      {ticket && (
-        <FeedbackModal
-          show={showFeedbackModal}
-          onHide={() => setShowFeedbackModal(false)}
-          ticket={ticket}
-        />
-      )}
-      {/* === END DAY 9 ADDITION === */}
+      {/* Full Image Preview Modal */}
+      <Modal show={showImageModal} onHide={() => setShowImageModal(false)} size="xl" centered>
+        <Modal.Header closeButton>
+          <Modal.Title>Attachment Preview</Modal.Title>
+        </Modal.Header>
+        <Modal.Body className="text-center p-3">
+          {imageBlobUrl && (
+            <Image src={imageBlobUrl} fluid rounded style={{maxHeight: "70vh", objectFit: "contain"}} />
+          )}
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="outline-secondary" onClick={() => setShowImageModal(false)}>Close</Button>
+          {imageBlobUrl && (
+            <Button variant="outline-success" href={imageBlobUrl} download="attachment.jpg">
+              <FaDownload className="me-1" /> Download
+            </Button>
+          )}
+        </Modal.Footer>
+      </Modal>
     </div>
   );
 };

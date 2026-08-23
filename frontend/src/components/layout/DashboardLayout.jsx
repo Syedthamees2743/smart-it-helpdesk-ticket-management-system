@@ -10,10 +10,7 @@ import {
   Dropdown,
 } from "react-bootstrap";
 
-import {
-  Outlet,
-  useNavigate,
-} from "react-router-dom";
+import { Outlet, useNavigate } from "react-router-dom";
 
 import {
   FaBars,
@@ -21,6 +18,8 @@ import {
   FaUserCircle,
   FaCog,
   FaQuestionCircle,
+  FaChevronDown,
+  FaUser,
 } from "react-icons/fa";
 
 import { useAuth } from "../../context/AuthContext";
@@ -36,9 +35,45 @@ const DashboardLayout = ({ role }) => {
 
   const [showMobileSidebar, setShowMobileSidebar] = useState(false);
 
-  // ==============================
+  // =========================================================
+  // USER NAME
+  // =========================================================
+
+  const firstName = user?.first_name || "";
+  const lastName = user?.last_name || "";
+
+  const fullName =
+    `${firstName} ${lastName}`.trim() ||
+    user?.username ||
+    "User";
+
+  // =========================================================
+  // INITIALS
+  // =========================================================
+
+  const getInitials = () => {
+    const first = firstName?.charAt(0) || "";
+    const last = lastName?.charAt(0) || "";
+
+    return (
+      `${first}${last}`.toUpperCase() ||
+      user?.username?.charAt(0)?.toUpperCase() ||
+      "U"
+    );
+  };
+
+  // =========================================================
+  // ROLE LABEL
+  // =========================================================
+
+  const roleLabel =
+    role?.charAt(0).toUpperCase() +
+      role?.slice(1).toLowerCase() || "User";
+
+  // =========================================================
   // LOGOUT
-  // ==============================
+  // =========================================================
+
   const handleLogout = async () => {
     try {
       await logout();
@@ -49,9 +84,10 @@ const DashboardLayout = ({ role }) => {
     }
   };
 
-  // ==============================
+  // =========================================================
   // MOBILE SIDEBAR
-  // ==============================
+  // =========================================================
+
   const toggleSidebar = () => {
     setShowMobileSidebar((prev) => !prev);
   };
@@ -60,19 +96,39 @@ const DashboardLayout = ({ role }) => {
     setShowMobileSidebar(false);
   };
 
+  // =========================================================
+  // NAVIGATION
+  // =========================================================
+
+  const goToProfile = () => {
+    navigate(`/${role}/profile`);
+  };
+
+  const goToSettings = () => {
+    navigate(`/${role}/settings`);
+  };
+
+  const goToHelp = () => {
+    navigate(`/${role}/help`);
+  };
+
+  // =========================================================
+  // UI
+  // =========================================================
+
   return (
     <Container
       fluid
-      className="p-0 m-0"
+      className="p-0 m-0 dashboard-layout"
       style={{
         height: "100vh",
         display: "flex",
-        flexDirection: "column",
         overflow: "hidden",
+        background: "#f8fafc",
       }}
     >
       <Row
-        className="g-0 flex-grow-1"
+        className="g-0 w-100"
         style={{
           height: "100vh",
           overflow: "hidden",
@@ -80,7 +136,8 @@ const DashboardLayout = ({ role }) => {
       >
         {/* =====================================================
             DESKTOP SIDEBAR
-            ===================================================== */}
+        ===================================================== */}
+
         <Col
           md="auto"
           className="d-none d-md-block p-0"
@@ -102,30 +159,49 @@ const DashboardLayout = ({ role }) => {
 
         {/* =====================================================
             MOBILE SIDEBAR
-            ===================================================== */}
+        ===================================================== */}
+
         <Offcanvas
           show={showMobileSidebar}
           onHide={closeSidebar}
           placement="start"
-          className="d-md-none"
+          className="d-md-none mobile-sidebar"
           style={{
-            width: "260px",
-            maxWidth: "260px",
+            width: "280px",
+            maxWidth: "85vw",
           }}
         >
           <Offcanvas.Header
             closeButton
             closeVariant="white"
-            className="bg-dark text-white border-0 py-2"
+            className="mobile-sidebar-header"
           >
-            <Offcanvas.Title className="small">
-              IT Service Desk
+            <Offcanvas.Title className="fw-bold">
+              <div className="d-flex align-items-center gap-2">
+                <div className="mobile-logo">IT</div>
+
+                <div>
+                  <div style={{ fontSize: "0.95rem" }}>
+                    ServiceDesk
+                  </div>
+
+                  <small
+                    style={{
+                      opacity: 0.7,
+                      fontSize: "0.7rem",
+                    }}
+                  >
+                    IT Support System
+                  </small>
+                </div>
+              </div>
             </Offcanvas.Title>
           </Offcanvas.Header>
 
           <Offcanvas.Body
-            className="p-0 bg-dark d-flex flex-column"
+            className="p-0"
             style={{
+              background: "#ffffff",
               overflow: "hidden",
             }}
           >
@@ -138,10 +214,11 @@ const DashboardLayout = ({ role }) => {
         </Offcanvas>
 
         {/* =====================================================
-            MAIN CONTENT AREA
-            ===================================================== */}
+            MAIN AREA
+        ===================================================== */}
+
         <Col
-          className="d-flex flex-column"
+          className="d-flex flex-column p-0"
           style={{
             height: "100vh",
             minWidth: 0,
@@ -150,119 +227,171 @@ const DashboardLayout = ({ role }) => {
         >
           {/* =================================================
               TOP NAVBAR
-              ================================================= */}
+          ================================================= */}
+
           <Navbar
-            bg="white"
-            className="shadow-sm px-3 border-bottom"
+            className="dashboard-navbar px-3 px-md-4"
             style={{
-              height: "68px",
-              minHeight: "68px",
+              height: "76px",
+              minHeight: "76px",
               flexShrink: 0,
+              background: "#ffffff",
+              borderBottom: "1px solid #e5e7eb",
               zIndex: 1000,
             }}
           >
-            {/* Mobile menu button */}
+            {/* Mobile menu */}
+
             <Button
-              variant="link"
-              className="d-md-none p-0 me-3 text-dark"
+              variant="light"
+              className="mobile-menu-button d-md-none me-3"
               onClick={toggleSidebar}
               type="button"
+              aria-label="Open menu"
             >
-              <FaBars size={24} />
+              <FaBars size={20} />
             </Button>
 
-            {/* Right side */}
-            <Navbar.Collapse className="justify-content-end w-100">
-              <Nav className="align-items-center">
+            {/* Desktop spacer */}
 
-                {/* Notification */}
-                <div className="me-3">
-                  <NotificationBell />
-                </div>
+            <div className="d-none d-md-block flex-grow-1">
+              <div className="topbar-system-name">
+                Smart IT Service Desk
+              </div>
 
-                {/* User Dropdown */}
-                <Dropdown align="end">
-                  <Dropdown.Toggle
-                    variant="link"
-                    className="text-decoration-none text-dark p-0 d-flex align-items-center"
-                    id="dashboard-user-dropdown"
-                  >
-                    <FaUserCircle
-                      size={34}
-                      className="me-2 text-secondary"
-                    />
+              <div className="topbar-system-subtitle">
+                IT Support Management System
+              </div>
+            </div>
 
-                    <div className="text-start d-none d-sm-block">
-                      <div
-                        className="fw-bold"
-                        style={{
-                          fontSize: "0.9rem",
-                          lineHeight: "1.2",
-                        }}
-                      >
-                        {user?.first_name || ""}{" "}
-                        {user?.last_name || ""}
-                      </div>
+            {/* =================================================
+                RIGHT SIDE
+            ================================================= */}
 
-                      <div
-                        className="text-muted text-uppercase"
-                        style={{
-                          fontSize: "0.7rem",
-                        }}
-                      >
-                        {role}
-                      </div>
+            <Nav className="align-items-center ms-auto">
+
+              {/* Notification */}
+
+              <div className="notification-wrapper me-2 me-md-3">
+                <NotificationBell />
+              </div>
+
+              {/* Divider */}
+
+              <div className="topbar-divider d-none d-sm-block" />
+
+              {/* User Dropdown */}
+
+              <Dropdown align="end">
+                <Dropdown.Toggle
+                  variant="link"
+                  className="user-dropdown-toggle text-decoration-none"
+                  id="dashboard-user-dropdown"
+                >
+                  {/* Avatar */}
+
+                  <div className="topbar-avatar">
+                    {getInitials()}
+                  </div>
+
+                  {/* User information */}
+
+                  <div className="user-dropdown-info d-none d-sm-block">
+                    <div className="user-dropdown-name">
+                      {fullName}
                     </div>
-                  </Dropdown.Toggle>
 
-                  <Dropdown.Menu className="shadow-sm border-0">
+                    <div className="user-dropdown-role">
+                      {roleLabel}
+                    </div>
+                  </div>
 
-                    {/* Settings */}
-                    <Dropdown.Item
-                      onClick={() =>
-                        navigate(`/${role}/settings`)
-                      }
-                    >
-                      <FaCog className="me-2" />
-                      Settings
-                    </Dropdown.Item>
+                  <FaChevronDown
+                    className="user-dropdown-arrow d-none d-sm-block"
+                    size={11}
+                  />
+                </Dropdown.Toggle>
 
-                    {/* Help */}
-                    <Dropdown.Item
-                      onClick={() =>
-                        navigate(`/${role}/help`)
-                      }
-                    >
-                      <FaQuestionCircle className="me-2" />
-                      Help & Support
-                    </Dropdown.Item>
+                {/* =================================================
+                    DROPDOWN MENU
+                ================================================= */}
 
-                    <Dropdown.Divider />
+                <Dropdown.Menu
+                  className="user-dropdown-menu shadow-lg border-0"
+                >
+                  {/* Profile header */}
 
-                    {/* Logout */}
-                    <Dropdown.Item
-                      className="text-danger"
-                      onClick={handleLogout}
-                    >
-                      <FaSignOutAlt className="me-2" />
-                      Logout
-                    </Dropdown.Item>
-                  </Dropdown.Menu>
-                </Dropdown>
-              </Nav>
-            </Navbar.Collapse>
+                  <div className="dropdown-user-header">
+                    <div className="dropdown-avatar">
+                      {getInitials()}
+                    </div>
+
+                    <div className="overflow-hidden">
+                      <div className="fw-bold text-dark text-truncate">
+                        {fullName}
+                      </div>
+
+                      <div className="text-muted small text-truncate">
+                        {user?.email || "No email"}
+                      </div>
+
+                      <span className="user-role-badge">
+                        {roleLabel}
+                      </span>
+                    </div>
+                  </div>
+
+                  <Dropdown.Divider />
+
+                  {/* Profile */}
+
+                  <Dropdown.Item onClick={goToProfile}>
+                    <FaUser className="dropdown-icon" />
+                    <span>My Profile</span>
+                  </Dropdown.Item>
+
+                  {/* Settings */}
+
+                  <Dropdown.Item onClick={goToSettings}>
+                    <FaCog className="dropdown-icon" />
+                    <span>Settings</span>
+                  </Dropdown.Item>
+
+                  {/* Help */}
+
+                  <Dropdown.Item onClick={goToHelp}>
+                    <FaQuestionCircle className="dropdown-icon" />
+                    <span>Help & Support</span>
+                  </Dropdown.Item>
+
+                  <Dropdown.Divider />
+
+                  {/* Logout */}
+
+                  <Dropdown.Item
+                    className="logout-dropdown-item"
+                    onClick={handleLogout}
+                  >
+                    <FaSignOutAlt className="dropdown-icon" />
+                    <span>Sign out</span>
+                  </Dropdown.Item>
+                </Dropdown.Menu>
+              </Dropdown>
+            </Nav>
           </Navbar>
 
           {/* =================================================
               PAGE CONTENT
-              ================================================= */}
+          ================================================= */}
+
           <main
-            className="main-content bg-light"
+            className="main-content"
             style={{
               flex: 1,
               minHeight: 0,
               overflowY: "auto",
               overflowX: "hidden",
+              background: "#f8fafc",
             }}
           >
             <Outlet />
@@ -270,10 +399,13 @@ const DashboardLayout = ({ role }) => {
 
           {/* =================================================
               FOOTER
-              ================================================= */}
+          ================================================= */}
+
           <div
             style={{
               flexShrink: 0,
+              background: "#ffffff",
+              borderTop: "1px solid #e5e7eb",
             }}
           >
             <Footer />

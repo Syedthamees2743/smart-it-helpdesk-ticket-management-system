@@ -42,6 +42,14 @@ import TechnicianDashboard from "./pages/technician/TechnicianDashboard";
 // Help & Support
 import HelpSupport from "./pages/support/HelpSupport";
 
+// NEW: Signup & Activation Pages
+import EmployeeSignup from "./pages/auth/EmployeeSignup";
+import TechnicianSignup from "./pages/auth/TechnicianSignup";
+import ActivateAccount from "./pages/auth/ActivateAccount";
+
+// NEW: Admin Pending Requests
+import PendingRequests from "./pages/admin/PendingRequests";
+
 // Placeholder for future pages
 const Placeholder = ({ title }) => (
   <div className="p-5 h4 text-muted">{title} - Coming Soon</div>
@@ -60,9 +68,17 @@ const AppRoutes = () => {
 
   return (
     <Routes>
+      {/* ==================== PUBLIC ROUTES ==================== */}
       <Route path="/login" element={<Login />} />
+      
+      {/* NEW: Signup Routes (Public) */}
+      <Route path="/employee/signup" element={<EmployeeSignup />} />
+      <Route path="/technician/signup" element={<TechnicianSignup />} />
+      
+      {/* NEW: Account Activation Route (Public) */}
+      <Route path="/activate-account/:token" element={<ActivateAccount />} />
 
-      {/* Admin Routes */}
+      {/* ==================== ADMIN ROUTES ==================== */}
       <Route
         path="/admin"
         element={
@@ -73,6 +89,7 @@ const AppRoutes = () => {
       >
         <Route index element={<AdminDashboard />} />
         <Route path="users" element={<UserManagement />} />
+        <Route path="pending-requests" element={<PendingRequests />} />
         <Route path="departments" element={<DepartmentManagement />} />
         <Route path="categories" element={<IssueCategoryManagement />} />
         <Route path="tickets" element={<TicketManagement />} />
@@ -90,7 +107,7 @@ const AppRoutes = () => {
         <Route path="help" element={<HelpSupport />} />
       </Route>
 
-      {/* Employee Routes */}
+      {/* ==================== EMPLOYEE ROUTES ==================== */}
       <Route
         path="/employee"
         element={
@@ -114,7 +131,7 @@ const AppRoutes = () => {
         <Route path="help" element={<HelpSupport />} />
       </Route>
 
-      {/* Technician Routes */}
+      {/* ==================== TECHNICIAN ROUTES ==================== */}
       <Route
         path="/technician"
         element={
@@ -134,7 +151,7 @@ const AppRoutes = () => {
         <Route path="help" element={<HelpSupport />} />
       </Route>
 
-      {/* Catch-all for wrong URLs */}
+      {/* ==================== CATCH-ALL ==================== */}
       <Route path="*" element={<Navigate to="/login" replace />} />
     </Routes>
   );

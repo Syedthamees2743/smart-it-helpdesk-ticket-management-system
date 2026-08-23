@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
-from .models import User, EmployeeProfile, TechnicianProfile
+from .models import User, EmployeeProfile, TechnicianProfile, AccountActivation
 
 
 @admin.register(User)
@@ -12,6 +12,7 @@ class CustomUserAdmin(UserAdmin):
         'first_name',
         'last_name',
         'role',
+        'account_status',
         'is_active',
         'created_at',
     )
@@ -28,6 +29,7 @@ class CustomUserAdmin(UserAdmin):
     
     list_filter = (
         'role',
+        'account_status',
         'is_active',
         'is_staff',
     )
@@ -40,6 +42,8 @@ class CustomUserAdmin(UserAdmin):
                 'role',
                 'phone_number',
                 'profile_image',
+                'account_status',
+                'rejection_reason',
             )
         }),
         ('Timestamps', {
@@ -56,6 +60,7 @@ class CustomUserAdmin(UserAdmin):
                 'role',
                 'phone_number',
                 'profile_image',
+                'account_status',
             )
         }),
     )
@@ -145,5 +150,33 @@ class TechnicianProfileAdmin(admin.ModelAdmin):
             'fields': ('created_at',)
         }),
     )
+    
+    readonly_fields = ('created_at',)
+
+
+@admin.register(AccountActivation)
+class AccountActivationAdmin(admin.ModelAdmin):
+    
+    list_display = (
+        'user',
+        'token',
+        'created_at',
+        'expires_at',
+        'used',
+    )
+    
+    list_display_links = ('user',)
+    
+    search_fields = (
+        'user__username',
+        'user__email',
+        'token',
+    )
+    
+    list_filter = (
+        'used',
+    )
+    
+    ordering = ('-created_at',)
     
     readonly_fields = ('created_at',)

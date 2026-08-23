@@ -1,0 +1,12 @@
+Smart IT Service Desk - Account Request Update
+
+Hello {{ user.first_name }},
+
+Your account registration request has been reviewed. Unfortunately, your request could not be approved at this time.
+
+Reason:
+{{ reason }}
+
+If you believe this decision was made in error, please contact your IT department or system administrator.
+
+Smart IT Service Desk

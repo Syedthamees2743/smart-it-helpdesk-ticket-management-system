@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="margin: 0; padding: 20px; background-color: #f5f5f5; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+    <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+        <div style="background: linear-gradient(135deg, #22543d 0%, #38a169 100%); padding: 30px; text-align: center;">
+            <h1 style="color: #ffffff; margin: 0;">🛠️ Smart IT Service Desk</h1>
+        </div>
+        <div style="padding: 30px;">
+            <div style="display: inline-block; background-color: #c6f6d5; color: #22543d; padding: 5px 15px; border-radius: 20px; font-weight: 600; margin-bottom: 20px;">✓ APPROVED</div>
+            <h2 style="color: #22543d; margin-top: 0;">Your Account Has Been Approved</h2>
+            <p>Hello <strong>{{ user.first_name }} {{ user.last_name }}</strong>,</p>
+            <p>Great news! Your account registration request has been approved by an administrator.</p>
+            <div style="background-color: #f0fff4; border-left: 4px solid #38a169; padding: 15px; margin: 20px 0;">
+                <p style="margin: 5px 0; color: #4a5568;"><strong>Account Details:</strong></p>
+                <p style="margin: 5px 0; color: #4a5568;">Name: {{ user.first_name }} {{ user.last_name }}</p>
+                <p style="margin: 5px 0; color: #4a5568;">{{ role }} ID: {{ user_id }}</p>
+                <p style="margin: 5px 0; color: #4a5568;">Department: {{ department }}</p>
+                <p style="margin: 5px 0; color: #4a5568;">Role: {{ role }}</p>
+                {% if extra_info %}<p style="margin: 5px 0; color: #4a5568;">{{ extra_info }}</p>{% endif %}
+            </div>
+            <p><strong>Next Step: Activate Your Account</strong></p>
+            <p>Click the button below to create your password and activate your account:</p>
+            <div style="text-align: center; margin: 30px 0;">
+                <a href="{{ activation_url }}" style="display: inline-block; background: linear-gradient(135deg, #22543d 0%, #38a169 100%); color: #ffffff !important; text-decoration: none; padding: 15px 30px; border-radius: 8px; font-weight: 600; font-size: 16px;">Activate Account</a>
+            </div>
+            <p style="font-size: 12px; color: #718096; word-break: break-all;">Or copy this link: {{ activation_url }}</p>
+            <div style="background-color: #fffaf0; border-left: 4px solid #ed8936; padding: 15px; margin: 20px 0;">
+                <p style="margin: 5px 0; color: #744210;"><strong>⚠️ Important:</strong> This activation link will expire in {{ expires_hours }} hours.</p>
+            </div>
+        </div>
+        <div style="background-color: #f7fafc; padding: 20px; text-align: center; color: #718096; font-size: 12px;">
+            <p>© Smart IT Service Desk. All rights reserved.</p>
+            <p>This is an automated message. Please do not reply to this email.</p>
+        </div>
+    </div>
+</body>
+</html>

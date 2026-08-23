@@ -1,0 +1,20 @@
+Smart IT Service Desk - Account Approved
+
+Hello {{ user.first_name }} {{ user.last_name }},
+
+Great news! Your account registration request has been approved by an administrator.
+
+Account Details:
+- Name: {{ user.first_name }} {{ user.last_name }}
+- {{ role }} ID: {{ user_id }}
+- Department: {{ department }}
+- Role: {{ role }}
+{% if extra_info %}- {{ extra_info }}{% endif %}
+
+Next Step: Activate Your Account
+To create your password and activate your account, visit:
+{{ activation_url }}
+
+IMPORTANT: This activation link will expire in {{ expires_hours }} hours.
+
+Smart IT Service Desk

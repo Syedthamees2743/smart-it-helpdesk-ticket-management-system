@@ -1,26 +1,78 @@
-import { Row, Col } from 'react-bootstrap';
+import React from "react";
 
-const StatCard = ({ icon, title, value, subtitle, color = "primary" }) => {
+const StatCard = ({
+  icon,
+  title,
+  value,
+  subtitle,
+  color = "primary",
+  trend,
+  trendType = "up",
+}) => {
   const colorMap = {
-    primary: '#3b82f6', success: '#22c55e', warning: '#f59e0b', 
-    danger: '#dc2626', info: '#06b6d4', secondary: '#64748b'
+    primary: "#2563eb",
+    success: "#16a34a",
+    warning: "#d97706",
+    danger: "#dc2626",
+    info: "#0891b2",
+    secondary: "#64748b",
   };
+
+  const selectedColor = colorMap[color] || colorMap.primary;
 
   return (
     <div className="stat-card">
-      <Row className="align-items-center">
-        <Col xs="auto" className="p-2 pe-0">
-          <div className="d-flex justify-content-center align-items-center rounded-circle" 
-               style={{ width: '48px', height: '48px', backgroundColor: `${colorMap[color]}15`, color: colorMap[color] }}>
-            {icon}
+      <div className="stat-card-content">
+
+        {/* Icon */}
+        <div
+          className="stat-icon"
+          style={{
+            backgroundColor: `${selectedColor}12`,
+            color: selectedColor,
+          }}
+        >
+          {icon}
+        </div>
+
+        {/* Content */}
+        <div className="stat-info">
+          <div className="stat-title">
+            {title}
           </div>
-        </Col>
-        <Col className="ps-2">
-          <div className="text-muted" style={{fontSize: '0.8rem'}}>{title}</div>
-          <div className="fw-bold fs-4">{value}</div>
-          {subtitle && <div className="text-muted" style={{fontSize: '0.75rem'}}>{subtitle}</div>}
-        </Col>
-      </Row>
+
+          <div className="stat-value">
+            {value}
+          </div>
+
+          <div className="stat-bottom">
+            {trend && (
+              <span
+                className={`stat-trend ${
+                  trendType === "down"
+                    ? "stat-trend-down"
+                    : "stat-trend-up"
+                }`}
+              >
+                <i
+                  className={`bi ${
+                    trendType === "down"
+                      ? "bi-arrow-down"
+                      : "bi-arrow-up"
+                  }`}
+                />
+                {trend}
+              </span>
+            )}
+
+            {subtitle && (
+              <span className="stat-subtitle">
+                {subtitle}
+              </span>
+            )}
+          </div>
+        </div>
+      </div>
     </div>
   );
 };

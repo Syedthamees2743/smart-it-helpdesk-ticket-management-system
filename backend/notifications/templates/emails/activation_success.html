@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="margin: 0; padding: 20px; background-color: #f5f5f5; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+    <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+        <div style="background: linear-gradient(135deg, #1a365d 0%, #2c5282 100%); padding: 30px; text-align: center;">
+            <h1 style="color: #ffffff; margin: 0;">🛠️ Smart IT Service Desk</h1>
+        </div>
+        <div style="padding: 30px; text-align: center;">
+            <div style="font-size: 48px; margin-bottom: 20px;">✅</div>
+            <h2 style="color: #1a365d;">Account Activated Successfully!</h2>
+            <p>Hello {{ user.first_name }},</p>
+            <p>Your account has been successfully activated. You can now log in to the Smart IT Service Desk.</p>
+            <div style="margin: 30px 0;">
+                <a href="{{ login_url }}" style="display: inline-block; background: linear-gradient(135deg, #1a365d 0%, #2c5282 100%); color: #ffffff !important; text-decoration: none; padding: 15px 30px; border-radius: 8px; font-weight: 600; font-size: 16px;">Go to Login</a>
+            </div>
+            <p style="color: #718096;">If you have any issues logging in, please contact your IT department.</p>
+        </div>
+        <div style="background-color: #f7fafc; padding: 20px; text-align: center; color: #718096; font-size: 12px;">
+            <p>© Smart IT Service Desk. All rights reserved.</p>
+        </div>
+    </div>
+</body>
+</html>
