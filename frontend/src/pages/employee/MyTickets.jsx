@@ -9,10 +9,20 @@ import {
   Badge,
   Table,
 } from "react-bootstrap";
-import { FaPlus, FaTimes, FaTicketAlt } from "react-icons/fa";
+import {
+  FaPlus,
+  FaTimes,
+  FaTicketAlt,
+  FaSearch,
+  FaChevronLeft,
+  FaChevronRight,
+  FaFilter,
+} from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
 import { getTickets } from "../../services/ticketService";
 import { getCategories } from "../../services/categoryService";
+
+import "../../styles/EmployeePages.css";
 
 const MyTickets = () => {
   const navigate = useNavigate();
@@ -40,7 +50,7 @@ const MyTickets = () => {
   useEffect(() => {
     getCategories()
       .then((res) => setCategories(res.data.results || res.data))
-      .catch((err) => {});
+      .catch((err) => console.error(err));
   }, []);
 
   const fetchData = async (extraParams = {}) => {
@@ -81,18 +91,23 @@ const MyTickets = () => {
 
   useEffect(() => {
     fetchData();
+    // eslint-disable-next-line
   }, [search, statusFilter, priorityFilter, categoryFilter]);
 
   const getStatusBadge = (status) => (
     <Badge
-      className={`badge-status-${status.replace(" ", "_").toLowerCase()} text-capitalize`}
+      className={`badge-status-${status
+        .replace(" ", "_")
+        .toLowerCase()} text-capitalize`}
     >
       {status.replace("_", " ")}
     </Badge>
   );
+
   const getPriorityBadge = (p) => (
     <Badge className={`badge-priority-${p.toLowerCase()}`}>{p}</Badge>
   );
+
   const getSlaBadge = (sla) =>
     sla === "Breached" ? (
       <Badge bg="danger">Breached</Badge>
@@ -105,38 +120,53 @@ const MyTickets = () => {
     );
 
   return (
-    <div>
-      <div className="d-flex justify-content-between align-items-center mb-4">
-        <div>
-          <h4 className="fw-bold mb-1">My Tickets</h4>
-          <p className="text-muted mb-0">
-            Track and manage your IT support requests.
-          </p>
+    <div className="emp-page-wrapper">
+      {/* HEADER */}
+      <div className="emp-page-header mb-4">
+        <div className="emp-page-title-row">
+          <div className="emp-page-icon-wrap">
+            <FaTicketAlt />
+          </div>
+          <div className="flex-grow-1">
+            <h4 className="emp-page-title">My Tickets</h4>
+            <p className="emp-page-subtitle">
+              Track and manage your IT support requests
+            </p>
+          </div>
+          <Button
+            className="emp-btn-submit"
+            onClick={() => navigate("/employee/tickets/new")}
+          >
+            <FaPlus className="me-2" />
+            Raise Complaint
+          </Button>
         </div>
-        <Button
-          variant="primary"
-          onClick={() => navigate("/employee/tickets/new")}
-        >
-          <FaPlus className="me-2" /> Raise Complaint
-        </Button>
       </div>
 
-      <Card className="border-0 shadow-sm">
-        <Card.Body>
-          <Row className="g-2 mb-3 align-items-end">
+      {/* FILTER BAR */}
+      <Card className="emp-card mb-3">
+        <Card.Body className="p-3">
+          <Row className="g-2 align-items-end">
             <Col md={4}>
+              <div className="emp-filter-label">
+                <FaSearch className="me-1" size={11} />
+                Search
+              </div>
               <Form.Control
-                placeholder="Search by ticket # or title..."
+                placeholder="Ticket # or title..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
+                className="emp-form-control"
               />
             </Col>
             <Col md={2}>
+              <div className="emp-filter-label">Status</div>
               <Form.Select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
+                className="emp-form-control"
               >
-                <option value="">All Status</option>
+                <option value="">All</option>
                 <option value="open">Open</option>
                 <option value="assigned">Assigned</option>
                 <option value="in_progress">In Progress</option>
@@ -145,11 +175,13 @@ const MyTickets = () => {
               </Form.Select>
             </Col>
             <Col md={2}>
+              <div className="emp-filter-label">Priority</div>
               <Form.Select
                 value={priorityFilter}
                 onChange={(e) => setPriorityFilter(e.target.value)}
+                className="emp-form-control"
               >
-                <option value="">All Priority</option>
+                <option value="">All</option>
                 <option value="low">Low</option>
                 <option value="medium">Medium</option>
                 <option value="high">High</option>
@@ -157,11 +189,13 @@ const MyTickets = () => {
               </Form.Select>
             </Col>
             <Col md={2}>
+              <div className="emp-filter-label">Category</div>
               <Form.Select
                 value={categoryFilter}
                 onChange={(e) => setCategoryFilter(e.target.value)}
+                className="emp-form-control"
               >
-                <option value="">All Categories</option>
+                <option value="">All</option>
                 {categories.map((c) => (
                   <option key={c.id} value={c.id}>
                     {c.name}
@@ -171,52 +205,59 @@ const MyTickets = () => {
             </Col>
             <Col md="auto">
               <Button
-                variant="outline-secondary"
-                size="sm"
+                className="emp-btn-clear"
                 onClick={clearFilters}
                 disabled={!hasActiveFilters}
               >
-                <FaTimes className="me-1" /> Clear
+                <FaTimes className="me-1" />
+                Clear
               </Button>
             </Col>
           </Row>
+        </Card.Body>
+      </Card>
 
+      {/* TABLE */}
+      <Card className="emp-card">
+        <Card.Body className="p-0">
           {loading ? (
-            <div className="text-center py-5">
+            <div className="emp-loading-state">
               <Spinner animation="border" />
+              <p>Loading tickets...</p>
             </div>
           ) : tickets.length === 0 ? (
-            <div className="text-center py-5 text-muted">
-              <FaTicketAlt style={{ fontSize: "2.5rem", color: "#d1d5db" }} />
-              <h5 className="mt-3">
+            <div className="emp-empty-state">
+              <FaTicketAlt className="emp-empty-icon" />
+              <h5 className="emp-empty-title">
                 {hasActiveFilters
                   ? "No tickets match your filters"
                   : "No tickets found"}
               </h5>
-              <p>
+              <p className="emp-empty-text">
                 {hasActiveFilters
                   ? "Try adjusting your search or filter criteria."
                   : "You haven't raised any support requests yet."}
               </p>
-              {hasActiveFilters && (
+              {hasActiveFilters ? (
+                <Button className="emp-btn-clear" onClick={clearFilters}>
+                  <FaFilter className="me-1" />
+                  Clear Filters
+                </Button>
+              ) : (
                 <Button
-                  variant="outline-primary"
-                  size="sm"
-                  onClick={clearFilters}
+                  className="emp-btn-submit"
+                  onClick={() => navigate("/employee/tickets/new")}
                 >
-                  <FaTimes className="me-1" /> Clear Filters
+                  <FaPlus className="me-2" />
+                  Raise Complaint
                 </Button>
               )}
             </div>
           ) : (
             <>
               <div className="table-responsive">
-                <Table
-                  hover
-                  className="align-middle mb-0"
-                  style={{ fontSize: "0.9rem" }}
-                >
-                  <thead className="table-light">
+                <Table hover className="emp-table align-middle mb-0">
+                  <thead>
                     <tr>
                       <th>Ticket #</th>
                       <th>Title</th>
@@ -231,9 +272,13 @@ const MyTickets = () => {
                   <tbody>
                     {tickets.map((t) => (
                       <tr key={t.id}>
-                        <td className="fw-medium">{t.ticket_number}</td>
+                        <td className="fw-semibold text-primary">
+                          {t.ticket_number}
+                        </td>
                         <td>{t.title}</td>
-                        <td className="text-muted">{t.category_name || "-"}</td>
+                        <td className="text-muted">
+                          {t.category_name || "-"}
+                        </td>
                         <td>{getPriorityBadge(t.priority)}</td>
                         <td>{t.technician_name || "Unassigned"}</td>
                         <td>{getStatusBadge(t.status)}</td>
@@ -241,8 +286,7 @@ const MyTickets = () => {
                         <td>
                           <Button
                             size="sm"
-                            variant="outline-primary"
-                            type="button"
+                            className="emp-btn-view"
                             onClick={() =>
                               navigate(`/employee/tickets/${t.id}`)
                             }
@@ -255,29 +299,29 @@ const MyTickets = () => {
                   </tbody>
                 </Table>
               </div>
-              <div className="d-flex justify-content-between align-items-center pt-3 mt-3 border-top">
-                <span className="text-muted small mb-0">
+
+              {/* PAGINATION */}
+              <div className="emp-pagination">
+                <span className="emp-pagination-count">
                   Showing {tickets.length} ticket
                   {tickets.length !== 1 ? "s" : ""}
                 </span>
-                <div>
+                <div className="emp-pagination-buttons">
                   <Button
-                    variant="outline-primary"
-                    size="sm"
-                    className="me-2 rounded-pill px-3"
+                    className="emp-btn-page"
                     disabled={!prevPage}
                     onClick={() => goToPage(prevPage)}
                   >
-                    ← Previous
+                    <FaChevronLeft className="me-1" size={10} />
+                    Previous
                   </Button>
                   <Button
-                    variant="outline-primary"
-                    size="sm"
-                    className="rounded-pill px-3"
+                    className="emp-btn-page"
                     disabled={!nextPage}
                     onClick={() => goToPage(nextPage)}
                   >
-                    Next →
+                    Next
+                    <FaChevronRight className="ms-1" size={10} />
                   </Button>
                 </div>
               </div>

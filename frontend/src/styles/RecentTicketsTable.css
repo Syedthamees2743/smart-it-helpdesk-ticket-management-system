@@ -1,0 +1,389 @@
+/* =========================================================
+   RECENT TICKETS TABLE
+========================================================= */
+.rt-wrapper {
+  width: 100%;
+}
+
+/* Table */
+.rt-table {
+  font-size: 0.85rem;
+  margin: 0;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.rt-table thead th {
+  background: #f8fafc;
+  border: none !important;
+  border-bottom: 2px solid #eef0f4 !important;
+  color: #64748b;
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 0.68rem;
+  letter-spacing: 0.5px;
+  padding: 14px 16px;
+  white-space: nowrap;
+}
+
+.rt-table thead th:first-child {
+  border-top-left-radius: 10px;
+}
+
+.rt-table thead th:last-child {
+  border-top-right-radius: 10px;
+}
+
+.rt-table tbody td {
+  padding: 14px 16px;
+  border: none !important;
+  border-bottom: 1px solid #f1f5f9 !important;
+  color: #334155;
+  vertical-align: middle;
+}
+
+.rt-table tbody tr {
+  transition: background 0.18s ease;
+}
+
+.rt-table tbody tr:hover {
+  background: #f8fafc;
+}
+
+.rt-table tbody tr:last-child td {
+  border-bottom: none !important;
+}
+
+/* =========================================================
+   TICKET CELL
+========================================================= */
+.rt-ticket-cell {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.rt-ticket-icon {
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9px;
+  background: #eff6ff;
+  color: #2563eb;
+  font-size: 16px;
+}
+
+.rt-ticket-info {
+  min-width: 0;
+}
+
+.rt-ticket-number {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #1e293b;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 200px;
+}
+
+.rt-ticket-ref {
+  font-size: 0.72rem;
+  color: #94a3b8;
+  margin-top: 2px;
+}
+
+/* =========================================================
+   EMPLOYEE CELL
+========================================================= */
+.rt-employee-cell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.rt-employee-avatar {
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #2563eb, #3b82f6);
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.rt-employee-name {
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: #475569;
+  white-space: nowrap;
+}
+
+/* =========================================================
+   CATEGORY
+========================================================= */
+.rt-category-text {
+  font-size: 0.8rem;
+  color: #64748b;
+}
+
+/* =========================================================
+   BADGES
+========================================================= */
+.rt-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 10px !important;
+  border-radius: 6px !important;
+  font-size: 0.72rem !important;
+  font-weight: 600 !important;
+  border: none !important;
+}
+
+.rt-badge-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.7;
+}
+
+/* Priority badges */
+.rt-priority-low {
+  background: #f0fdf4 !important;
+  color: #16a34a !important;
+}
+
+.rt-priority-medium {
+  background: #eff6ff !important;
+  color: #2563eb !important;
+}
+
+.rt-priority-high {
+  background: #fffbeb !important;
+  color: #d97706 !important;
+}
+
+.rt-priority-critical {
+  background: #fef2f2 !important;
+  color: #dc2626 !important;
+}
+
+.rt-priority-default {
+  background: #f1f5f9 !important;
+  color: #64748b !important;
+}
+
+/* Status badges */
+.rt-status-open {
+  background: #eff6ff !important;
+  color: #2563eb !important;
+}
+
+.rt-status-assigned {
+  background: #f5f3ff !important;
+  color: #7c3aed !important;
+}
+
+.rt-status-in_progress {
+  background: #fffbeb !important;
+  color: #d97706 !important;
+}
+
+.rt-status-resolved {
+  background: #f0fdf4 !important;
+  color: #16a34a !important;
+}
+
+.rt-status-reopened {
+  background: #fef2f2 !important;
+  color: #dc2626 !important;
+}
+
+.rt-status-closed {
+  background: #f1f5f9 !important;
+  color: #64748b !important;
+}
+
+.rt-badge-default {
+  background: #f1f5f9 !important;
+  color: #64748b !important;
+}
+
+/* =========================================================
+   TECHNICIAN
+========================================================= */
+.rt-tech-cell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.rt-tech-avatar {
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: #f1f5f9;
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.rt-tech-cell span {
+  font-size: 0.82rem;
+  color: #475569;
+}
+
+.rt-unassigned {
+  font-size: 0.8rem;
+  color: #94a3b8;
+  font-style: italic;
+}
+
+.rt-unassigned i {
+  color: #cbd5e1;
+}
+
+/* =========================================================
+   SLA
+========================================================= */
+.rt-sla {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.rt-sla-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.rt-sla-normal {
+  color: #16a34a;
+}
+
+.rt-sla-warning {
+  color: #d97706;
+}
+
+.rt-sla-breached {
+  color: #dc2626;
+}
+
+/* =========================================================
+   DATE
+========================================================= */
+.rt-date {
+  font-size: 0.78rem;
+  color: #94a3b8;
+  white-space: nowrap;
+}
+
+/* =========================================================
+   VIEW BUTTON
+========================================================= */
+.rt-view-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: #ffffff !important;
+  border: 1px solid #e2e8f0 !important;
+  color: #2563eb !important;
+  border-radius: 8px !important;
+  padding: 0.35rem 0.8rem !important;
+  font-size: 0.75rem !important;
+  font-weight: 600 !important;
+  transition: all 0.2s ease !important;
+}
+
+.rt-view-btn:hover:not(:disabled) {
+  background: #2563eb !important;
+  color: #ffffff !important;
+  border-color: #2563eb !important;
+  transform: translateY(-1px);
+  box-shadow: 0 3px 10px rgba(37, 99, 235, 0.25) !important;
+}
+
+.rt-view-btn svg {
+  font-size: 12px;
+}
+
+.rt-view-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* =========================================================
+   EMPTY STATE
+========================================================= */
+.rt-empty-state {
+  text-align: center;
+  padding: 50px 20px;
+}
+
+.rt-empty-icon {
+  font-size: 3rem;
+  color: #e2e8f0;
+  margin-bottom: 12px;
+}
+
+.rt-empty-icon i {
+  font-size: 3rem;
+}
+
+.rt-empty-title {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #475569;
+  margin-bottom: 6px;
+}
+
+.rt-empty-text {
+  font-size: 0.82rem;
+  color: #94a3b8;
+  margin: 0;
+}
+
+/* =========================================================
+   RESPONSIVE
+========================================================= */
+@media (max-width: 991.98px) {
+  .rt-ticket-number {
+    max-width: 140px;
+  }
+}
+
+@media (max-width: 575.98px) {
+  .rt-table thead th,
+  .rt-table tbody td {
+    padding: 10px 12px;
+  }
+
+  .rt-ticket-icon {
+    width: 30px;
+    height: 30px;
+    font-size: 14px;
+  }
+
+  .rt-employee-avatar {
+    width: 28px;
+    height: 28px;
+    font-size: 11px;
+  }
+}

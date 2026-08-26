@@ -155,6 +155,7 @@ class UserManagementView(generics.ListCreateAPIView):
         role = self.request.query_params.get('role', '')
         is_active = self.request.query_params.get('is_active', '')
         account_status = self.request.query_params.get('account_status', '')
+        department = self.request.query_params.get('department', '')
 
         if search:
             qs = qs.filter(
@@ -174,6 +175,12 @@ class UserManagementView(generics.ListCreateAPIView):
 
         if account_status:
             qs = qs.filter(account_status=account_status)
+
+        if department:
+            qs = qs.filter(
+                Q(employee_profile__department_id=department) |
+                Q(technician_profile__department_id=department)
+                )
 
         return qs
 

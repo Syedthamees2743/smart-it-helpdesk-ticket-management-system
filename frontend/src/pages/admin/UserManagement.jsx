@@ -1,9 +1,10 @@
 import { useState, useEffect, useContext } from 'react';
-import { Card, Button, Row, Col, Pagination } from 'react-bootstrap';
+import { Card, Button } from 'react-bootstrap';
 import { FaPlus, FaTimes, FaUsers } from 'react-icons/fa';
 import { toast } from "react-toastify";
 import { AuthContext } from '../../context/AuthContext';
 import { getUsers, createUser, updateUser, deleteUser, toggleUserStatus } from '../../services/userService';
+import { getDepartments } from '../../services/departmentService';
 
 import UserFilters from '../../components/admin/UserFilters';
 import UserTable from '../../components/admin/UserTable';
@@ -26,10 +27,16 @@ const UserManagement = () => {
   const [roleFilter, setRoleFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
 
+  // =========================================================
+  // NEW: Department Filter States
+  // =========================================================
+  const [departments, setDepartments] = useState([]);
+  const [departmentFilter, setDepartmentFilter] = useState('');
+
   // Modal States
   const [showFormModal, setShowFormModal] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
-  
+
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [confirmAction, setConfirmAction] = useState({ type: '', user: null });
   const [actionLoading, setActionLoading] = useState(false);
@@ -38,18 +45,32 @@ const UserManagement = () => {
   const [showPrefModal, setShowPrefModal] = useState(false);
   const [prefTargetUser, setPrefTargetUser] = useState(null);
 
-  const hasActiveFilters = searchTerm || roleFilter || statusFilter;
+  const hasActiveFilters = searchTerm || roleFilter || statusFilter || departmentFilter;
 
-  // Build query params from filters
+  // =========================================================
+  // NEW: Fetch departments for dropdown
+  // =========================================================
+  useEffect(() => {
+    getDepartments({ page_size: 100 })
+      .then((res) => {
+        const data = res.data;
+        const list = Array.isArray(data) ? data : (data?.results || []);
+        setDepartments(list);
+      })
+      .catch(() => {});
+  }, []);
+
+  // Build query params from filters — department-um add pannirukken
   const getFilterParams = () => {
     const params = { page_size: 20 };
     if (searchTerm) params.search = searchTerm;
     if (roleFilter) params.role = roleFilter;
     if (statusFilter) params.is_active = statusFilter === 'active' ? 'true' : 'false';
+    if (departmentFilter) params.department = departmentFilter; // NEW
     return params;
   };
 
-  // Fetch Data — now uses backend filtering
+  // Fetch Data — backend filtering
   const fetchUsers = async (url) => {
     setLoading(true);
     try {
@@ -71,16 +92,17 @@ const UserManagement = () => {
     }
   };
 
-  // Re-fetch when filters change
+  // Re-fetch when filters change — departmentFilter-um dependency-la add pannirukken
   useEffect(() => {
     fetchUsers();
-  }, [searchTerm, roleFilter, statusFilter]);
+  }, [searchTerm, roleFilter, statusFilter, departmentFilter]);
 
   // Clear all filters
   const clearFilters = () => {
     setSearchTerm('');
     setRoleFilter('');
     setStatusFilter('');
+    setDepartmentFilter(''); // NEW
   };
 
   // Handlers
@@ -94,7 +116,7 @@ const UserManagement = () => {
     fetchUsers();
   };
 
-    const handleToggleStatus = async () => {
+  const handleToggleStatus = async () => {
     setActionLoading(true);
     try {
       const res = await toggleUserStatus(confirmAction.user.id);
@@ -131,38 +153,56 @@ const UserManagement = () => {
     setShowConfirmModal(true);
   };
 
-  // Open notification preferences modal
   const openPrefModal = (user) => {
     setPrefTargetUser(user);
     setShowPrefModal(true);
   };
 
   return (
-    <div>
-      <div className="d-flex justify-content-between align-items-center mb-4">
+    <div style={{ backgroundColor: "#f8f9fa", minHeight: "100vh" }} className="py-4 px-3 px-md-4">
+      {/* =====================================================
+          HEADER
+      ===================================================== */}
+
+      <div className="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
         <div>
-          <h4 className="fw-bold mb-1">User Management</h4>
+          <h4 className="fw-bold mb-1 text-dark">User Management</h4>
           <p className="text-muted mb-0">Manage employees, technicians and administrators.</p>
         </div>
-        <Button variant="primary" onClick={() => { setEditingUser(null); setShowFormModal(true); }}>
+        <Button
+          variant="primary"
+          className="rounded-pill px-4 d-flex align-items-center shadow-sm"
+          onClick={() => { setEditingUser(null); setShowFormModal(true); }}
+        >
           <FaPlus className="me-2" /> Add User
         </Button>
       </div>
 
-      <Card className="border-0 shadow-sm">
-        <Card.Body>
-          <UserFilters 
+      <Card className="border-0 shadow-sm rounded-4">
+        <Card.Body className="p-4">
+          {/* =====================================================
+              FILTERS (with Department)
+          ===================================================== */}
+
+          <UserFilters
             searchTerm={searchTerm}
             onSearchChange={setSearchTerm}
             roleFilter={roleFilter}
             onRoleChange={setRoleFilter}
             statusFilter={statusFilter}
             onStatusChange={setStatusFilter}
+            departmentFilter={departmentFilter}       // NEW
+            onDepartmentChange={setDepartmentFilter}   // NEW
+            departments={departments}                  // NEW
             onRefresh={() => fetchUsers()}
             onClear={clearFilters}
           />
 
-          <UserTable 
+          {/* =====================================================
+              TABLE
+          ===================================================== */}
+
+          <UserTable
             users={users}
             loading={loading}
             currentUser={currentUser}
@@ -172,19 +212,19 @@ const UserManagement = () => {
             onManagePrefs={openPrefModal}
             emptyState={
               users.length === 0 && !loading ? (
-                <div className="text-center py-4 text-muted">
-                  <FaUsers style={{ fontSize: '2rem', color: '#d1d5db' }} />
-                  <h5 className="mt-2">
+                <div className="text-center py-5 text-muted">
+                  <FaUsers style={{ fontSize: '2.5rem', color: '#dee2e6' }} />
+                  <h5 className="mt-3 fw-bold text-dark">
                     {hasActiveFilters ? 'No users match your filters' : 'No users found'}
                   </h5>
-                  <p>
+                  <p className="mb-3">
                     {hasActiveFilters
                       ? 'Try adjusting your search or filter criteria.'
                       : 'Click "Add User" to create one.'}
                   </p>
                   {hasActiveFilters && (
-                    <Button variant="outline-primary" size="sm" onClick={clearFilters}>
-                      <FaTimes className="me-1" /> Clear Filters
+                    <Button variant="outline-primary" size="sm" className="rounded-pill px-4" onClick={clearFilters}>
+                      <FaTimes className="me-1" /> Clear All Filters
                     </Button>
                   )}
                 </div>
@@ -192,43 +232,67 @@ const UserManagement = () => {
             }
           />
 
-          {/* Pagination */}
+          {/* =====================================================
+              PAGINATION
+          ===================================================== */}
+
           {(nextPage || prevPage) && (
-            <div className="d-flex justify-content-between align-items-center mt-3 pt-3 border-top">
+            <div className="d-flex justify-content-between align-items-center mt-4 pt-4 border-top flex-wrap gap-3">
               <div className="text-muted small">
-                Showing <strong>{users.length}</strong> of <strong>{totalCount}</strong> users
+                Showing <strong className="text-dark">{users.length}</strong> of{' '}
+                <strong className="text-dark">{totalCount}</strong> users
               </div>
-              <Pagination className="mb-0">
-                <Pagination.Prev disabled={!prevPage} onClick={() => fetchUsers(prevPage)} />
-                <Pagination.Next disabled={!nextPage} onClick={() => fetchUsers(nextPage)} />
-              </Pagination>
+              <div className="d-flex align-items-center gap-1">
+                <Button
+                  variant="light"
+                  className="border"
+                  size="sm"
+                  style={{ width: "80px", height: "36px", display: "flex", alignItems: "center", justifyContent: "center" }}
+                  disabled={!prevPage}
+                  onClick={() => fetchUsers(prevPage)}
+                >
+                  ‹ Prev
+                </Button>
+                <Button
+                  variant="light"
+                  className="border"
+                  size="sm"
+                  style={{ width: "80px", height: "36px", display: "flex", alignItems: "center", justifyContent: "center" }}
+                  disabled={!nextPage}
+                  onClick={() => fetchUsers(nextPage)}
+                >
+                  Next ›
+                </Button>
+              </div>
             </div>
           )}
         </Card.Body>
       </Card>
 
-      {/* Modals */}
-      <UserFormModal 
+      {/* =====================================================
+          MODALS
+      ===================================================== */}
+
+      <UserFormModal
         show={showFormModal}
         onHide={() => setShowFormModal(false)}
         onSave={handleSaveUser}
         editingUser={editingUser}
       />
 
-      <ConfirmModal 
+      <ConfirmModal
         show={showConfirmModal}
         onHide={() => setShowConfirmModal(false)}
         onConfirm={confirmAction.type === 'delete' ? handleDelete : handleToggleStatus}
         title={confirmAction.type === 'delete' ? 'Delete User' : `Deactivate ${confirmAction.user?.first_name}?`}
         message={
-          confirmAction.type === 'delete' 
+          confirmAction.type === 'delete'
             ? `Are you sure you want to delete ${confirmAction.user?.username}? This action cannot be undone.`
             : `Are you sure you want to deactivate ${confirmAction.user?.username}? They will not be able to log in.`
         }
         loading={actionLoading}
       />
 
-      {/* Notification Preferences Modal */}
       <UserPrefModal
         show={showPrefModal}
         onHide={() => setShowPrefModal(false)}

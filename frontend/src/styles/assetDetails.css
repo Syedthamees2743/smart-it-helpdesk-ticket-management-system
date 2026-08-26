@@ -1,0 +1,625 @@
+/* =========================================================
+   ASSET DETAILS PAGE
+   ========================================================= */
+.ad-page {
+  animation: adFadeIn 0.4s ease;
+}
+
+@keyframes adFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* =========================================================
+   PAGE HEADER
+   ========================================================= */
+.ad-page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.ad-back-btn {
+  background: #ffffff !important;
+  border: 1px solid #e2e8f0 !important;
+  color: #475569 !important;
+  border-radius: 9px !important;
+  padding: 0.5rem 1rem !important;
+  font-size: 0.82rem !important;
+  font-weight: 600 !important;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  transition: all 0.2s ease !important;
+}
+
+.ad-back-btn:hover {
+  background: #f1f5f9 !important;
+  border-color: #cbd5e1 !important;
+  transform: translateX(-2px);
+}
+
+.ad-header-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* Action Buttons */
+.ad-action-btn {
+  border: none !important;
+  border-radius: 9px !important;
+  padding: 0.5rem 0.9rem !important;
+  font-size: 0.78rem !important;
+  font-weight: 600 !important;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s ease !important;
+}
+
+.ad-action-btn svg {
+  font-size: 14px;
+}
+
+.ad-btn-primary {
+  background: linear-gradient(135deg, #2563eb, #3b82f6) !important;
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.2) !important;
+}
+
+.ad-btn-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.3) !important;
+}
+
+.ad-btn-success {
+  background: linear-gradient(135deg, #16a34a, #22c55e) !important;
+  box-shadow: 0 2px 8px rgba(22, 163, 74, 0.2) !important;
+}
+
+.ad-btn-success:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(22, 163, 74, 0.3) !important;
+}
+
+.ad-btn-warning {
+  background: linear-gradient(135deg, #d97706, #f59e0b) !important;
+  box-shadow: 0 2px 8px rgba(217, 119, 6, 0.2) !important;
+}
+
+.ad-btn-warning:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(217, 119, 6, 0.3) !important;
+}
+
+.ad-btn-info {
+  background: linear-gradient(135deg, #0891b2, #06b6d4) !important;
+  box-shadow: 0 2px 8px rgba(8, 145, 178, 0.2) !important;
+}
+
+.ad-btn-info:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(8, 145, 178, 0.3) !important;
+}
+
+.ad-btn-danger {
+  background: #ffffff !important;
+  border: 1px solid #fecaca !important;
+  color: #dc2626 !important;
+}
+
+.ad-btn-danger:hover {
+  background: #fef2f2 !important;
+  border-color: #fca5a5 !important;
+  transform: translateY(-1px);
+}
+
+/* =========================================================
+   CARDS
+   ========================================================= */
+.ad-card {
+  border: 1px solid #eef0f4 !important;
+  border-radius: 14px !important;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04) !important;
+  overflow: hidden;
+  position: relative;
+  transition: box-shadow 0.3s ease;
+}
+
+.ad-card:hover {
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.06) !important;
+}
+
+.ad-title-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, #2563eb, #3b82f6, #60a5fa);
+  background-size: 200% 100%;
+  animation: adShimmer 3s ease-in-out infinite;
+}
+
+@keyframes adShimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.ad-card-glow {
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(circle, rgba(37, 99, 235, 0.03) 0%, transparent 50%);
+  pointer-events: none;
+}
+
+/* =========================================================
+   ASSET HEADER
+   ========================================================= */
+.ad-asset-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.ad-asset-icon-wrap {
+  width: 56px;
+  height: 56px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #eff6ff, #dbeafe);
+  color: #2563eb;
+  font-size: 26px;
+  border: 1px solid #bfdbfe;
+  transition: transform 0.3s ease;
+}
+
+.ad-title-card:hover .ad-asset-icon-wrap {
+  transform: scale(1.05);
+}
+
+.ad-asset-title-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.ad-asset-name {
+  margin: 0 0 6px;
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: #0f172a;
+  letter-spacing: -0.3px;
+}
+
+.ad-asset-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.ad-asset-code {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.78rem;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.ad-asset-code svg {
+  font-size: 12px;
+  color: #94a3b8;
+}
+
+/* =========================================================
+   STATUS BADGES
+   ========================================================= */
+.ad-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 12px;
+  border-radius: 7px;
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+
+.ad-status-available {
+  background: #f0fdf4;
+  color: #16a34a;
+}
+
+.ad-status-assigned {
+  background: #eff6ff;
+  color: #2563eb;
+}
+
+.ad-status-active {
+  background: #eff6ff;
+  color: #2563eb;
+}
+
+.ad-status-maintenance {
+  background: #fffbeb;
+  color: #d97706;
+}
+
+.ad-status-retired {
+  background: #f1f5f9;
+  color: #64748b;
+}
+
+.ad-status-default {
+  background: #f1f5f9;
+  color: #64748b;
+}
+
+/* =========================================================
+   DIVIDER
+   ========================================================= */
+.ad-divider {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, #e2e8f0, transparent);
+  margin: 0 0 24px;
+}
+
+/* =========================================================
+   INFO GRID
+   ========================================================= */
+.ad-info-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 14px;
+}
+
+.ad-info-box {
+  padding: 14px 16px;
+  background: #f8fafc;
+  border: 1px solid #eef0f5;
+  border-radius: 11px;
+  transition: all 0.25s ease;
+}
+
+.ad-info-box:hover {
+  background: #f1f5f9;
+  border-color: #e2e8f0;
+  transform: translateY(-1px);
+}
+
+.ad-info-highlight {
+  background: linear-gradient(135deg, #fffbeb, #fffaf3);
+  border-color: #fef3c7;
+}
+
+.ad-info-box-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.ad-info-icon {
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  color: #64748b;
+  flex-shrink: 0;
+}
+
+.ad-info-label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.ad-info-value {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.ad-serial {
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Warranty Row */
+.ad-warranty-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.ad-warranty-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 9px;
+  border-radius: 20px;
+  font-size: 0.68rem;
+  font-weight: 600;
+}
+
+.ad-warranty-success {
+  background: #f0fdf4;
+  color: #16a34a;
+}
+
+.ad-warranty-warning {
+  background: #fffbeb;
+  color: #d97706;
+}
+
+.ad-warranty-info {
+  background: #eff6ff;
+  color: #2563eb;
+}
+
+.ad-warranty-expired {
+  background: #fef2f2;
+  color: #dc2626;
+}
+
+/* =========================================================
+   ASSIGNMENT CARD
+   ========================================================= */
+.ad-assignment-card {
+  background: linear-gradient(135deg, #f8faff, #f0f7ff) !important;
+}
+
+.ad-assignment-header {
+  background: transparent !important;
+  border-bottom: 1px solid #e2e8f0 !important;
+  border: none !important;
+  border-bottom: 1px solid #e2e8f0 !important;
+  padding: 16px 20px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.ad-assignment-header svg {
+  color: #2563eb;
+  font-size: 17px;
+}
+
+.ad-assignment-body {
+  padding: 28px 20px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: 320px;
+}
+
+/* Assigned State */
+.ad-assigned-state {
+  text-align: center;
+  animation: adFadeIn 0.3s ease;
+}
+
+.ad-assigned-avatar {
+  width: 72px;
+  height: 72px;
+  margin: 0 auto 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #2563eb, #3b82f6);
+  color: #ffffff;
+  font-size: 30px;
+  box-shadow: 0 6px 18px rgba(37, 99, 235, 0.25);
+}
+
+.ad-assigned-name {
+  margin: 0 0 4px;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.ad-assigned-id {
+  margin: 0 0 10px;
+  font-size: 0.78rem;
+  color: #94a3b8;
+}
+
+.ad-dept-badge {
+  display: inline-block;
+  padding: 4px 12px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 20px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #475569;
+  margin-bottom: 14px;
+}
+
+.ad-assigned-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 14px;
+  background: #f0fdf4;
+  color: #16a34a;
+  border-radius: 20px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  margin-bottom: 20px;
+}
+
+.ad-assigned-date-box {
+  background: #ffffff;
+  border: 1px solid #eef0f5;
+  border-radius: 10px;
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.ad-date-label {
+  font-size: 0.72rem;
+  color: #94a3b8;
+  font-weight: 500;
+}
+
+.ad-date-value {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+/* Unassigned State */
+.ad-unassigned-state {
+  text-align: center;
+  padding: 20px 0;
+  animation: adFadeIn 0.3s ease;
+}
+
+.ad-unassigned-icon {
+  width: 72px;
+  height: 72px;
+  margin: 0 auto 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: #f1f5f9;
+  color: #94a3b8;
+  font-size: 30px;
+}
+
+.ad-unassigned-title {
+  margin: 0 0 6px;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #475569;
+}
+
+.ad-unassigned-text {
+  margin: 0;
+  font-size: 0.78rem;
+  color: #94a3b8;
+  line-height: 1.5;
+}
+
+/* =========================================================
+   LOADING
+   ========================================================= */
+.ad-loading {
+  text-align: center;
+  padding: 80px 20px;
+}
+
+.ad-spinner {
+  color: #2563eb;
+  width: 3rem;
+  height: 3rem;
+}
+
+.ad-loading-text {
+  margin-top: 16px;
+  font-size: 0.85rem;
+  color: #94a3b8;
+}
+
+/* =========================================================
+   ERROR
+   ========================================================= */
+.ad-error-box {
+  display: flex;
+  align-items: center;
+  padding: 16px 18px;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-left: 3px solid #dc2626;
+  border-radius: 11px;
+  color: #b91c1c;
+  font-size: 0.85rem;
+  font-weight: 500;
+  margin-top: 16px;
+}
+
+/* =========================================================
+   RESPONSIVE
+   ========================================================= */
+@media (max-width: 768px) {
+  .ad-info-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .ad-asset-name {
+    font-size: 1.2rem;
+  }
+
+  .ad-asset-icon-wrap {
+    width: 48px;
+    height: 48px;
+    font-size: 22px;
+  }
+
+  .ad-header-actions {
+    width: 100%;
+  }
+
+  .ad-action-btn {
+    flex: 1;
+    justify-content: center;
+    font-size: 0.72rem !important;
+    padding: 0.45rem 0.6rem !important;
+  }
+
+  .ad-action-btn span {
+    display: none;
+  }
+}
+
+@media (max-width: 575px) {
+  .ad-page-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .ad-back-btn {
+    width: fit-content;
+  }
+
+  .ad-info-box {
+    padding: 12px 14px;
+  }
+
+  .ad-assignment-body {
+    min-height: auto;
+    padding: 24px 16px;
+  }
+}

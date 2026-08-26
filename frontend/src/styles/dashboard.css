@@ -682,3 +682,86 @@ body {
     height: 36px;
   }
 }
+
+/* =========================================================
+   MOBILE OFFCANVAS ANIMATION
+========================================================= */
+.mobile-sidebar.offcanvas.offcanvas-start {
+  transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+.mobile-sidebar .offcanvas-body {
+  animation: fadeIn 0.4s ease 0.1s both;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateX(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Mobile sidebar links stagger animation */
+.mobile-sidebar .sidebar-link {
+  animation: fadeIn 0.4s ease both;
+}
+
+/* =========================================================
+   DESKTOP NAVBAR ANIMATION
+========================================================= */
+.dashboard-navbar {
+  animation: fadeInDown 0.5s ease both;
+}
+
+@keyframes fadeInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* =========================================================
+   TOPBAR AVATAR ANIMATION
+========================================================= */
+.topbar-avatar {
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.topbar-avatar:hover {
+  transform: scale(1.08);
+  box-shadow: 0 4px 14px rgba(79, 70, 229, 0.35);
+}
+
+/* =========================================================
+   USER DROPDOWN MENU ANIMATION
+========================================================= */
+.user-dropdown-menu {
+  animation: dropdownFade 0.25s cubic-bezier(0.4, 0, 0.2, 1) both !important;
+}
+
+@keyframes dropdownFade {
+  from {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.user-dropdown-menu .dropdown-item {
+  transition: background 0.18s ease, color 0.18s ease, padding-left 0.18s ease;
+}
+
+.user-dropdown-menu .dropdown-item:hover {
+  padding-left: 16px;
+}

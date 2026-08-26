@@ -14,14 +14,32 @@ import { FaHeadset } from 'react-icons/fa';
 import authService from '../../services/authService';
 import './AuthPages.css';
 
+const STEPS = [
+  { id: 1, title: 'Personal Details', hint: 'Who you are', icon: 'bi-person-badge', fields: ['first_name', 'last_name'] },
+  { id: 2, title: 'Account Setup', hint: 'Login credentials', icon: 'bi-shield-lock', fields: ['username', 'email', 'confirm_email'] },
+  { id: 3, title: 'Expertise', hint: 'Department & skills', icon: 'bi-cpu', fields: ['phone_number', 'department', 'specialization'] }
+];
+
+const SPECIALIZATION_CHIPS = ['Hardware', 'Networking', 'Software', 'Security', 'Cloud', 'Database'];
+
+const focusFirstError = () => {
+  requestAnimationFrame(() => {
+    const el = document.querySelector('.step-content .is-invalid');
+    if (el) el.focus();
+  });
+};
+
 const TechnicianSignup = () => {
   const [departments, setDepartments] = useState([]);
   const [loading, setLoading] = useState(false);
   const [departmentsLoading, setDepartmentsLoading] = useState(true);
+  const [departmentsError, setDepartmentsError] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState('');
   const [fieldErrors, setFieldErrors] = useState({});
   const [animateIn, setAnimateIn] = useState(false);
+  const [currentStep, setCurrentStep] = useState(1);
+  const [direction, setDirection] = useState('forward');
 
   const [formData, setFormData] = useState({
     username: '',
@@ -43,20 +61,18 @@ const TechnicianSignup = () => {
   const fetchDepartments = async () => {
     try {
       setDepartmentsLoading(true);
+      setDepartmentsError(false);
       const response = await authService.getDepartments();
 
       let deptList = [];
-      if (response?.data && Array.isArray(response.data)) {
-        deptList = response.data;
-      } else if (response?.results && Array.isArray(response.results)) {
-        deptList = response.results;
-      } else if (Array.isArray(response)) {
-        deptList = response;
-      }
+      if (response?.data && Array.isArray(response.data)) deptList = response.data;
+      else if (response?.results && Array.isArray(response.results)) deptList = response.results;
+      else if (Array.isArray(response)) deptList = response;
 
       setDepartments(deptList);
     } catch (err) {
       console.error('Failed to fetch departments:', err);
+      setDepartmentsError(true);
     } finally {
       setDepartmentsLoading(false);
     }
@@ -72,70 +88,145 @@ const TechnicianSignup = () => {
     if (error) setError('');
   };
 
-  const validateForm = () => {
+  const applyChip = (chip) => {
+    setFormData(prev => ({ ...prev, specialization: prev.specialization === chip ? '' : chip }));
+    if (fieldErrors.specialization) {
+      setFieldErrors(prev => ({ ...prev, specialization: '' }));
+    }
+    if (error) setError('');
+  };
+
+  const emailsMatch =
+    formData.email.trim() !== '' &&
+    formData.confirm_email.trim() !== '' &&
+    formData.email.toLowerCase() === formData.confirm_email.toLowerCase();
+
+  /* ── Step Validation ── */
+  const validateStep = (stepId) => {
     const errors = {};
 
-    if (!formData.username.trim()) {
-      errors.username = 'Username is required';
-    } else if (formData.username.length < 3) {
-      errors.username = 'Username must be at least 3 characters';
+    if (stepId === 1) {
+      if (!formData.first_name.trim()) errors.first_name = 'First name is required';
+      if (!formData.last_name.trim()) errors.last_name = 'Last name is required';
     }
 
-    if (!formData.first_name.trim()) errors.first_name = 'First name is required';
-    if (!formData.last_name.trim()) errors.last_name = 'Last name is required';
+    if (stepId === 2) {
+      if (!formData.username.trim()) {
+        errors.username = 'Username is required';
+      } else if (formData.username.length < 3) {
+        errors.username = 'Username must be at least 3 characters';
+      }
 
-    if (!formData.email.trim()) {
-      errors.email = 'Email is required';
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      errors.email = 'Invalid email format';
+      if (!formData.email.trim()) {
+        errors.email = 'Email is required';
+      } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+        errors.email = 'Invalid email format';
+      }
+
+      if (!formData.confirm_email.trim()) {
+        errors.confirm_email = 'Please confirm your email';
+      } else if (!emailsMatch) {
+        errors.confirm_email = 'Email addresses do not match';
+      }
     }
 
-    if (!formData.confirm_email.trim()) {
-      errors.confirm_email = 'Please confirm your email';
-    } else if (formData.email.toLowerCase() !== formData.confirm_email.toLowerCase()) {
-      errors.confirm_email = 'Email addresses do not match';
+    if (stepId === 3) {
+      if (!formData.department) errors.department = 'Department is required';
+      if (!formData.specialization.trim()) errors.specialization = 'Specialization is required';
     }
 
-    if (!formData.department) errors.department = 'Department is required';
-    if (!formData.specialization.trim()) errors.specialization = 'Specialization is required';
+    setFieldErrors(prev => {
+      const next = { ...prev };
+      STEPS[stepId - 1].fields.forEach(f => delete next[f]);
+      return { ...next, ...errors };
+    });
 
-    setFieldErrors(errors);
     return Object.keys(errors).length === 0;
   };
+
+  const handleNext = () => {
+    if (!validateStep(currentStep)) {
+      focusFirstError();
+      return;
+    }
+    setDirection('forward');
+    setCurrentStep(s => Math.min(STEPS.length, s + 1));
+  };
+
+  const handleBack = () => {
+    setDirection('back');
+    setCurrentStep(s => Math.max(1, s - 1));
+  };
+
+  const goToStep = (stepId) => {
+    if (stepId < currentStep) {
+      setDirection('back');
+      setCurrentStep(stepId);
+    }
+  };
+
+  const validateForm = () => validateStep(1) && validateStep(2) && validateStep(3);
 
   const getErrorString = (val) => {
     if (typeof val === 'string') return val;
     if (Array.isArray(val)) return val.map(v => typeof v === 'string' ? v : String(v)).join(', ');
+    if (typeof val === 'object' && val !== null) {
+      return Object.values(val).map(getErrorString).join(', ');
+    }
     return String(val);
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    if (currentStep < STEPS.length) {
+      handleNext();
+      return;
+    }
+
     setError('');
     setFieldErrors({});
 
-    if (!validateForm()) return;
+    if (!validateForm()) {
+      focusFirstError();
+      return;
+    }
+
+    const submitData = {
+      username: formData.username.trim(),
+      first_name: formData.first_name.trim(),
+      last_name: formData.last_name.trim(),
+      email: formData.email.trim(),
+      phone_number: formData.phone_number.trim(),
+      department: parseInt(formData.department),
+      specialization: formData.specialization.trim()
+    };
 
     setLoading(true);
 
     try {
-      const { confirm_email, ...submitData } = formData;
       await authService.technicianSignup(submitData);
       setSubmitted(true);
     } catch (err) {
       setFieldErrors({});
       setError('');
 
-      const data = err.response?.data;
+      let data = err.response?.data;
+      if (data?.success === false && data.error) data = data.error;
 
       if (!data) {
-        setError('An error occurred. Please try again.');
+        setError('Network error. Please check your connection and try again.');
       } else if (typeof data === 'string') {
         setError(data);
       } else if (data.detail && typeof data.detail === 'string') {
         setError(data.detail);
       } else if (data.error && typeof data.error === 'string') {
         setError(data.error);
+      } else if (data.error && typeof data.error === 'object') {
+        const errorStr = Object.values(data.error)
+          .map(v => typeof v === 'string' ? v : JSON.stringify(v))
+          .join(', ');
+        setError(errorStr || 'An error occurred. Please try again.');
       } else {
         const fieldNames = ['username', 'first_name', 'last_name', 'email', 'phone_number', 'department', 'specialization'];
         let hasFieldError = false;
@@ -156,7 +247,8 @@ const TechnicianSignup = () => {
 
         if (!hasFieldError) {
           const allErrors = [];
-          Object.values(data).forEach(val => {
+          Object.entries(data).forEach(([key, val]) => {
+            if (key === 'success') return;
             if (Array.isArray(val)) val.forEach(v => { if (typeof v === 'string') allErrors.push(v); });
             else if (typeof val === 'string') allErrors.push(val);
           });
@@ -168,7 +260,24 @@ const TechnicianSignup = () => {
     }
   };
 
+  /* ── Success Screen ── */
   if (submitted) {
+    const selectedDept = departments.find(d => String(d.id) === String(formData.department));
+
+    const summary = [
+      { icon: 'bi-person', label: 'Name', value: `${formData.first_name} ${formData.last_name}` },
+      { icon: 'bi-at', label: 'Username', value: formData.username },
+      { icon: 'bi-envelope', label: 'Email', value: formData.email },
+      { icon: 'bi-building', label: 'Department', value: selectedDept?.name || '—' },
+      { icon: 'bi-cpu', label: 'Specialization', value: formData.specialization }
+    ];
+
+    const nextSteps = [
+      { state: 'done', icon: 'bi-check', text: 'Request submitted successfully' },
+      { state: 'current', icon: 'bi-person-check', text: 'Administrator verifies your technical role' },
+      { state: 'pending', icon: 'bi-key', text: 'Technician access granted & email sent' }
+    ];
+
     return (
       <div className="auth-page">
         <Container>
@@ -181,18 +290,43 @@ const TechnicianSignup = () => {
                   </div>
                 </div>
 
-                <div className="status-title">Registration Submitted</div>
+                <div className="status-title">Technician Request Submitted</div>
 
                 <p className="status-description mb-4">
                   Your technician registration request has been submitted successfully.
                 </p>
 
+                <div className="user-summary user-summary-animate">
+                  {summary.map(item => (
+                    <div className="user-summary-item" key={item.label}>
+                      <div className="user-summary-label">
+                        <i className={`bi ${item.icon} me-2`}></i>{item.label}
+                      </div>
+                      <div className="user-summary-value">{item.value}</div>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="next-steps">
+                  <div className="next-steps-title">
+                    <i className="bi bi-list-check"></i> What happens next
+                  </div>
+                  {nextSteps.map((step, idx) => (
+                    <div className="next-step-item" key={idx}>
+                      <div className={`next-step-icon ${step.state}`}>
+                        <i className={`bi ${step.icon}`}></i>
+                      </div>
+                      <div className="next-step-text">{step.text}</div>
+                    </div>
+                  ))}
+                </div>
+
                 <Alert variant="success" className="success-alert-animate">
                   <i className="bi bi-shield-check me-2"></i>
-                  Your account is pending administrator approval.
+                  Verified technicians get access to ticket queues, assignments and resolution tools.
                 </Alert>
 
-                <Button as={Link} to="/login" className="auth-submit mt-3">
+                <Button as={Link} to="/login" className="auth-submit technician-submit">
                   <i className="bi bi-box-arrow-in-right me-2"></i>
                   Go to Login
                 </Button>
@@ -208,30 +342,26 @@ const TechnicianSignup = () => {
     <div className="auth-page">
       <div className={`auth-wrapper ${animateIn ? 'auth-animate-in' : ''}`}>
 
-        {/* Brand Section - Same Square Icon as Login */}
+        {/* Brand Section */}
         <div className="auth-brand">
-          <div className="auth-brand-icon">
+          <div className="auth-brand-icon technician-brand-icon">
             <FaHeadset />
           </div>
           <h5>Smart IT Service Desk</h5>
           <p>Technical Support Management Platform</p>
         </div>
 
-        <Card className="auth-card">
+        <Card className="auth-card technician-card">
 
           <div className="auth-card-header">
+            <span className="role-tag role-tag-technician">
+              <i className="bi bi-tools"></i>Technician Access
+            </span>
             <h2>Technician Registration</h2>
-            <p>Request technician access to manage IT support operations.</p>
+            <p>Request access to manage and resolve IT support tickets.</p>
           </div>
 
           <Card.Body className="auth-card-body">
-
-            <div className="info-banner info-banner-animate">
-              <i className="bi bi-info-circle-fill"></i>
-              <span>
-                Your technician registration will be reviewed by an administrator before activation.
-              </span>
-            </div>
 
             {error && (
               <Alert variant="danger" dismissible onClose={() => setError('')} className="alert-animate">
@@ -242,222 +372,350 @@ const TechnicianSignup = () => {
 
             <Form onSubmit={handleSubmit} noValidate>
 
-              <div className="form-section-title">Personal Information</div>
+              <div className="signup-layout">
 
-              <Row>
-                <Col md={6} className="form-col-animate" style={{ animationDelay: '0.05s' }}>
-                  <Form.Group className="mb-3">
-                    <Form.Label className="auth-label">
-                      First Name <span className="auth-required">*</span>
-                    </Form.Label>
-                    <div className="field-icon-wrapper">
-                      <i className="bi bi-person"></i>
-                      <Form.Control
-                        className="auth-input"
-                        type="text"
-                        name="first_name"
-                        value={formData.first_name}
-                        onChange={handleChange}
-                        isInvalid={!!fieldErrors.first_name}
-                        placeholder="Enter first name"
-                      />
-                    </div>
-                    <Form.Control.Feedback type="invalid">
-                      {fieldErrors.first_name}
-                    </Form.Control.Feedback>
-                  </Form.Group>
-                </Col>
-
-                <Col md={6} className="form-col-animate" style={{ animationDelay: '0.1s' }}>
-                  <Form.Group className="mb-3">
-                    <Form.Label className="auth-label">
-                      Last Name <span className="auth-required">*</span>
-                    </Form.Label>
-                    <div className="field-icon-wrapper">
-                      <i className="bi bi-person"></i>
-                      <Form.Control
-                        className="auth-input"
-                        type="text"
-                        name="last_name"
-                        value={formData.last_name}
-                        onChange={handleChange}
-                        isInvalid={!!fieldErrors.last_name}
-                        placeholder="Enter last name"
-                      />
-                    </div>
-                    <Form.Control.Feedback type="invalid">
-                      {fieldErrors.last_name}
-                    </Form.Control.Feedback>
-                  </Form.Group>
-                </Col>
-              </Row>
-
-              <div className="form-section-title mt-3">Account Information</div>
-
-              <div className="form-col-animate" style={{ animationDelay: '0.15s' }}>
-                <Form.Group className="mb-3">
-                  <Form.Label className="auth-label">
-                    Username <span className="auth-required">*</span>
-                  </Form.Label>
-                  <div className="field-icon-wrapper">
-                    <i className="bi bi-at"></i>
-                    <Form.Control
-                      className="auth-input"
-                      type="text"
-                      name="username"
-                      value={formData.username}
-                      onChange={handleChange}
-                      isInvalid={!!fieldErrors.username}
-                      placeholder="Choose a username"
-                    />
-                  </div>
-                  <Form.Control.Feedback type="invalid">
-                    {fieldErrors.username}
-                  </Form.Control.Feedback>
-                </Form.Group>
-              </div>
-
-              <Row>
-                <Col md={6} className="form-col-animate" style={{ animationDelay: '0.2s' }}>
-                  <Form.Group className="mb-3">
-                    <Form.Label className="auth-label">
-                      Email <span className="auth-required">*</span>
-                    </Form.Label>
-                    <div className="field-icon-wrapper">
-                      <i className="bi bi-envelope"></i>
-                      <Form.Control
-                        className="auth-input"
-                        type="email"
-                        name="email"
-                        value={formData.email}
-                        onChange={handleChange}
-                        isInvalid={!!fieldErrors.email}
-                        placeholder="name@company.com"
-                      />
-                    </div>
-                    <Form.Control.Feedback type="invalid">
-                      {fieldErrors.email}
-                    </Form.Control.Feedback>
-                  </Form.Group>
-                </Col>
-
-                <Col md={6} className="form-col-animate" style={{ animationDelay: '0.25s' }}>
-                  <Form.Group className="mb-3">
-                    <Form.Label className="auth-label">
-                      Confirm Email <span className="auth-required">*</span>
-                    </Form.Label>
-                    <div className="field-icon-wrapper">
-                      <i className="bi bi-envelope-check"></i>
-                      <Form.Control
-                        className="auth-input"
-                        type="email"
-                        name="confirm_email"
-                        value={formData.confirm_email}
-                        onChange={handleChange}
-                        isInvalid={!!fieldErrors.confirm_email}
-                        placeholder="Confirm email"
-                      />
-                    </div>
-                    <Form.Control.Feedback type="invalid">
-                      {fieldErrors.confirm_email}
-                    </Form.Control.Feedback>
-                  </Form.Group>
-                </Col>
-              </Row>
-
-              <div className="form-section-title mt-3">Technical Information</div>
-
-              <Row>
-                <Col md={6} className="form-col-animate" style={{ animationDelay: '0.3s' }}>
-                  <Form.Group className="mb-3">
-                    <Form.Label className="auth-label">Phone Number</Form.Label>
-                    <div className="field-icon-wrapper">
-                      <i className="bi bi-telephone"></i>
-                      <Form.Control
-                        className="auth-input"
-                        type="tel"
-                        name="phone_number"
-                        value={formData.phone_number}
-                        onChange={handleChange}
-                        isInvalid={!!fieldErrors.phone_number}
-                        placeholder="+91 XXXXX XXXXX"
-                      />
-                    </div>
-                    <Form.Control.Feedback type="invalid">
-                      {fieldErrors.phone_number}
-                    </Form.Control.Feedback>
-                  </Form.Group>
-                </Col>
-
-                <Col md={6} className="form-col-animate" style={{ animationDelay: '0.35s' }}>
-                  <Form.Group className="mb-3">
-                    <Form.Label className="auth-label">
-                      Department <span className="auth-required">*</span>
-                    </Form.Label>
-                    <Form.Select
-                      className="auth-select"
-                      name="department"
-                      value={formData.department}
-                      onChange={handleChange}
-                      isInvalid={!!fieldErrors.department}
-                      disabled={departmentsLoading}
+                {/* ── Vertical Step Rail ── */}
+                <aside className="tech-rail">
+                  {STEPS.map((step, idx) => (
+                    <div
+                      key={step.id}
+                      className={[
+                        'rail-item',
+                        currentStep === step.id ? 'active' : '',
+                        currentStep > step.id ? 'completed clickable' : ''
+                      ].filter(Boolean).join(' ')}
+                      onClick={() => goToStep(step.id)}
                     >
-                      <option value="">
-                        {departmentsLoading ? 'Loading departments...' : 'Select Department'}
-                      </option>
-                      {departments.map(dept => (
-                        <option key={dept.id} value={dept.id}>
-                          {dept.name}
-                        </option>
-                      ))}
-                    </Form.Select>
-                    <Form.Control.Feedback type="invalid">
-                      {fieldErrors.department}
-                    </Form.Control.Feedback>
-                  </Form.Group>
-                </Col>
-              </Row>
+                      <div className="rail-marker">
+                        <div className="rail-dot">
+                          {currentStep > step.id
+                            ? <i className="bi bi-check-lg"></i>
+                            : <i className={`bi ${step.icon}`}></i>}
+                        </div>
+                        {idx < STEPS.length - 1 && (
+                          <div className={`rail-line ${currentStep > step.id ? 'completed' : ''}`}></div>
+                        )}
+                      </div>
+                      <div className="rail-info">
+                        <span className="rail-step">Step {step.id}</span>
+                        <span className="rail-title">{step.title}</span>
+                        <span className="rail-hint">{step.hint}</span>
+                      </div>
+                    </div>
+                  ))}
 
-              <div className="form-col-animate" style={{ animationDelay: '0.4s' }}>
-                <Form.Group className="mb-4">
-                  <Form.Label className="auth-label">
-                    Specialization <span className="auth-required">*</span>
-                  </Form.Label>
-                  <div className="field-icon-wrapper">
-                    <i className="bi bi-cpu"></i>
-                    <Form.Control
-                      className="auth-input"
-                      type="text"
-                      name="specialization"
-                      value={formData.specialization}
-                      onChange={handleChange}
-                      isInvalid={!!fieldErrors.specialization}
-                      placeholder="Hardware, Networking, Software, etc."
-                    />
+                  <div className="rail-note">
+                    <i className="bi bi-lightning-charge"></i>
+                    <span>Technicians handle ticket queues, assignments &amp; SLA tracking.</span>
                   </div>
-                  <Form.Control.Feedback type="invalid">
-                    {fieldErrors.specialization}
-                  </Form.Control.Feedback>
-                </Form.Group>
+                </aside>
+
+                {/* ── Step Content ── */}
+                <div
+                  key={currentStep}
+                  className={`step-content ${direction === 'forward' ? 'step-content-forward' : 'step-content-back'}`}
+                >
+
+                  {/* STEP 1: Personal */}
+                  {currentStep === 1 && (
+                    <>
+                      <div className="info-banner info-banner-animate info-variant-tech">
+                        <i className="bi bi-info-circle-fill"></i>
+                        <span>
+                          Your technician registration will be reviewed by an administrator before activation.
+                        </span>
+                      </div>
+
+                      <div className="form-section-title">
+                        <i className="bi bi-person-vcard"></i> Personal Information
+                      </div>
+
+                      <Row>
+                        <Col md={6} className="form-col-animate" style={{ animationDelay: '0.05s' }}>
+                          <Form.Group className="mb-3">
+                            <Form.Label className="auth-label">
+                              First Name <span className="auth-required">*</span>
+                            </Form.Label>
+                            <div className="field-icon-wrapper">
+                              <i className="bi bi-person"></i>
+                              <Form.Control
+                                className="auth-input"
+                                type="text"
+                                name="first_name"
+                                autoComplete="given-name"
+                                value={formData.first_name}
+                                onChange={handleChange}
+                                isInvalid={!!fieldErrors.first_name}
+                                placeholder="Enter first name"
+                                autoFocus
+                              />
+                              <Form.Control.Feedback type="invalid">
+                                {fieldErrors.first_name}
+                              </Form.Control.Feedback>
+                            </div>
+                          </Form.Group>
+                        </Col>
+
+                        <Col md={6} className="form-col-animate" style={{ animationDelay: '0.1s' }}>
+                          <Form.Group className="mb-3">
+                            <Form.Label className="auth-label">
+                              Last Name <span className="auth-required">*</span>
+                            </Form.Label>
+                            <div className="field-icon-wrapper">
+                              <i className="bi bi-person"></i>
+                              <Form.Control
+                                className="auth-input"
+                                type="text"
+                                name="last_name"
+                                autoComplete="family-name"
+                                value={formData.last_name}
+                                onChange={handleChange}
+                                isInvalid={!!fieldErrors.last_name}
+                                placeholder="Enter last name"
+                              />
+                              <Form.Control.Feedback type="invalid">
+                                {fieldErrors.last_name}
+                              </Form.Control.Feedback>
+                            </div>
+                          </Form.Group>
+                        </Col>
+                      </Row>
+                    </>
+                  )}
+
+                  {/* STEP 2: Account */}
+                  {currentStep === 2 && (
+                    <>
+                      <div className="form-section-title">
+                        <i className="bi bi-shield-lock"></i> Account Information
+                      </div>
+
+                      <Form.Group className="mb-3">
+                        <Form.Label className="auth-label">
+                          Username <span className="auth-required">*</span>
+                        </Form.Label>
+                        <div className="field-icon-wrapper">
+                          <i className="bi bi-at"></i>
+                          <Form.Control
+                            className="auth-input"
+                            type="text"
+                            name="username"
+                            autoComplete="username"
+                            value={formData.username}
+                            onChange={handleChange}
+                            isInvalid={!!fieldErrors.username}
+                            placeholder="Choose a username"
+                            autoFocus
+                          />
+                          <Form.Control.Feedback type="invalid">
+                            {fieldErrors.username}
+                          </Form.Control.Feedback>
+                        </div>
+                        <div className={`field-hint ${formData.username.length >= 3 ? 'hint-valid' : ''}`}>
+                          <i className="bi bi-info-circle"></i>
+                          At least 3 characters
+                          {formData.username.length > 0 && (
+                            <span className="char-count">({formData.username.length})</span>
+                          )}
+                        </div>
+                      </Form.Group>
+
+                      <Row>
+                        <Col md={6} className="form-col-animate" style={{ animationDelay: '0.05s' }}>
+                          <Form.Group className="mb-3">
+                            <Form.Label className="auth-label">
+                              Email <span className="auth-required">*</span>
+                            </Form.Label>
+                            <div className="field-icon-wrapper">
+                              <i className="bi bi-envelope"></i>
+                              <Form.Control
+                                className="auth-input"
+                                type="email"
+                                name="email"
+                                autoComplete="email"
+                                value={formData.email}
+                                onChange={handleChange}
+                                isInvalid={!!fieldErrors.email}
+                                placeholder="name@company.com"
+                              />
+                              <Form.Control.Feedback type="invalid">
+                                {fieldErrors.email}
+                              </Form.Control.Feedback>
+                            </div>
+                          </Form.Group>
+                        </Col>
+
+                        <Col md={6} className="form-col-animate" style={{ animationDelay: '0.1s' }}>
+                          <Form.Group className="mb-3">
+                            <Form.Label className="auth-label">
+                              Confirm Email <span className="auth-required">*</span>
+                            </Form.Label>
+                            <div className="field-icon-wrapper">
+                              <i className={`bi ${emailsMatch ? 'bi-envelope-check' : 'bi-envelope'}`}></i>
+                              <Form.Control
+                                className="auth-input"
+                                type="email"
+                                name="confirm_email"
+                                value={formData.confirm_email}
+                                onChange={handleChange}
+                                isInvalid={!!fieldErrors.confirm_email}
+                                placeholder="Confirm email"
+                              />
+                              {formData.confirm_email.trim() !== '' && (
+                                <span className={`field-match-indicator ${emailsMatch ? 'matched' : 'mismatched'}`}>
+                                  <i className={`bi ${emailsMatch ? 'bi-check-circle-fill' : 'bi-exclamation-circle-fill'}`}></i>
+                                </span>
+                              )}
+                              <Form.Control.Feedback type="invalid">
+                                {fieldErrors.confirm_email}
+                              </Form.Control.Feedback>
+                            </div>
+                          </Form.Group>
+                        </Col>
+                      </Row>
+                    </>
+                  )}
+
+                  {/* STEP 3: Expertise */}
+                  {currentStep === 3 && (
+                    <>
+                      <div className="form-section-title">
+                        <i className="bi bi-cpu"></i> Technical Information
+                      </div>
+
+                      <Row>
+                        <Col md={6} className="form-col-animate" style={{ animationDelay: '0.05s' }}>
+                          <Form.Group className="mb-3">
+                            <Form.Label className="auth-label">Phone Number</Form.Label>
+                            <div className="field-icon-wrapper">
+                              <i className="bi bi-telephone"></i>
+                              <Form.Control
+                                className="auth-input"
+                                type="tel"
+                                name="phone_number"
+                                autoComplete="tel"
+                                value={formData.phone_number}
+                                onChange={handleChange}
+                                isInvalid={!!fieldErrors.phone_number}
+                                placeholder="+91 XXXXX XXXXX"
+                                autoFocus
+                              />
+                              <Form.Control.Feedback type="invalid">
+                                {fieldErrors.phone_number}
+                              </Form.Control.Feedback>
+                            </div>
+                          </Form.Group>
+                        </Col>
+
+                        <Col md={6} className="form-col-animate" style={{ animationDelay: '0.1s' }}>
+                          <Form.Group className="mb-3">
+                            <Form.Label className="auth-label">
+                              Department <span className="auth-required">*</span>
+                            </Form.Label>
+                            <Form.Select
+                              className="auth-select"
+                              name="department"
+                              value={formData.department}
+                              onChange={handleChange}
+                              isInvalid={!!fieldErrors.department}
+                              disabled={departmentsLoading}
+                            >
+                              <option value="">
+                                {departmentsLoading ? 'Loading departments...' : 'Select Department'}
+                              </option>
+                              {departments.map(dept => (
+                                <option key={dept.id} value={dept.id}>{dept.name}</option>
+                              ))}
+                            </Form.Select>
+                            <Form.Control.Feedback type="invalid">
+                              {fieldErrors.department}
+                            </Form.Control.Feedback>
+                            {departmentsError && (
+                              <div className="field-hint hint-error">
+                                <i className="bi bi-wifi-off"></i>
+                                Failed to load departments.
+                                <button type="button" className="retry-link" onClick={fetchDepartments}>
+                                  <i className="bi bi-arrow-clockwise"></i> Retry
+                                </button>
+                              </div>
+                            )}
+                          </Form.Group>
+                        </Col>
+                      </Row>
+
+                      <Form.Group className="mb-2">
+                        <Form.Label className="auth-label">
+                          Specialization <span className="auth-required">*</span>
+                        </Form.Label>
+                        <div className="field-icon-wrapper">
+                          <i className="bi bi-cpu"></i>
+                          <Form.Control
+                            className="auth-input"
+                            type="text"
+                            name="specialization"
+                            value={formData.specialization}
+                            onChange={handleChange}
+                            isInvalid={!!fieldErrors.specialization}
+                            placeholder="e.g. Hardware, Networking, Cloud..."
+                          />
+                          <Form.Control.Feedback type="invalid">
+                            {fieldErrors.specialization}
+                          </Form.Control.Feedback>
+                        </div>
+                        <div className="chips-row">
+                          {SPECIALIZATION_CHIPS.map(chip => (
+                            <button
+                              type="button"
+                              key={chip}
+                              className={`chip ${formData.specialization === chip ? 'chip-active' : ''}`}
+                              onClick={() => applyChip(chip)}
+                            >
+                              {chip}
+                            </button>
+                          ))}
+                        </div>
+                      </Form.Group>
+                    </>
+                  )}
+                </div>
               </div>
 
-              <Button
-                type="submit"
-                className="auth-submit technician-submit"
-                disabled={loading || departmentsLoading}
-              >
-                {loading ? (
-                  <>
-                    <Spinner animation="border" size="sm" className="me-2" />
-                    Submitting Request...
-                  </>
+              {/* ── Navigation ── */}
+              <div className="step-navigation">
+                {currentStep > 1 ? (
+                  <Button type="button" className="step-back-btn" onClick={handleBack} disabled={loading}>
+                    <i className="bi bi-arrow-left me-2"></i>Back
+                  </Button>
                 ) : (
-                  <>
-                    <i className="bi bi-send me-2"></i>
-                    Submit Technician Request
-                  </>
+                  <Button as={Link} to="/login" className="step-back-btn">
+                    Cancel
+                  </Button>
                 )}
-              </Button>
+
+                {currentStep < STEPS.length ? (
+                  <Button type="submit" className="auth-submit technician-submit">
+                    Continue <i className="bi bi-arrow-right ms-2"></i>
+                  </Button>
+                ) : (
+                  <Button
+                    type="submit"
+                    className="auth-submit technician-submit"
+                    disabled={loading || departmentsLoading}
+                  >
+                    {loading ? (
+                      <>
+                        <Spinner animation="border" size="sm" className="me-2" />
+                        Submitting Request...
+                      </>
+                    ) : (
+                      <>
+                        <i className="bi bi-send me-2"></i>
+                        Submit Technician Request
+                      </>
+                    )}
+                  </Button>
+                )}
+              </div>
 
             </Form>
 

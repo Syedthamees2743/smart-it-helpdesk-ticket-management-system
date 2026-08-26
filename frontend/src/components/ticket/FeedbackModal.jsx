@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Modal, Button, Form, Alert, Spinner } from 'react-bootstrap';
-import { FaStar, FaRegStar } from 'react-icons/fa';
+import { FaStar, FaRegStar, FaCheckCircle } from 'react-icons/fa';
 import { FiMessageSquare } from 'react-icons/fi';
 import feedbackService from '../../services/feedbackService';
 
@@ -68,7 +68,7 @@ const FeedbackModal = ({ show, onHide, ticket }) => {
       setRating(0);
       setReview('');
       // Re-check to switch to "already submitted" view
-      setTimeout(() => checkExistingFeedback(), 500);
+      setTimeout(() => checkExistingFeedback(), 1000);
     } catch (err) {
       // Parse our custom backend error format
       const errorMsg = err.response?.data?.error;
@@ -109,12 +109,14 @@ const FeedbackModal = ({ show, onHide, ticket }) => {
             cursor: interactive ? 'pointer' : 'default',
             fontSize: '2rem',
             color: i <= activeRating ? '#f59e0b' : '#d1d5db',
-            transition: 'color 0.15s ease',
-            marginRight: '4px',
+            transition: 'transform 0.15s ease, color 0.15s ease',
+            marginRight: '8px',
+            display: 'inline-block',
           }}
           onClick={() => interactive && setRating(i)}
           onMouseEnter={() => interactive && setHoverRating(i)}
           onMouseLeave={() => interactive && setHoverRating(0)}
+          onMouseDown={(e) => interactive && e.preventDefault()} // Prevent text selection highlight
         >
           {i <= activeRating ? <FaStar /> : <FaRegStar />}
         </span>
@@ -136,63 +138,75 @@ const FeedbackModal = ({ show, onHide, ticket }) => {
 
   return (
     <Modal show={show} onHide={onHide} centered size="md">
-      <Modal.Header closeButton className="bg-light border-bottom">
-        <Modal.Title className="d-flex align-items-center gap-2">
+      <Modal.Header closeButton className="bg-light border-bottom-0 pt-4 px-4">
+        <Modal.Title className="d-flex align-items-center gap-2 fw-bold text-dark">
           <FiMessageSquare className="text-primary" />
           Share Your Feedback
         </Modal.Title>
       </Modal.Header>
-      <Modal.Body>
+      <Modal.Body className="p-4">
         {loading ? (
-          <div className="text-center py-4">
+          <div className="text-center py-5">
             <Spinner animation="border" variant="primary" />
-            <p className="mt-2 text-muted">Checking feedback status...</p>
+            <p className="mt-3 text-muted">Checking feedback status...</p>
           </div>
         ) : existingFeedback ? (
           /* ===== ALREADY SUBMITTED VIEW ===== */
-          <div className="text-center py-3">
-            <div className="mb-3">
-              <span style={{ fontSize: '2.5rem', color: '#10b981' }}>
-                <FaStar />
-              </span>
-              <h4 className="mt-2 text-success">Feedback Submitted</h4>
-              <p className="text-muted">
-                You have already submitted feedback for this ticket.
-              </p>
+          <div className="text-center py-4">
+            <div style={{ 
+              width: '64px', 
+              height: '64px', 
+              borderRadius: '50%', 
+              backgroundColor: '#d1fae5', 
+              color: '#10b981', 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center', 
+              margin: '0 auto 1rem auto',
+              fontSize: '1.8rem'
+            }}>
+              <FaCheckCircle />
             </div>
-            <div className="bg-light rounded-3 p-3 text-start">
-              <div className="d-flex align-items-center gap-2 mb-2">
-                <span className="fw-semibold">Your Rating:</span>
-                <span className="d-flex align-items-center">
+            <h4 className="fw-bold text-dark mb-1">Feedback Submitted</h4>
+            <p className="text-muted mb-4">
+              You have already submitted feedback for this ticket.
+            </p>
+            <div className="bg-light rounded-4 p-4 text-start border">
+              <div className="d-flex align-items-center justify-content-between mb-3 pb-3 border-bottom">
+                <span className="fw-bold text-dark">Your Rating:</span>
+                <div className="d-flex align-items-center">
                   {renderStars(false)}
-                </span>
-                <span className="text-muted small">
-                  ({getRatingLabel(existingFeedback.rating)})
-                </span>
-              </div>
-              {existingFeedback.review && (
-                <div>
-                  <span className="fw-semibold">Your Review:</span>
-                  <p className="mt-1 mb-0 text-muted">{existingFeedback.review}</p>
                 </div>
+              </div>
+              {existingFeedback.review ? (
+                <div>
+                  <span className="fw-bold text-dark d-block mb-1">Your Review:</span>
+                  <p className="mb-0 text-muted" style={{ fontStyle: 'italic', lineHeight: '1.6' }}>
+                    "{existingFeedback.review}"
+                  </p>
+                </div>
+              ) : (
+                <p className="text-muted mb-0 fst-italic">No written review provided.</p>
               )}
             </div>
           </div>
         ) : (
           /* ===== FEEDBACK FORM ===== */
           <>
-            {error && <Alert variant="danger">{error}</Alert>}
-            {success && <Alert variant="success">{success}</Alert>}
+            {error && <Alert variant="danger" className="rounded-3 border-0">{error}</Alert>}
+            {success && <Alert variant="success" className="rounded-3 border-0">{success}</Alert>}
 
-            <div className="text-center mb-3">
-              <p className="text-muted mb-2">
+            <div className="text-center mb-4 py-4 bg-light rounded-4 border">
+              <p className="text-muted mb-3">
                 How would you rate the support for ticket{' '}
-                <strong>{ticket?.ticket_number}</strong>?
+                <strong className="text-dark">{ticket?.ticket_number}</strong>?
               </p>
-              <div className="d-flex justify-content-center align-items-center">
+              <div className="d-flex justify-content-center align-items-center mb-3">
                 {renderStars(true)}
+              </div>
+              <div style={{ minHeight: '24px' }}>
                 {(hoverRating || rating) > 0 && (
-                  <span className="ms-2 text-muted small">
+                  <span className="badge bg-primary text-white px-3 py-2 rounded-pill fw-semibold">
                     {getRatingLabel(hoverRating || rating)}
                   </span>
                 )}
@@ -200,27 +214,32 @@ const FeedbackModal = ({ show, onHide, ticket }) => {
             </div>
 
             <Form onSubmit={handleSubmit}>
-              <Form.Group className="mb-3">
-                <Form.Label>
+              <Form.Group className="mb-4">
+                <Form.Label className="fw-semibold text-dark">
                   Write a Review{' '}
-                  <span className="text-muted">(optional)</span>
+                  <span className="text-muted fw-normal">(optional)</span>
                 </Form.Label>
                 <Form.Control
                   as="textarea"
-                  rows={3}
+                  rows={4}
                   placeholder="Share your experience with the support provided..."
                   value={review}
                   onChange={(e) => setReview(e.target.value)}
                   maxLength={1000}
+                  className="shadow-none"
+                  style={{ borderRadius: '12px', resize: 'none' }}
                 />
-                <Form.Text className="text-muted">
-                  {review.length}/1000 characters
-                </Form.Text>
+                <div className="d-flex justify-content-end">
+                  <Form.Text className="text-muted mt-2">
+                    {review.length}/1000 characters
+                  </Form.Text>
+                </div>
               </Form.Group>
 
               <div className="d-flex justify-content-end gap-2">
                 <Button
-                  variant="outline-secondary"
+                  variant="light"
+                  className="border px-4 rounded-pill"
                   onClick={onHide}
                   disabled={submitting}
                 >
@@ -229,6 +248,7 @@ const FeedbackModal = ({ show, onHide, ticket }) => {
                 <Button
                   type="submit"
                   variant="primary"
+                  className="px-4 rounded-pill"
                   disabled={submitting || rating === 0}
                 >
                   {submitting ? (

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useContext } from "react";
 import { useNavigate } from "react-router-dom";
-import { FaBell, FaCheckDouble } from "react-icons/fa";
+import { FaBell, FaCheckDouble, FaRegBell } from "react-icons/fa";
 import { Spinner } from "react-bootstrap";
 import { AuthContext } from "../../context/AuthContext";
 import notificationService from "../../services/notificationService";
@@ -21,7 +21,7 @@ const NotificationBell = () => {
       const data = await notificationService.getUnreadCount();
       setUnreadCount(data.unread_count || 0);
     } catch (err) {
-      // Silent fail for background polling
+      // Silent fail
     }
   };
 
@@ -37,14 +37,12 @@ const NotificationBell = () => {
     }
   };
 
-  // Poll unread count every 30 seconds
   useEffect(() => {
     fetchUnreadCount();
     const interval = setInterval(fetchUnreadCount, 30000);
     return () => clearInterval(interval);
   }, []);
 
-  // Click outside to close dropdown
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
@@ -70,9 +68,7 @@ const NotificationBell = () => {
         setNotifications((prev) =>
           prev.map((n) => (n.id === notif.id ? { ...n, is_read: true } : n))
         );
-      } catch (err) {
-        // Continue navigation even if mark-read fails
-      }
+      } catch (err) {}
     }
     if (notif.ticket) {
       setDropdownOpen(false);
@@ -85,9 +81,7 @@ const NotificationBell = () => {
       await notificationService.markAllAsRead();
       setUnreadCount(0);
       setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
-    } catch (err) {
-      // Silent fail
-    }
+    } catch (err) {}
   };
 
   const handleViewAll = () => {
@@ -110,17 +104,26 @@ const NotificationBell = () => {
 
   return (
     <div className="position-relative" ref={dropdownRef}>
-      {/* Bell Button - Fixed duplicate style bug */}
+      <style>
+        {`
+          @keyframes fadeInDown {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+          }
+        `}
+      </style>
+      
+      {/* Bell Button */}
       <button
-        className="btn btn-link position-relative p-1 border-0 d-flex align-items-center justify-content-center"
+        className="btn p-0 border-0 d-flex align-items-center justify-content-center"
         style={{ 
           width: "40px", 
           height: "40px", 
-          borderRadius: "10px", 
-          textDecoration: "none", 
-          color: "#475569",
-          transition: "all 0.2s",
-          backgroundColor: dropdownOpen ? "#f1f5f9" : "transparent"
+          borderRadius: "50%", 
+          backgroundColor: dropdownOpen ? "#f1f5f9" : "transparent",
+          color: "#64748b",
+          transition: "all 0.2s ease",
+          boxShadow: "none"
         }}
         onClick={toggleDropdown}
         title="Notifications"
@@ -128,7 +131,7 @@ const NotificationBell = () => {
         <FaBell size={18} />
         {unreadCount > 0 && (
           <span
-            className="position-absolute top-0 start-100 translate-middle badge border border-light rounded-circle"
+            className="position-absolute top-0 start-100 translate-middle badge border border-2 border-white rounded-circle"
             style={{
               backgroundColor: "#ef4444",
               fontSize: "0.6rem",
@@ -138,7 +141,9 @@ const NotificationBell = () => {
               alignItems: "center",
               justifyContent: "center",
               fontWeight: "700",
-              boxShadow: "0 2px 4px rgba(239, 68, 68, 0.4)"
+              color: "white",
+              boxShadow: "0 2px 4px rgba(239, 68, 68, 0.3)",
+              zIndex: 10
             }}
           >
             {unreadCount > 99 ? "99+" : unreadCount}
@@ -149,25 +154,28 @@ const NotificationBell = () => {
       {/* Dropdown */}
       {dropdownOpen && (
         <div
-          className="position-absolute end-0 mt-2 bg-white overflow-hidden"
+          className="position-absolute mt-2 bg-white overflow-hidden"
           style={{ 
-            width: "380px", 
+            // Mobile responsive: takes full width minus margin, max 380px on desktop
+            width: "min(380px, calc(100vw - 32px))", 
+            right: 0,
             zIndex: 1050,
             borderRadius: "16px",
             border: "1px solid #e2e8f0",
-            boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)"
+            boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)",
+            animation: "fadeInDown 0.2s ease-out"
           }}
         >
           {/* Header */}
           <div 
             className="d-flex justify-content-between align-items-center px-4 py-3 border-bottom"
-            style={{ backgroundColor: "#f8fafc", borderBottom: "1px solid #f1f5f9" }}
+            style={{ borderBottom: "1px solid #e2e8f0", backgroundColor: "#ffffff" }}
           >
-            <strong className="text-dark" style={{ fontSize: "0.9rem" }}>Notifications</strong>
+            <strong className="text-dark" style={{ fontSize: "1rem" }}>Notifications</strong>
             {unreadCount > 0 && (
               <button
                 className="btn btn-sm p-0 border-0 d-flex align-items-center gap-1"
-                style={{ color: "#4f46e5", fontSize: "0.78rem", fontWeight: "600" }}
+                style={{ color: "#3b82f6", fontSize: "0.78rem", fontWeight: "600" }}
                 onClick={handleMarkAllRead}
               >
                 <FaCheckDouble size={12} />
@@ -177,17 +185,15 @@ const NotificationBell = () => {
           </div>
 
           {/* Notification List */}
-          <div style={{ maxHeight: "360px", overflowY: "auto" }}>
+          <div style={{ maxHeight: "400px", overflowY: "auto" }}>
             {loading ? (
               <div className="text-center py-5">
-                <Spinner size="sm" animation="border" style={{ color: "#4f46e5" }} />
+                <Spinner size="sm" animation="border" style={{ color: "#3b82f6" }} />
               </div>
             ) : notifications.length === 0 ? (
               <div className="text-center py-5 px-4">
-                <div className="text-muted mb-2" style={{ fontSize: "2rem", opacity: 0.3 }}>
-                  <FaBell />
-                </div>
-                <div className="text-muted small fw-medium">You're all caught up!</div>
+                <FaRegBell style={{ fontSize: '2rem', color: '#cbd5e1' }} />
+                <div className="text-dark small fw-medium mt-2">You're all caught up!</div>
                 <div className="text-muted" style={{ fontSize: "0.75rem" }}>No new notifications right now.</div>
               </div>
             ) : (
@@ -197,14 +203,14 @@ const NotificationBell = () => {
                   className="d-flex px-4 py-3"
                   style={{
                     cursor: notif.ticket ? "pointer" : "default",
-                    backgroundColor: !notif.is_read ? "#f8faff" : "#ffffff",
-                    borderLeft: !notif.is_read ? "4px solid #4f46e5" : "4px solid transparent",
+                    backgroundColor: !notif.is_read ? "#eff6ff" : "#ffffff",
+                    borderLeft: !notif.is_read ? "4px solid #3b82f6" : "4px solid transparent",
                     borderBottom: index === notifications.length - 1 ? "none" : "1px solid #f1f5f9",
                     transition: "background-color 0.2s ease"
                   }}
                   onClick={() => handleNotificationClick(notif)}
-                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = notif.is_read ? "#f8fafc" : "#eef2ff"}
-                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = notif.is_read ? "#ffffff" : "#f8faff"}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = notif.is_read ? "#f8fafc" : "#dbeafe"}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = notif.is_read ? "#ffffff" : "#eff6ff"}
                 >
                   {/* Content */}
                   <div className="flex-grow-1 me-3">
@@ -212,8 +218,8 @@ const NotificationBell = () => {
                       className="mb-1"
                       style={{
                         fontSize: "0.85rem",
-                        fontWeight: !notif.is_read ? "700" : "500",
-                        color: !notif.is_read ? "#111827" : "#6b7280", // Unread = Pitch Black, Read = Grey
+                        fontWeight: !notif.is_read ? "700" : "600",
+                        color: "#111827",
                         lineHeight: "1.3"
                       }}
                     >
@@ -222,7 +228,7 @@ const NotificationBell = () => {
                     <div
                       style={{
                         fontSize: "0.8rem",
-                        color: !notif.is_read ? "#374151" : "#9ca3af", // Unread = Dark Grey, Read = Very Light Grey
+                        color: !notif.is_read ? "#475569" : "#94a3b8",
                         lineHeight: "1.4",
                         display: "-webkit-box",
                         WebkitLineClamp: 2,
@@ -232,27 +238,24 @@ const NotificationBell = () => {
                     >
                       {notif.message}
                     </div>
-                  </div>
-
-                  {/* Time Badge */}
-                  <div className="flex-shrink-0 text-end" style={{ minWidth: "50px" }}>
-                    <span
+                    <div 
+                      className="mt-1 d-flex align-items-center gap-1"
                       style={{
                         fontSize: "0.7rem",
                         color: "#94a3b8",
-                        fontWeight: "500",
-                        whiteSpace: "nowrap"
+                        fontWeight: "500"
                       }}
                     >
                       {getTimeAgo(notif.created_at)}
-                    </span>
-                    {/* Unread Dot Indicator */}
-                    {!notif.is_read && (
-                      <div className="mt-2 d-flex justify-content-end">
-                        <div style={{ width: 8, height: 8, backgroundColor: "#4f46e5", borderRadius: "50%" }}></div>
-                      </div>
-                    )}
+                    </div>
                   </div>
+
+                  {/* Unread Dot Indicator */}
+                  {!notif.is_read && (
+                    <div className="flex-shrink-0 d-flex align-items-center">
+                      <div style={{ width: 8, height: 8, backgroundColor: "#3b82f6", borderRadius: "50%" }}></div>
+                    </div>
+                  )}
                 </div>
               ))
             )}
@@ -261,21 +264,24 @@ const NotificationBell = () => {
           {/* Footer */}
           {notifications.length > 0 && (
             <div 
-              className="text-center py-3 border-top"
-              style={{ backgroundColor: "#f8fafc", borderTop: "1px solid #f1f5f9" }}
+              className="border-top"
+              style={{ borderTop: "1px solid #e2e8f0", backgroundColor: "#ffffff" }}
             >
-              <span
-                className="fw-semibold"
+              <button 
+                className="btn w-100 py-3 border-0 bg-transparent"
                 style={{
                   cursor: "pointer",
-                  textDecoration: "none",
                   fontSize: "0.85rem",
-                  color: "#4f46e5"
+                  color: "#3b82f6",
+                  fontWeight: "600",
+                  transition: "background 0.2s"
                 }}
                 onClick={handleViewAll}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "#f1f5f9"}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "transparent"}
               >
                 View All Notifications
-              </span>
+              </button>
             </div>
           )}
         </div>

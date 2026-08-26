@@ -81,6 +81,7 @@ const AssignedTickets = () => {
                                 <option value="reopened">Reopened</option>
                                 <option value="in_progress">In Progress</option>
                                 <option value="resolved">Resolved</option>
+                                <option value="closed">Closed</option>
                             </Form.Select>
                         </Col>
                         <Col md={2}>

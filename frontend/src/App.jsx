@@ -124,8 +124,6 @@ const AppRoutes = () => {
         <Route path="assets/:id" element={<AssetDetails />} />
         <Route path="notifications" element={<NotificationCenter />} />
         <Route path="faqs" element={<KnowledgeBase />} />
-        <Route path="feedbacks" element={<Placeholder title="Feedbacks" />} />
-        <Route path="assets/new" element={<Placeholder title="Add Asset" />} />
         <Route path="settings" element={<SettingsPage />} />
         <Route path="profile" element={<EmployeeProfile />} />
         <Route path="help" element={<HelpSupport />} />

@@ -2,6 +2,8 @@ import React from "react";
 import { Table, Button, Badge } from "react-bootstrap";
 import { FaEye } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
+import "../../styles/RecentTicketsTable.css"
+
 
 const RecentTicketsTable = ({
   tickets,
@@ -10,32 +12,24 @@ const RecentTicketsTable = ({
 }) => {
   const navigate = useNavigate();
 
-  /* --------------------------------
-     Empty State
-  -------------------------------- */
+  /* Empty State */
   if (!tickets || tickets.length === 0) {
     return (
-      <div className="tickets-empty-state">
-        <div className="tickets-empty-icon">
+      <div className="rt-empty-state">
+        <div className="rt-empty-icon">
           <i className="bi bi-ticket-perforated"></i>
         </div>
-
-        <h6>No Recent Tickets</h6>
-
-        <p>
+        <h6 className="rt-empty-title">No Recent Tickets</h6>
+        <p className="rt-empty-text">
           There are no support tickets to display at the moment.
         </p>
       </div>
     );
   }
 
-  /* --------------------------------
-     Helpers
-  -------------------------------- */
-
+  /* Helpers */
   const formatStatus = (status) => {
     if (!status) return "Unknown";
-
     return status
       .replaceAll("_", " ")
       .replace(/\b\w/g, (char) => char.toUpperCase());
@@ -43,164 +37,102 @@ const RecentTicketsTable = ({
 
   const formatPriority = (priority) => {
     if (!priority) return "Normal";
-
     return (
-      priority.charAt(0).toUpperCase() +
-      priority.slice(1).toLowerCase()
+      priority.charAt(0).toUpperCase() + priority.slice(1).toLowerCase()
     );
   };
 
   const getStatusClass = (status) => {
-    if (!status) return "badge-status-default";
-
-    return `badge-status-${status
-      .toLowerCase()
-      .replaceAll(" ", "_")}`;
+    if (!status) return "rt-badge-default";
+    return `rt-status-${status.toLowerCase().replaceAll(" ", "_")}`;
   };
 
   const getPriorityClass = (priority) => {
-    if (!priority) return "badge-priority-default";
-
-    return `badge-priority-${priority.toLowerCase()}`;
+    if (!priority) return "rt-priority-default";
+    return `rt-priority-${priority.toLowerCase()}`;
   };
 
   const getSlaClass = (sla) => {
-    if (!sla) return "sla-normal";
-
+    if (!sla) return "rt-sla-normal";
     const value = sla.toLowerCase();
-
     if (
       value.includes("breach") ||
       value.includes("overdue") ||
       value.includes("expired")
     ) {
-      return "sla-breached";
+      return "rt-sla-breached";
     }
-
-    if (
-      value.includes("warning") ||
-      value.includes("due")
-    ) {
-      return "sla-warning";
+    if (value.includes("warning") || value.includes("due")) {
+      return "rt-sla-warning";
     }
+    return "rt-sla-normal";
+  };
 
-    return "sla-normal";
+  const getInitials = (name) => {
+    if (!name || name === "—") return "?";
+    return name.charAt(0).toUpperCase();
   };
 
   const handleView = (ticketId) => {
     if (!ticketId) return;
-
     navigate(`${basePath}${ticketId}`);
   };
 
   return (
-    <div className="recent-tickets-wrapper">
+    <div className="rt-wrapper">
       <Table
         hover
         responsive
-        className="itsm-table recent-tickets-table align-middle mb-0"
+        className="rt-table align-middle mb-0"
       >
         <thead>
           <tr>
-            <th>
-              {employeeView ? "Ticket" : "Ticket #"}
-            </th>
-
-            {!employeeView && (
-              <th>Employee</th>
-            )}
-
-            {!employeeView && (
-              <th>Category</th>
-            )}
-
+            <th>{employeeView ? "Ticket" : "Ticket #"}</th>
+            {!employeeView && <th>Employee</th>}
+            {!employeeView && <th>Category</th>}
             <th>Priority</th>
-
-            {!employeeView && (
-              <th>Technician</th>
-            )}
-
+            {!employeeView && <th>Technician</th>}
             <th>Status</th>
-
             <th>SLA</th>
-
             <th>Date</th>
-
-            <th className="text-end">
-              Action
-            </th>
+            <th className="text-end">Action</th>
           </tr>
         </thead>
 
         <tbody>
           {tickets.map((ticket, index) => {
             const ticketId =
-              ticket.id ||
-              ticket.ticket_number ||
-              ticket.ticketNumber;
-
-            const title =
-              ticket.title ||
-              ticket.subject ||
-              "Untitled Ticket";
-
+              ticket.id || ticket.ticket_number || ticket.ticketNumber;
+            const title = ticket.title || ticket.subject || "Untitled Ticket";
             const employee =
-              ticket.employee ||
-              ticket.employee_name ||
-              "—";
-
+              ticket.employee || ticket.employee_name || "—";
             const category =
-              ticket.category ||
-              ticket.category_name ||
-              "—";
-
+              ticket.category || ticket.category_name || "—";
             const technician =
               ticket.tech ||
               ticket.technician ||
               ticket.technician_name ||
               "Unassigned";
-
-            const priority =
-              ticket.priority || "normal";
-
-            const status =
-              ticket.status || "open";
-
-            const sla =
-              ticket.sla ||
-              ticket.sla_status ||
-              "Normal";
-
-            const date =
-              ticket.date ||
-              ticket.created_at ||
-              "—";
+            const priority = ticket.priority || "normal";
+            const status = ticket.status || "open";
+            const sla = ticket.sla || ticket.sla_status || "Normal";
+            const date = ticket.date || ticket.created_at || "—";
 
             return (
               <tr key={ticketId || index}>
-
                 {/* Ticket */}
                 <td>
-                  <div className="ticket-cell">
-
-                    <div className="ticket-icon">
+                  <div className="rt-ticket-cell">
+                    <div className="rt-ticket-icon">
                       <i className="bi bi-ticket-detailed"></i>
                     </div>
-
-                    <div className="ticket-info">
-
-                      <div className="ticket-number">
-                        {employeeView
-                          ? title
-                          : ticketId || "—"}
+                    <div className="rt-ticket-info">
+                      <div className="rt-ticket-number">
+                        {employeeView ? title : ticketId || "—"}
                       </div>
-
                       {employeeView && ticketId && (
-                        <div className="ticket-reference">
-                          #{ticketId}
-                        </div>
+                        <div className="rt-ticket-ref">#{ticketId}</div>
                       )}
-
                     </div>
                   </div>
                 </td>
@@ -208,16 +140,11 @@ const RecentTicketsTable = ({
                 {/* Employee */}
                 {!employeeView && (
                   <td>
-                    <div className="employee-cell">
-                      <div className="employee-avatar">
-                        {employee
-                          .charAt(0)
-                          .toUpperCase()}
+                    <div className="rt-employee-cell">
+                      <div className="rt-employee-avatar">
+                        {getInitials(employee)}
                       </div>
-
-                      <span>
-                        {employee}
-                      </span>
+                      <span className="rt-employee-name">{employee}</span>
                     </div>
                   </td>
                 )}
@@ -225,20 +152,14 @@ const RecentTicketsTable = ({
                 {/* Category */}
                 {!employeeView && (
                   <td>
-                    <span className="category-text">
-                      {category}
-                    </span>
+                    <span className="rt-category-text">{category}</span>
                   </td>
                 )}
 
                 {/* Priority */}
                 <td>
-                  <Badge
-                    className={`ticket-badge ${getPriorityClass(
-                      priority
-                    )}`}
-                  >
-                    <span className="badge-dot"></span>
+                  <Badge className={`rt-badge ${getPriorityClass(priority)}`}>
+                    <span className="rt-badge-dot"></span>
                     {formatPriority(priority)}
                   </Badge>
                 </td>
@@ -247,13 +168,15 @@ const RecentTicketsTable = ({
                 {!employeeView && (
                   <td>
                     {technician === "Unassigned" ? (
-                      <span className="unassigned-text">
+                      <span className="rt-unassigned">
                         <i className="bi bi-person-dash me-1"></i>
                         Unassigned
                       </span>
                     ) : (
-                      <div className="technician-cell">
-                        <i className="bi bi-person-gear"></i>
+                      <div className="rt-tech-cell">
+                        <div className="rt-tech-avatar">
+                          {getInitials(technician)}
+                        </div>
                         <span>{technician}</span>
                       </div>
                     )}
@@ -262,44 +185,29 @@ const RecentTicketsTable = ({
 
                 {/* Status */}
                 <td>
-                  <Badge
-                    className={`ticket-badge ${getStatusClass(
-                      status
-                    )}`}
-                  >
+                  <Badge className={`rt-badge ${getStatusClass(status)}`}>
                     {formatStatus(status)}
                   </Badge>
                 </td>
 
                 {/* SLA */}
                 <td>
-                  <span
-                    className={`sla-status ${getSlaClass(
-                      sla
-                    )}`}
-                  >
-                    <span className="sla-dot"></span>
+                  <span className={`rt-sla ${getSlaClass(sla)}`}>
+                    <span className="rt-sla-dot"></span>
                     {sla}
                   </span>
                 </td>
 
                 {/* Date */}
                 <td>
-                  <span className="ticket-date">
-                    {date}
-                  </span>
+                  <span className="rt-date">{date}</span>
                 </td>
 
                 {/* Action */}
                 <td className="text-end">
                   <Button
-                    variant="light"
-                    size="sm"
-                    className="ticket-view-btn"
-                    type="button"
-                    onClick={() =>
-                      handleView(ticketId)
-                    }
+                    className="rt-view-btn"
+                    onClick={() => handleView(ticketId)}
                     disabled={!ticketId}
                     title="View ticket"
                   >
@@ -307,7 +215,6 @@ const RecentTicketsTable = ({
                     <span>View</span>
                   </Button>
                 </td>
-
               </tr>
             );
           })}

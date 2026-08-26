@@ -1,4 +1,5 @@
 import React from "react";
+import "../../styles/StatCard.css"
 
 const StatCard = ({
   icon,
@@ -21,44 +22,36 @@ const StatCard = ({
   const selectedColor = colorMap[color] || colorMap.primary;
 
   return (
-    <div className="stat-card">
-      <div className="stat-card-content">
+    <div
+      className="stat-card-pro"
+      style={{ "--card-color": selectedColor }}
+    >
+      {/* Decorative top bar */}
+      <div className="stat-card-pro-bar" />
 
+      <div className="stat-card-pro-body">
         {/* Icon */}
-        <div
-          className="stat-icon"
-          style={{
-            backgroundColor: `${selectedColor}12`,
-            color: selectedColor,
-          }}
-        >
-          {icon}
-        </div>
+        <div className="stat-card-pro-icon">{icon}</div>
 
         {/* Content */}
-        <div className="stat-info">
-          <div className="stat-title">
-            {title}
-          </div>
+        <div className="stat-card-pro-info">
+          <div className="stat-card-pro-label">{title}</div>
+          <div className="stat-card-pro-value">{value}</div>
 
-          <div className="stat-value">
-            {value}
-          </div>
-
-          <div className="stat-bottom">
+          <div className="stat-card-pro-bottom">
             {trend && (
               <span
-                className={`stat-trend ${
+                className={`stat-card-pro-trend ${
                   trendType === "down"
-                    ? "stat-trend-down"
-                    : "stat-trend-up"
+                    ? "trend-down"
+                    : "trend-up"
                 }`}
               >
                 <i
                   className={`bi ${
                     trendType === "down"
-                      ? "bi-arrow-down"
-                      : "bi-arrow-up"
+                      ? "bi-arrow-down-short"
+                      : "bi-arrow-up-short"
                   }`}
                 />
                 {trend}
@@ -66,7 +59,7 @@ const StatCard = ({
             )}
 
             {subtitle && (
-              <span className="stat-subtitle">
+              <span className="stat-card-pro-subtitle">
                 {subtitle}
               </span>
             )}
