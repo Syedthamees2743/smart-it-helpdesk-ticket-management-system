@@ -274,12 +274,21 @@ class TicketViewSet(viewsets.ModelViewSet):
 
         serializer = ReopenTicketSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
+        reason = serializer.validated_data["reason"]
 
         old_status = ticket.status
         ticket.status = "reopened"
-        ticket.reopen_reason = serializer.validated_data["reason"]
+        ticket.reopen_reason = reason
         ticket.resolved_at = None
         ticket.save()
+
+        # ── NEW: Reason-ah comment thread-la auto-comment ah add pannurom ──
+        # Itha nambi Technician/Admin ticket page comment section-la kaapaadum
+        TicketComment.objects.create(
+            ticket=ticket,
+            user=request.user,
+            comment=f"Ticket REOPENED by employee.\n\nReason: {reason}"
+        )
 
         send_ticket_reopened_notification(ticket)
 
@@ -288,7 +297,7 @@ class TicketViewSet(viewsets.ModelViewSet):
             create_notification(
                 user=admin,
                 title="Ticket Reopened",
-                message=f"Ticket {ticket.ticket_number} has been reopened by {ticket.employee.get_full_name()}.",
+                message=f"Ticket {ticket.ticket_number} has been reopened by {ticket.employee.get_full_name()}. Reason: {reason}",
                 notification_type="ticket_reopened",
                 ticket=ticket,
             )
@@ -296,13 +305,17 @@ class TicketViewSet(viewsets.ModelViewSet):
             create_notification(
                 user=ticket.assigned_technician,
                 title="Ticket Reopened",
-                message=f"Ticket {ticket.ticket_number} has been reopened by the employee.",
+                message=f"Ticket {ticket.ticket_number} has been reopened by the employee. Reason: {reason}",
                 notification_type="ticket_reopened",
                 ticket=ticket,
             )
 
         return Response(
-            {"message": "Ticket reopened successfully.", "status": ticket.status},
+            {
+                "message": "Ticket reopened successfully.",
+                "status": ticket.status,
+                "reopen_reason": reason,
+            },
             status=status.HTTP_200_OK,
         )
 

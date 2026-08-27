@@ -145,3 +145,125 @@ code {
   color: #64748b;
   font-size: 14px;
 }
+
+/* =========================================================
+   REOPEN REASON BANNER
+========================================================= */
+.reopen-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 16px 18px;
+  border-radius: 12px;
+  margin-bottom: 20px;
+  border: 1px solid;
+  animation: reopenSlideIn 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes reopenSlideIn {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Active — orange warning */
+.reopen-banner-active {
+  background: linear-gradient(135deg, #fff7ed 0%, #fffbeb 100%);
+  border-color: #fed7aa;
+  box-shadow: 0 2px 8px rgba(234, 88, 12, 0.08);
+}
+
+/* History — neutral grey */
+.reopen-banner-history {
+  background: #f8fafc;
+  border-color: #e2e8f0;
+}
+
+.reopen-banner-icon {
+  width: 38px;
+  height: 38px;
+  min-width: 38px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 17px;
+}
+
+.reopen-banner-active .reopen-banner-icon {
+  background: linear-gradient(135deg, #ffedd5, #fed7aa);
+  color: #c2410c;
+}
+
+.reopen-banner-history .reopen-banner-icon {
+  background: #e2e8f0;
+  color: #64748b;
+}
+
+.reopen-banner-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.reopen-banner-title {
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: -0.1px;
+  margin-bottom: 5px;
+}
+
+.reopen-banner-active .reopen-banner-title { color: #9a3412; }
+.reopen-banner-history .reopen-banner-title { color: #475569; }
+
+.reopen-banner-meta {
+  font-weight: 500;
+  color: #94a3b8;
+  font-size: 0.75rem;
+}
+
+.reopen-banner-reason {
+  font-size: 0.8rem;
+  color: #334155;
+  line-height: 1.55;
+  word-break: break-word;
+}
+
+.reopen-reason-label {
+  font-weight: 700;
+  color: #c2410c;
+}
+
+.reopen-banner-history .reopen-reason-label {
+  color: #64748b;
+}
+
+.reopen-banner-badge {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 12px;
+  border-radius: 20px;
+  background: #ea580c;
+  color: #fff;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  animation: reopenPulse 2s ease-in-out infinite;
+}
+
+@keyframes reopenPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(234, 88, 12, 0.3); }
+  50% { box-shadow: 0 0 0 5px rgba(234, 88, 12, 0); }
+}
+
+@media (max-width: 576px) {
+  .reopen-banner {
+    flex-wrap: wrap;
+    padding: 14px;
+  }
+
+  .reopen-banner-badge {
+    order: -1;
+    width: 100%;
+    justify-content: center;
+  }
+}
