@@ -12,7 +12,7 @@ import {
 import { Link } from 'react-router-dom';
 import { FaHeadset } from 'react-icons/fa';
 import authService from '../../services/authService';
-import './AuthPages.css';
+import '../../styles/AuthPages.css';
 
 const STEPS = [
   { id: 1, title: 'Personal Details', hint: 'Who you are', icon: 'bi-person-badge', fields: ['first_name', 'last_name'] },

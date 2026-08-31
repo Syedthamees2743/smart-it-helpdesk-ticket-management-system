@@ -16,43 +16,41 @@ import {
   FaUserCircle,
   FaChevronRight,
 } from "react-icons/fa";
-
 import { FiHelpCircle } from "react-icons/fi";
-
 import { useAuth } from "../../context/AuthContext";
 
-const Sidebar = ({ role, mobile, onClick }) => {
+const Sidebar = ({ role, mobile, onClick, badgeCounts = {} }) => {
   const { user, logout } = useAuth();
 
   const menus = {
     admin: [
       { path: "/admin", icon: <FaTachometerAlt />, label: "Dashboard", end: true },
       { path: "/admin/users", icon: <FaUsers />, label: "Users" },
-      { path: "/admin/pending-requests", icon: <FiHelpCircle />, label: "Pending Requests" },
+      { path: "/admin/pending-requests", icon: <FiHelpCircle />, label: "Pending Requests", badgeKey: "pendingRequests" },
       { path: "/admin/departments", icon: <FaBuilding />, label: "Departments" },
       { path: "/admin/categories", icon: <FaListAlt />, label: "Issue Categories" },
-      { path: "/admin/tickets", icon: <FaTicketAlt />, label: "Tickets" },
+      { path: "/admin/tickets", icon: <FaTicketAlt />, label: "Tickets", badgeKey: "tickets" },
       { path: "/admin/assets", icon: <FaLaptop />, label: "Assets" },
       { path: "/admin/asset-categories", icon: <FaListAlt />, label: "Asset Categories" },
       { path: "/admin/faqs", icon: <FaQuestionCircle />, label: "FAQ / KB" },
       { path: "/admin/feedbacks", icon: <FaComments />, label: "Feedback" },
-      { path: "/admin/notifications", icon: <FaBell />, label: "Notifications" },
+      { path: "/admin/notifications", icon: <FaBell />, label: "Notifications", badgeKey: "notifications" },
       { path: "/admin/technician-performance", icon: <FaTachometerAlt />, label: "Tech Performance" },
       { path: "/admin/reports", icon: <FaStar />, label: "Reports" },
     ],
     employee: [
       { path: "/employee", icon: <FaTachometerAlt />, label: "Dashboard", end: true },
       { path: "/employee/tickets/new", icon: <FaTicketAlt />, label: "Raise Complaint" },
-      { path: "/employee/tickets", icon: <FaListAlt />, label: "My Tickets" },
+      { path: "/employee/tickets", icon: <FaListAlt />, label: "My Tickets", badgeKey: "tickets" },
       { path: "/employee/assets", icon: <FaLaptop />, label: "My Assets" },
-      { path: "/employee/notifications", icon: <FaBell />, label: "Notifications" },
+      { path: "/employee/notifications", icon: <FaBell />, label: "Notifications", badgeKey: "notifications" },
       { path: "/employee/faqs", icon: <FaQuestionCircle />, label: "Knowledge Base" },
     ],
     technician: [
       { path: "/technician", icon: <FaTachometerAlt />, label: "Dashboard", end: true },
-      { path: "/technician/tickets", icon: <FaTicketAlt />, label: "Assigned Tickets" },
+      { path: "/technician/tickets", icon: <FaTicketAlt />, label: "Assigned Tickets", badgeKey: "tickets" },
       { path: "/technician/performance", icon: <FaTachometerAlt />, label: "My Performance" },
-      { path: "/technician/notifications", icon: <FaBell />, label: "Notifications" },
+      { path: "/technician/notifications", icon: <FaBell />, label: "Notifications", badgeKey: "notifications" },
       { path: "/technician/faqs", icon: <FaQuestionCircle />, label: "Knowledge Base" },
     ],
   };
@@ -83,6 +81,23 @@ const Sidebar = ({ role, mobile, onClick }) => {
     return role.charAt(0).toUpperCase() + role.slice(1);
   };
 
+  const renderBadge = (item) => {
+    const count = item.badgeKey ? badgeCounts[item.badgeKey] : undefined;
+    if (!count || count <= 0) return null;
+
+    const isBlue = item.badgeKey === "tickets" || item.badgeKey === "pendingRequests";
+    const display = count > 99 ? "99+" : count;
+
+    return (
+      <span
+        className={`sidebar-badge ${isBlue ? "sidebar-badge--blue" : ""}`}
+        style={{ animationDelay: `${0.05 * currentMenu.indexOf(item) + 0.4}s` }}
+      >
+        {display}
+      </span>
+    );
+  };
+
   return (
     <aside className="sidebar-wrapper sidebar-anim">
       {/* BRAND */}
@@ -98,7 +113,7 @@ const Sidebar = ({ role, mobile, onClick }) => {
 
       {/* MAIN NAVIGATION */}
       <div className="sidebar-content">
-        <div className="sidebar-section-title section-anim">MAIN MENU</div>
+        <div className="sidebar-section-title section-anim">Main Menu</div>
         <div className="sidebar-nav-scroll">
           <Nav className="flex-column">
             {currentMenu
@@ -111,11 +126,12 @@ const Sidebar = ({ role, mobile, onClick }) => {
                   className={({ isActive }) =>
                     `sidebar-link link-anim ${isActive ? "active" : ""}`
                   }
-                  style={{ animationDelay: `${0.05 * index + 0.2}s` }}
+                  style={{ animationDelay: `${0.04 * index + 0.2}s` }}
                   onClick={handleClose}
                 >
                   <span className="sidebar-link-icon">{item.icon}</span>
                   <span className="sidebar-link-text">{item.label}</span>
+                  {renderBadge(item)}
                   <span className="sidebar-link-arrow">
                     <FaChevronRight />
                   </span>
@@ -143,7 +159,7 @@ const Sidebar = ({ role, mobile, onClick }) => {
 
       {/* BOTTOM AREA */}
       <div className="sidebar-bottom">
-        <div className="sidebar-section-title section-anim">ACCOUNT</div>
+        <div className="sidebar-section-title section-anim">Account</div>
 
         <NavLink
           to={`/${role}/profile`}

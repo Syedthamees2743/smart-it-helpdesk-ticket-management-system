@@ -1,0 +1,166 @@
+/* =========================================================
+   FEEDBACK CARD — Animated
+   ========================================================= */
+.fb-card {
+  border: 1px solid !important;
+  border-radius: 16px !important;
+  padding: 20px 22px;
+  margin-bottom: 20px;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05), 0 8px 24px rgba(15, 23, 42, 0.06);
+  animation: fbSlideIn 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes fbSlideIn {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Header ── */
+.fb-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.fb-header-icon {
+  width: 42px;
+  height: 42px;
+  min-width: 42px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  font-size: 0.95rem;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.15);
+  animation: fbIconPop 0.5s 0.15s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes fbIconPop {
+  0% { opacity: 0; transform: scale(0.5); }
+  60% { transform: scale(1.12); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+.fb-title {
+  font-weight: 700;
+  color: #0f172a;
+  font-size: 0.95rem;
+  line-height: 1.2;
+}
+
+.fb-sub {
+  font-size: 0.75rem;
+  font-weight: 600;
+  margin-top: 2px;
+}
+
+.fb-score {
+  font-size: 1.6rem;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+}
+
+.fb-score-max {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #94a3b8;
+}
+
+/* ── Stars ── */
+.fb-stars-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+  animation: fbSlideIn 0.5s 0.25s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.fb-stars {
+  display: flex;
+  gap: 3px;
+}
+
+.fb-stars svg {
+  font-size: 1.1rem;
+  animation: fbStarPop 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.fb-stars svg:nth-child(1) { animation-delay: 0.3s; }
+.fb-stars svg:nth-child(2) { animation-delay: 0.38s; }
+.fb-stars svg:nth-child(3) { animation-delay: 0.46s; }
+.fb-stars svg:nth-child(4) { animation-delay: 0.54s; }
+.fb-stars svg:nth-child(5) { animation-delay: 0.62s; }
+
+@keyframes fbStarPop {
+  0% { opacity: 0; transform: scale(0.3) rotate(-20deg); }
+  60% { transform: scale(1.2) rotate(5deg); }
+  100% { opacity: 1; transform: scale(1) rotate(0); }
+}
+
+.fb-rating-text {
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+/* ── Review ── */
+.fb-review {
+  background: rgba(255, 255, 255, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.9);
+  border-radius: 12px;
+  padding: 14px 16px;
+  margin-bottom: 14px;
+  animation: fbSlideIn 0.5s 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.fb-review p {
+  color: #334155;
+  font-size: 0.88rem;
+  line-height: 1.65;
+  font-style: italic;
+  margin: 0;
+}
+
+/* ── Footer ── */
+.fb-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  animation: fbSlideIn 0.5s 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.fb-employee {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.fb-employee-icon {
+  font-size: 1.3rem;
+  color: #94a3b8;
+}
+
+.fb-employee-name {
+  font-weight: 600;
+  color: #475569;
+  font-size: 0.82rem;
+}
+
+.fb-date {
+  color: #94a3b8;
+  font-size: 0.72rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fb-card,
+  .fb-header-icon,
+  .fb-stars-row,
+  .fb-stars svg,
+  .fb-review,
+  .fb-footer {
+    animation: none !important;
+  }
+}

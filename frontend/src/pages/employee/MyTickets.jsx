@@ -8,6 +8,7 @@ import {
   Spinner,
   Badge,
   Table,
+  Alert,
 } from "react-bootstrap";
 import {
   FaPlus,
@@ -17,9 +18,10 @@ import {
   FaChevronLeft,
   FaChevronRight,
   FaFilter,
+  FaLock,
 } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
-import { getTickets } from "../../services/ticketService";
+import { getTickets, getMyEligibleAssets } from "../../services/ticketService";
 import { getCategories } from "../../services/categoryService";
 
 import "../../styles/EmployeePages.css";
@@ -37,6 +39,12 @@ const MyTickets = () => {
   const [priorityFilter, setPriorityFilter] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("");
 
+  // ═══════════════════════════════════════════════
+  // NEW: Asset restriction states
+  // ═══════════════════════════════════════════════
+  const [hasAssets, setHasAssets] = useState(true);
+  const [assetCheckLoading, setAssetCheckLoading] = useState(true);
+
   const hasActiveFilters =
     search || statusFilter || priorityFilter || categoryFilter;
 
@@ -51,6 +59,19 @@ const MyTickets = () => {
     getCategories()
       .then((res) => setCategories(res.data.results || res.data))
       .catch((err) => console.error(err));
+  }, []);
+
+  // ═══════════════════════════════════════════════
+  // NEW: Check if employee has any active assigned assets
+  // ═══════════════════════════════════════════════
+  useEffect(() => {
+    getMyEligibleAssets()
+      .then((res) => {
+        const list = Array.isArray(res.data) ? res.data : [];
+        setHasAssets(list.length > 0);
+      })
+      .catch(() => setHasAssets(true)) // API fail-ah irundha block panna maatom
+      .finally(() => setAssetCheckLoading(false));
   }, []);
 
   const fetchData = async (extraParams = {}) => {
@@ -133,15 +154,50 @@ const MyTickets = () => {
               Track and manage your IT support requests
             </p>
           </div>
-          <Button
-            className="emp-btn-submit"
-            onClick={() => navigate("/employee/tickets/new")}
-          >
-            <FaPlus className="me-2" />
-            Raise Complaint
-          </Button>
+
+          {/* ═══════════════════════════════════════════
+              NEW: Conditional Raise Complaint button
+              ═══════════════════════════════════════════ */}
+          {assetCheckLoading ? (
+            <Button className="emp-btn-submit" disabled>
+              <Spinner size="sm" animation="border" />
+            </Button>
+          ) : hasAssets ? (
+            <Button
+              className="emp-btn-submit"
+              onClick={() => navigate("/employee/tickets/new")}
+            >
+              <FaPlus className="me-2" />
+              Raise Complaint
+            </Button>
+          ) : (
+            <Button
+              className="emp-btn-submit"
+              disabled
+              title="No IT asset assigned — contact IT Admin"
+            >
+              <FaLock className="me-2" />
+              Raise Complaint
+            </Button>
+          )}
         </div>
       </div>
+
+      {/* ═══════════════════════════════════════════
+          NEW: No assets warning banner
+          ═══════════════════════════════════════════ */}
+      {!assetCheckLoading && !hasAssets && (
+        <Alert
+          variant="warning"
+          className="mb-3 rounded-4 border-0 d-flex align-items-center"
+        >
+          <FaLock className="me-2 flex-shrink-0" />
+          <div style={{ fontSize: "0.85rem" }}>
+            <strong>Ticket creation blocked:</strong> No IT asset is currently
+            assigned to you. Please contact the IT Admin.
+          </div>
+        </Alert>
+      )}
 
       {/* FILTER BAR */}
       <Card className="emp-card mb-3">
@@ -243,7 +299,7 @@ const MyTickets = () => {
                   <FaFilter className="me-1" />
                   Clear Filters
                 </Button>
-              ) : (
+              ) : hasAssets ? (
                 <Button
                   className="emp-btn-submit"
                   onClick={() => navigate("/employee/tickets/new")}
@@ -251,6 +307,15 @@ const MyTickets = () => {
                   <FaPlus className="me-2" />
                   Raise Complaint
                 </Button>
+              ) : (
+                <div
+                  className="text-muted d-flex align-items-center gap-2 justify-content-center"
+                  style={{ fontSize: "0.85rem" }}
+                >
+                  <FaLock style={{ fontSize: "0.75rem" }} />
+                  Contact IT Admin to get an asset assigned before creating
+                  tickets.
+                </div>
               )}
             </div>
           ) : (

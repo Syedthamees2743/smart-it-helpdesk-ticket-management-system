@@ -3,6 +3,18 @@ from django.utils import timezone
 from .models import Ticket, IssueCategory
 from .models import TicketComment
 import datetime
+from assets.models import Asset, AssetAssignment
+
+
+# =========================================================
+# NEW: Helper — Employee-oda ACTIVE asset assignments
+# (status = 'active' use pandrom — return panna 'returned' aagum)
+# =========================================================
+def get_active_assignments(user):
+    return AssetAssignment.objects.filter(
+        employee=user,
+        status='active'
+    ).select_related('asset', 'asset__category')
 
 
 class TicketListSerializer(serializers.ModelSerializer):
@@ -17,6 +29,10 @@ class TicketListSerializer(serializers.ModelSerializer):
     technician_specialization = serializers.SerializerMethodField()
     sla_status = serializers.SerializerMethodField()
 
+    # ── NEW: Asset fields ──
+    asset_name = serializers.SerializerMethodField()
+    asset_code = serializers.SerializerMethodField()
+
     class Meta:
         model = Ticket
         fields = (
@@ -26,6 +42,7 @@ class TicketListSerializer(serializers.ModelSerializer):
             'category_name',
             'technician_name', 'technician_id', 'technician_department', 'technician_specialization',
             'priority', 'status',
+            'asset_name', 'asset_code',
             'sla_deadline', 'sla_status', 'created_at'
         )
 
@@ -64,6 +81,13 @@ class TicketListSerializer(serializers.ModelSerializer):
         profile = getattr(obj.assigned_technician, 'technician_profile', None)
         return profile.specialization if profile else None
 
+    # ── NEW: Asset methods ──
+    def get_asset_name(self, obj):
+        return obj.asset.asset_name if obj.asset else None
+
+    def get_asset_code(self, obj):
+        return obj.asset.asset_code if obj.asset else None
+
     def get_sla_status(self, obj):
         if not obj.sla_deadline:
             return "Pending"
@@ -92,6 +116,10 @@ class TicketDetailSerializer(serializers.ModelSerializer):
     assigned_by_name = serializers.StringRelatedField(source='assigned_by', read_only=True)
     sla_status = serializers.SerializerMethodField()
     resolution_time_hours = serializers.SerializerMethodField()
+
+    # ── NEW: Asset fields ──
+    asset_name = serializers.SerializerMethodField()
+    asset_code = serializers.SerializerMethodField()
 
     class Meta:
         model = Ticket
@@ -133,6 +161,13 @@ class TicketDetailSerializer(serializers.ModelSerializer):
         profile = getattr(obj.assigned_technician, 'technician_profile', None)
         return profile.specialization if profile else None
 
+    # ── NEW: Asset methods ──
+    def get_asset_name(self, obj):
+        return obj.asset.asset_name if obj.asset else None
+
+    def get_asset_code(self, obj):
+        return obj.asset.asset_code if obj.asset else None
+
     def get_sla_status(self, obj):
         if not obj.sla_deadline: return "Pending"
         now = timezone.now()
@@ -149,9 +184,31 @@ class TicketDetailSerializer(serializers.ModelSerializer):
 
 
 class TicketCreateUpdateSerializer(serializers.ModelSerializer):
+    # ── NEW: Asset field with ownership validation ──
+    asset = serializers.PrimaryKeyRelatedField(
+        queryset=Asset.objects.all(),
+        required=False,
+        allow_null=True
+    )
+
     class Meta:
         model = Ticket
-        fields = ('title', 'description', 'department', 'category', 'screenshot', 'priority')
+        fields = ('title', 'description', 'department', 'category', 'screenshot', 'priority', 'asset')
+
+    def validate_asset(self, value):
+        """
+        Employee-ku mattum: selected asset avanukku assign aagi irukanum.
+        (Admin/Technician-ku restriction illa — workflow affect aagathu)
+        """
+        request = self.context.get('request')
+        user = getattr(request, 'user', None)
+
+        if value and user and user.role == 'employee':
+            if not get_active_assignments(user).filter(asset=value).exists():
+                raise serializers.ValidationError(
+                    "Invalid asset. You can only select assets currently assigned to you."
+                )
+        return value
 
 
 # --- ACTION SERIALIZERS ---

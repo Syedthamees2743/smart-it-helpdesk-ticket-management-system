@@ -21,12 +21,21 @@ class FeedbackViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         user = self.request.user
         if user.role == 'admin':
-            return Feedback.objects.all()
+            qs = Feedback.objects.all()
         elif user.role == 'technician':
-            return Feedback.objects.filter(ticket__assigned_technician=user)
+            qs = Feedback.objects.filter(ticket__assigned_technician=user)
         elif user.role == 'employee':
-            return Feedback.objects.filter(employee=user)
-        return Feedback.objects.none()
+            qs = Feedback.objects.filter(employee=user)
+        else:
+            return Feedback.objects.none()
+
+        # ── NEW: Filter by ticket → /feedbacks/?ticket=12 ──
+        ticket_id = self.request.query_params.get('ticket')
+        if ticket_id:
+            qs = qs.filter(ticket_id=ticket_id)
+
+        return qs
+        
 
     def perform_create(self, serializer):
         ticket_id = serializer.validated_data.get('ticket').id

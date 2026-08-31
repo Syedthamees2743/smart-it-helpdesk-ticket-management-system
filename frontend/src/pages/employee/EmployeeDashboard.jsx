@@ -20,6 +20,7 @@ import {
   FaChartPie,
   FaTags,
   FaBoxOpen,
+  FaLock,
 } from "react-icons/fa";
 import {
   PieChart,
@@ -34,10 +35,11 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import dashboardService from "../../services/dashboardService";
+import { getMyEligibleAssets } from "../../services/ticketService";
 
 /* ══════════════════════════════════════════════
    GLOBAL ANIMATION STYLES (self-contained)
-══════════════════════════════════════════════ */
+════════════════════════════════════ */
 const GlobalStyles = () => (
   <style>{`
     /* ── Keyframes ── */
@@ -142,6 +144,13 @@ const GlobalStyles = () => (
     }
     .btn-cta .cta-icon { transition: transform 0.3s ease; display: inline-block; }
     .btn-cta:hover .cta-icon { transform: rotate(90deg) scale(1.15); }
+    .btn-cta:disabled {
+      animation: none;
+      transform: none !important;
+      box-shadow: none !important;
+      opacity: 0.75;
+      cursor: not-allowed;
+    }
     .live-dot {
       width: 8px; height: 8px; border-radius: 50%;
       background: #34d399; display: inline-block;
@@ -237,7 +246,7 @@ const GlobalStyles = () => (
 
 /* ══════════════════════════════════════════════
    HOOKS & UTILITIES
-══════════════════════════════════════════════ */
+════════════════════════════════════ */
 
 /* Animated number counter (easeOutCubic) */
 const AnimatedNumber = ({ value, duration = 1200 }) => {
@@ -325,7 +334,7 @@ const useMounted = (delay = 400) => {
 
 /* ══════════════════════════════════════════════
    KPICard — Gradient icon, shine sweep, counter
-══════════════════════════════════════════════ */
+════════════════════════════════════ */
 const KPICard = ({ icon, bgColor, label, value, valueColor, delay = 0, onClick }) => (
   <Card
     className="border-0 shadow-sm rounded-4 h-100 kpi-card fade-in-up"
@@ -386,7 +395,7 @@ const ChartTooltip = ({ payload, suffix }) => {
 
 /* ══════════════════════════════════════════════
    Shimmer Skeletons
-══════════════════════════════════════════════ */
+════════════════════════════════════ */
 const SkeletonCard = () => (
   <Card className="border-0 shadow-sm rounded-4">
     <Card.Body className="d-flex align-items-center py-3 px-3">
@@ -439,8 +448,25 @@ const EmployeeDashboard = () => {
   const [error, setError] = useState("");
   const mounted = useMounted(500);
 
+  // ═══════════════════════════════════════════════
+  // NEW: Asset restriction state (ticket creation)
+  // ═══════════════════════════════════════════════
+  const [canCreateTicket, setCanCreateTicket] = useState(true);
+
   useEffect(() => {
     fetchDashboard();
+  }, []);
+
+  // ═══════════════════════════════════════════════
+  // NEW: Check if employee has active assets
+  // ═══════════════════════════════════════════════
+  useEffect(() => {
+    getMyEligibleAssets()
+      .then((res) => {
+        const list = Array.isArray(res.data) ? res.data : [];
+        setCanCreateTicket(list.length > 0);
+      })
+      .catch(() => setCanCreateTicket(true));
   }, []);
 
   const fetchDashboard = async (silent = false) => {
@@ -593,10 +619,23 @@ const EmployeeDashboard = () => {
             <Button className="glass-btn rounded-pill px-3 py-2 d-flex align-items-center" onClick={() => fetchDashboard(true)} disabled={refreshing}>
               {refreshing ? <FaSyncAlt className="spin-icon" /> : <FaSyncAlt />}
             </Button>
-            {/* Primary CTA */}
-            <Button className="btn-cta px-4 py-2 d-flex align-items-center gap-2" onClick={() => navigate("/employee/tickets/new")}>
-              <FaPlus className="cta-icon" /> Raise New Complaint
-            </Button>
+
+            {/* ═══════════════════════════════════════════
+                NEW: Primary CTA — asset restriction check
+                ═══════════════════════════════════════════ */}
+            {canCreateTicket ? (
+              <Button className="btn-cta px-4 py-2 d-flex align-items-center gap-2" onClick={() => navigate("/employee/tickets/new")}>
+                <FaPlus className="cta-icon" /> Raise New Complaint
+              </Button>
+            ) : (
+              <Button
+                className="btn-cta px-4 py-2 d-flex align-items-center gap-2"
+                disabled
+                title="No IT asset assigned — contact IT Admin"
+              >
+                <FaLock /> No Asset Assigned
+              </Button>
+            )}
           </div>
         </div>
       </div>
@@ -868,9 +907,17 @@ const EmployeeDashboard = () => {
               <div className="text-center text-muted py-5">
                 <FaTicketAlt style={{ fontSize: "2.5rem", color: "#dee2e6" }} />
                 <p className="mt-2 mb-0">No recent tickets found.</p>
-                <Button variant="primary" size="sm" className="rounded-pill px-3 mt-3" onClick={() => navigate("/employee/tickets/new")}>
-                  <FaPlus className="me-1" /> Raise your first complaint
-                </Button>
+                {/* ═══ NEW: Conditional empty state button ═══ */}
+                {canCreateTicket ? (
+                  <Button variant="primary" size="sm" className="rounded-pill px-3 mt-3" onClick={() => navigate("/employee/tickets/new")}>
+                    <FaPlus className="me-1" /> Raise your first complaint
+                  </Button>
+                ) : (
+                  <div className="text-muted small mt-3 d-flex align-items-center justify-content-center gap-2">
+                    <FaLock style={{ fontSize: "0.7rem" }} />
+                    Contact IT Admin to get an asset assigned before creating tickets.
+                  </div>
+                )}
               </div>
             )}
           </Card>
@@ -911,6 +958,11 @@ const EmployeeDashboard = () => {
                   <div className="text-center text-muted py-4">
                     <FaBoxOpen style={{ fontSize: "2.2rem", color: "#dee2e6" }} />
                     <p className="mt-2 mb-0 small">No assets assigned</p>
+                    {/* ═══ NEW: Ticket restriction note ═══ */}
+                    <div className="mt-2 small d-flex align-items-center justify-content-center gap-1" style={{ color: "#dc2626" }}>
+                      <FaLock style={{ fontSize: "0.65rem" }} />
+                      Ticket creation blocked
+                    </div>
                   </div>
                 )}
               </Card.Body>

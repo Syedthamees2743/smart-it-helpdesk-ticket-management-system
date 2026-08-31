@@ -52,6 +52,7 @@ class Ticket(models.Model):
     department = models.ForeignKey('departments.Department', on_delete=models.SET_NULL, null=True, blank=True, related_name='tickets', verbose_name='Department')
     category = models.ForeignKey(IssueCategory, on_delete=models.SET_NULL, null=True, blank=True, related_name='tickets', verbose_name='Category')
     assigned_technician = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='assigned_tickets', verbose_name='Assigned Technician')
+    asset = models.ForeignKey('assets.Asset', on_delete=models.SET_NULL, null=True, blank=True, related_name='tickets', verbose_name='Affected Asset')
     
     title = models.CharField(max_length=200, verbose_name='Title')
     description = models.TextField(verbose_name='Description')

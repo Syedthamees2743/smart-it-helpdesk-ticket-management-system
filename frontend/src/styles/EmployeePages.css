@@ -644,3 +644,56 @@
     margin-top: 4px;
   }
 }
+
+/* =========================================================
+   FEEDBACK COLUMN — My Tickets table
+   ========================================================= */
+
+/* Stars display (submitted feedback) */
+.emp-feedback-stars {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 8px;
+  transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.emp-feedback-stars svg {
+  color: #f59e0b;
+  font-size: 0.78rem;
+}
+
+.emp-feedback-stars:hover {
+  background: #fffbeb;
+  transform: scale(1.06);
+}
+
+.emp-feedback-count {
+  margin-left: 6px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #b45309;
+}
+
+/* Rate button (no feedback yet) */
+.emp-btn-feedback {
+  border: 1px solid #fde68a !important;
+  background: linear-gradient(135deg, #fffbeb, #fef3c7) !important;
+  color: #b45309 !important;
+  font-size: 0.72rem !important;
+  font-weight: 600 !important;
+  border-radius: 20px !important;
+  padding: 4px 12px !important;
+  display: inline-flex;
+  align-items: center;
+  transition: all 0.2s ease !important;
+}
+
+.emp-btn-feedback:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 3px 8px rgba(217, 119, 6, 0.2);
+  background: linear-gradient(135deg, #fef3c7, #fde68a) !important;
+  color: #92400e !important;
+}

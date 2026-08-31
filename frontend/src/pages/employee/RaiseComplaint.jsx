@@ -30,23 +30,35 @@ import {
   FaChevronRight,
   FaCloudUploadAlt,
   FaTimesCircle,
+  FaLaptop,
+  FaLock,
+  FaHeadset,
+  FaInfoCircle,
 } from "react-icons/fa";
 
-import { createTicket } from "../../services/ticketService";
+import { createTicket, getMyEligibleAssets } from "../../services/ticketService";
 import { getCategories } from "../../services/categoryService";
 import aiService from "../../services/aiService";
+
+import "../../styles/RaiseComplaint.css";
 
 const RaiseComplaint = () => {
   const navigate = useNavigate();
 
   const [categories, setCategories] = useState([]);
   const [categoryLoading, setCategoryLoading] = useState(true);
+
+  const [assets, setAssets] = useState([]);
+  const [assetLoading, setAssetLoading] = useState(true);
+  const [hasNoAssets, setHasNoAssets] = useState(false);
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [fileName, setFileName] = useState("");
   const [dragOver, setDragOver] = useState(false);
 
   const [formData, setFormData] = useState({
+    asset: "",
     category: "",
     title: "",
     description: "",
@@ -97,6 +109,27 @@ const RaiseComplaint = () => {
     };
 
     loadAllCategories();
+  }, []);
+
+  /* ── Fetch Employee's Eligible Assets ── */
+  useEffect(() => {
+    const loadMyAssets = async () => {
+      setAssetLoading(true);
+      try {
+        const res = await getMyEligibleAssets();
+        const list = Array.isArray(res.data) ? res.data : [];
+        setAssets(list);
+        setHasNoAssets(list.length === 0);
+      } catch (err) {
+        console.error("Failed to load assets:", err);
+        setAssets([]);
+        setHasNoAssets(true);
+      } finally {
+        setAssetLoading(false);
+      }
+    };
+
+    loadMyAssets();
   }, []);
 
   /* ── Handlers ── */
@@ -202,6 +235,12 @@ const RaiseComplaint = () => {
     setLoading(true);
     setError("");
 
+    if (!formData.asset) {
+      setError("Please select the affected asset for this ticket.");
+      setLoading(false);
+      return;
+    }
+
     if (!formData.category) {
       setError("Please select an issue category.");
       setLoading(false);
@@ -209,6 +248,7 @@ const RaiseComplaint = () => {
     }
 
     const data = new FormData();
+    data.append("asset", formData.asset);
     data.append("category", formData.category);
     data.append("title", formData.title);
     data.append("description", formData.description);
@@ -233,40 +273,12 @@ const RaiseComplaint = () => {
     }
   };
 
-  /* ── Priority Options (Visual Selector) ── */
+  /* ── Priority Options ── */
   const priorityOptions = [
-    {
-      value: "low",
-      label: "Low",
-      color: "#22c55e",
-      bg: "#f0fdf4",
-      desc: "Minor issue, no urgency",
-      sla: "48h SLA",
-    },
-    {
-      value: "medium",
-      label: "Medium",
-      color: "#3b82f6",
-      bg: "#eff6ff",
-      desc: "Normal priority",
-      sla: "24h SLA",
-    },
-    {
-      value: "high",
-      label: "High",
-      color: "#f59e0b",
-      bg: "#fffbeb",
-      desc: "Urgent, affects work",
-      sla: "8h SLA",
-    },
-    {
-      value: "critical",
-      label: "Critical",
-      color: "#dc2626",
-      bg: "#fef2f2",
-      desc: "System down, immediate",
-      sla: "4h SLA",
-    },
+    { value: "low", label: "Low", color: "#22c55e", bg: "#f0fdf4", border: "#bbf7d0", desc: "Minor issue, no urgency", sla: "48h SLA" },
+    { value: "medium", label: "Medium", color: "#3b82f6", bg: "#eff6ff", border: "#bfdbfe", desc: "Normal priority", sla: "24h SLA" },
+    { value: "high", label: "High", color: "#f59e0b", bg: "#fffbeb", border: "#fde68a", desc: "Urgent, affects work", sla: "8h SLA" },
+    { value: "critical", label: "Critical", color: "#dc2626", bg: "#fef2f2", border: "#fecaca", desc: "System down, immediate", sla: "4h SLA" },
   ];
 
   const getPriorityColor = (priority) => {
@@ -287,38 +299,120 @@ const RaiseComplaint = () => {
     "Attach screenshots if possible",
   ];
 
-  const selectedPriority = priorityOptions.find(
-    (p) => p.value === formData.priority,
-  );
+  const selectedAsset = formData.asset
+    ? assets.find((a) => String(a.id) === String(formData.asset))
+    : null;
 
+  /* ═══════════ SKELETON LOADING ═══════════ */
+  if (assetLoading || categoryLoading) {
+    return (
+      <div className="rc-page">
+        <div className="rc-header">
+          <div className="rc-skeleton rc-skeleton-icon" />
+          <div>
+            <div className="rc-skeleton rc-skeleton-title" />
+            <div className="rc-skeleton rc-skeleton-sub" />
+          </div>
+        </div>
+        <Row className="g-4">
+          <Col lg={8}>
+            <div className="rc-skeleton rc-skeleton-card">
+              {[1, 2, 3, 4, 5].map((i) => (
+                <div key={i} className="rc-skeleton rc-skeleton-field" />
+              ))}
+            </div>
+          </Col>
+          <Col lg={4}>
+            <div className="rc-skeleton rc-skeleton-side" />
+          </Col>
+        </Row>
+      </div>
+    );
+  }
+
+  /* ═══════════ BLOCKED STATE ═══════════ */
+  if (hasNoAssets) {
+    return (
+      <div className="rc-page">
+        <div className="rc-header">
+          <div className="rc-header-icon">
+            <FaTicketAlt />
+          </div>
+          <div>
+            <h4 className="rc-header-title">Raise Complaint</h4>
+            <p className="rc-header-sub">Submit a new IT support request</p>
+          </div>
+        </div>
+
+        <Card className="rc-card rc-blocked-card">
+          <Card.Body className="text-center py-5 px-4">
+            <div className="rc-blocked-icon">
+              <FaLock />
+            </div>
+
+            <h4 className="rc-blocked-title">Ticket Creation Blocked</h4>
+
+            <p className="rc-blocked-text">
+              You cannot create a support ticket because no IT asset is
+              currently assigned to your account. Please contact the IT Admin
+              to get an asset assigned first.
+            </p>
+
+            <div className="rc-blocked-info">
+              <div className="rc-blocked-info-icon">
+                <FaHeadset />
+              </div>
+              <div className="text-start">
+                <div className="rc-blocked-info-title">Need an asset?</div>
+                <div className="rc-blocked-info-text">
+                  Contact your IT Administrator to request an asset assignment.
+                </div>
+              </div>
+            </div>
+
+            <div className="d-flex gap-2 justify-content-center flex-wrap">
+              <Button
+                variant="light"
+                className="rc-btn-outline-pill px-4 py-2"
+                onClick={() => navigate("/employee/tickets")}
+              >
+                View My Tickets
+              </Button>
+              <Button
+                className="rc-btn-primary-pill px-4 py-2"
+                onClick={() => navigate("/employee/assets")}
+              >
+                <FaLaptop className="me-2" /> Check My Assets
+              </Button>
+            </div>
+          </Card.Body>
+        </Card>
+      </div>
+    );
+  }
+
+  /* ═══════════ NORMAL FORM ═══════════ */
   return (
-    <div
-      style={{ backgroundColor: "#f8f9fa", minHeight: "100vh" }}
-      className="py-4 px-3 px-md-4"
-    >
+    <div className="rc-page">
       {/* ════════════ HEADER ════════════ */}
-      <div className="d-flex align-items-center gap-3 mb-4">
-        <div
-          className="d-flex align-items-center justify-content-center rounded-4 shadow-sm flex-shrink-0"
-          style={{
-            width: 56,
-            height: 56,
-            background: "linear-gradient(135deg, #2563eb, #3b82f6)",
-          }}
-        >
-          <FaTicketAlt style={{ fontSize: "1.4rem", color: "white" }} />
+      <div className="rc-header">
+        <div className="rc-header-icon">
+          <FaTicketAlt />
         </div>
-        <div>
-          <h4 className="mb-1 fw-bold text-dark">Raise Complaint</h4>
-          <p className="text-muted mb-0">Submit a new IT support request</p>
+        <div className="flex-grow-1">
+          <h4 className="rc-header-title">Raise Complaint</h4>
+          <p className="rc-header-sub">Submit a new IT support request</p>
         </div>
+        <Badge pill className="rc-asset-count">
+          <FaLaptop /> {assets.length} asset{assets.length !== 1 ? "s" : ""} assigned
+        </Badge>
       </div>
 
       {/* ════════════ ERROR ════════════ */}
       {error && (
         <Alert
           variant="danger"
-          className="mb-4 rounded-4 border-0 d-flex align-items-center"
+          className="mb-4 rounded-4 border-0 d-flex align-items-center rc-alert-shake"
           dismissible
           onClose={() => setError("")}
         >
@@ -330,19 +424,65 @@ const RaiseComplaint = () => {
       <Row className="g-4">
         {/* ════════════ MAIN FORM ════════════ */}
         <Col lg={8}>
-          <Card className="border-0 shadow-sm rounded-4">
+          <Card className="rc-card">
             <Card.Body className="p-4">
               <Form onSubmit={handleSubmit} noValidate>
-                {/* ── TITLE ── */}
-                <Form.Group className="mb-4">
-                  <Form.Label
-                    className="fw-semibold text-dark mb-1"
-                    style={{ fontSize: "0.85rem" }}
+
+                {/* ═══ AFFECTED ASSET ═══ */}
+                <Form.Group className="mb-4 rc-anim" style={{ animationDelay: "0.1s" }}>
+                  <Form.Label className="rc-label">
+                    <FaLaptop className="rc-label-icon" />
+                    Affected Asset <span className="text-danger">*</span>
+                  </Form.Label>
+
+                  <Form.Select
+                    name="asset"
+                    value={formData.asset}
+                    onChange={handleChange}
+                    required
+                    className="rc-input"
                   >
-                    <FaHeading
-                      className="me-1 text-muted"
-                      style={{ fontSize: "0.75rem" }}
-                    />
+                    <option value="">Select the affected asset...</option>
+                    {assets.map((asset) => (
+                      <option key={asset.id} value={asset.id}>
+                        {asset.asset_code} — {asset.asset_name}
+                        {asset.category_name ? ` (${asset.category_name})` : ""}
+                      </option>
+                    ))}
+                  </Form.Select>
+
+                  {selectedAsset && (
+                    <div className="rc-asset-selected">
+                      <div className="rc-asset-selected-icon">
+                        <FaLaptop />
+                      </div>
+                      <div>
+                        <div className="rc-asset-selected-name">
+                          {selectedAsset.asset_name}
+                        </div>
+                        <div className="rc-asset-selected-meta">
+                          {selectedAsset.asset_code}
+                          {selectedAsset.brand || selectedAsset.model
+                            ? ` • ${[selectedAsset.brand, selectedAsset.model]
+                                .filter(Boolean)
+                                .join(" ")}`
+                            : ""}
+                          {selectedAsset.category_name
+                            ? ` • ${selectedAsset.category_name}`
+                            : ""}
+                        </div>
+                      </div>
+                      <span className="rc-asset-selected-check">
+                        <FaCheck />
+                      </span>
+                    </div>
+                  )}
+                </Form.Group>
+
+                {/* ═══ TITLE ═══ */}
+                <Form.Group className="mb-4 rc-anim" style={{ animationDelay: "0.18s" }}>
+                  <Form.Label className="rc-label">
+                    <FaHeading className="rc-label-icon" />
                     Title <span className="text-danger">*</span>
                   </Form.Label>
                   <Form.Control
@@ -352,29 +492,19 @@ const RaiseComplaint = () => {
                     placeholder="Brief summary of the issue"
                     required
                     maxLength={200}
-                    className="shadow-none py-2"
-                    style={{ borderRadius: "12px", fontSize: "0.92rem" }}
+                    className="rc-input"
                   />
                   <div className="d-flex justify-content-end">
-                    <Form.Text
-                      className="text-muted mt-1"
-                      style={{ fontSize: "0.7rem" }}
-                    >
+                    <Form.Text className="rc-char-count">
                       {formData.title.length}/200
                     </Form.Text>
                   </div>
                 </Form.Group>
 
-                {/* ── DESCRIPTION ── */}
-                <Form.Group className="mb-4">
-                  <Form.Label
-                    className="fw-semibold text-dark mb-1"
-                    style={{ fontSize: "0.85rem" }}
-                  >
-                    <FaAlignLeft
-                      className="me-1 text-muted"
-                      style={{ fontSize: "0.75rem" }}
-                    />
+                {/* ═══ DESCRIPTION ═══ */}
+                <Form.Group className="mb-4 rc-anim" style={{ animationDelay: "0.26s" }}>
+                  <Form.Label className="rc-label">
+                    <FaAlignLeft className="rc-label-icon" />
                     Description <span className="text-danger">*</span>
                   </Form.Label>
                   <Form.Control
@@ -385,64 +515,36 @@ const RaiseComplaint = () => {
                     onChange={handleChange}
                     placeholder="Explain the issue in detail — what happened, when it started, any error messages, steps you've already tried..."
                     required
-                    className="shadow-none"
-                    style={{
-                      borderRadius: "12px",
-                      fontSize: "0.92rem",
-                      resize: "vertical",
-                    }}
+                    className="rc-input rc-textarea"
                   />
                 </Form.Group>
 
-                {/* ── AI ANALYZE BAR ── */}
-                <div
-                  className="d-flex align-items-center justify-content-between flex-wrap gap-2 p-3 rounded-4 mb-3"
-                  style={{
-                    backgroundColor: "#f5f3ff",
-                    border: "1px dashed #c4b5fd",
-                  }}
-                >
+                {/* ═══ AI ANALYZE BAR ═══ */}
+                <div className="rc-ai-bar rc-anim" style={{ animationDelay: "0.34s" }}>
                   <div className="d-flex align-items-center gap-2">
-                    <div
-                      className="rounded-3 d-flex align-items-center justify-content-center flex-shrink-0"
-                      style={{
-                        width: "34px",
-                        height: "34px",
-                        backgroundColor: "#2563eb",
-                      }}
-                    >
-                      <FaMagic style={{ fontSize: "0.8rem", color: "white" }} />
+                    <div className="rc-ai-bar-icon">
+                      <FaMagic />
                     </div>
                     <div>
-                      <div
-                        className="fw-semibold text-dark"
-                        style={{ fontSize: "0.85rem" }}
-                      >
-                        Smart AI Assistant
-                      </div>
-                      <div
-                        className="text-muted"
-                        style={{ fontSize: "0.72rem" }}
-                      >
-                        Auto-detects the right category & priority
+                      <div className="rc-ai-bar-title">Smart AI Assistant</div>
+                      <div className="rc-ai-bar-sub">
+                        Auto-detects the right category &amp; priority
                       </div>
                     </div>
                   </div>
                   <Button
                     type="button"
-                    className="rounded-pill px-4 border-0 shadow-sm"
-                    style={{
-                      backgroundColor: "#2563eb",
-                      fontSize: "0.82rem",
-                      fontWeight: 600,
-                    }}
+                    className="rc-btn-primary-pill rc-ai-btn"
                     onClick={handleAnalyze}
                     disabled={aiLoading || loading}
                   >
                     {aiLoading ? (
                       <>
                         <Spinner size="sm" className="me-2" />
-                        Analyzing...
+                        Analyzing
+                        <span className="rc-dots">
+                          <span>.</span><span>.</span><span>.</span>
+                        </span>
                       </>
                     ) : (
                       <>
@@ -452,151 +554,59 @@ const RaiseComplaint = () => {
                     )}
                   </Button>
                 </div>
-                {/* ── AI ERROR ── */}
+
+                {/* ═══ AI ERROR ═══ */}
                 {aiError && (
                   <Alert
-                    className="py-2 px-3 mb-3 rounded-4 border-0 d-flex align-items-start"
+                    className="py-2 px-3 mb-3 rounded-4 border-0 d-flex align-items-start rc-ai-error"
                     dismissible
                     onClose={() => setAiError("")}
-                    style={{
-                      backgroundColor: "#FFF7ED",
-                      color: "#9A3412",
-                      border: "1px solid #FED7AA",
-                    }}
                   >
-                    <div
-                      className="d-flex align-items-center justify-content-center rounded-circle flex-shrink-0 me-2"
-                      style={{
-                        width: "24px",
-                        height: "24px",
-                        backgroundColor: "#FFEDD5",
-                      }}
-                    >
-                      <FaRobot
-                        style={{
-                          fontSize: "0.75rem",
-                          color: "#EA580C",
-                        }}
-                      />
+                    <div className="rc-ai-error-icon">
+                      <FaRobot />
                     </div>
-
-                    <div style={{ fontSize: "0.78rem", lineHeight: 1.5 }}>
+                    <div className="rc-ai-error-text">
                       <strong>AI Unavailable</strong>
                       <span className="ms-1">{aiError}</span>
                     </div>
                   </Alert>
                 )}
 
-                {/* ── AI RESULT ── */}
+                {/* ═══ AI RESULT ═══ */}
                 {aiResult && (
-                  <div
-                    className="rounded-4 overflow-hidden mb-4"
-                    style={{
-                      border: "1px solid #DDD6FE",
-                      backgroundColor: "#FFFFFF",
-                      boxShadow: "0 2px 8px rgba(79, 70, 229, 0.06)",
-                    }}
-                  >
-                    {/* ── AI HEADER ── */}
-                    <div
-                      className="d-flex align-items-center justify-content-between px-3 py-3"
-                      style={{
-                        background:
-                          "linear-gradient(135deg, #F5F3FF 0%, #EEF2FF 100%)",
-                        borderBottom: "1px solid #E9E5FF",
-                      }}
-                    >
+                  <div className="rc-ai-result">
+                    {/* AI HEADER */}
+                    <div className="rc-ai-result-header">
                       <div className="d-flex align-items-center gap-2">
-                        {/* AI Icon */}
-                        <div
-                          className="d-flex align-items-center justify-content-center rounded-3"
-                          style={{
-                            width: "32px",
-                            height: "32px",
-                            background:
-                              "linear-gradient(135deg, #4F46E5, #7C3AED)",
-                            color: "#FFFFFF",
-                            boxShadow: "0 3px 8px rgba(79, 70, 229, 0.2)",
-                          }}
-                        >
-                          <FaMagic style={{ fontSize: "0.8rem" }} />
+                        <div className="rc-ai-result-logo">
+                          <FaMagic />
                         </div>
-
                         <div>
-                          <div
-                            className="fw-bold text-dark"
-                            style={{
-                              fontSize: "0.86rem",
-                              lineHeight: 1.2,
-                            }}
-                          >
-                            AI Suggestion
-                          </div>
-
-                          <div
-                            className="text-muted"
-                            style={{
-                              fontSize: "0.68rem",
-                              marginTop: "2px",
-                            }}
-                          >
+                          <div className="rc-ai-result-title">AI Suggestion</div>
+                          <div className="rc-ai-result-sub">
                             Smart analysis based on your ticket
                           </div>
                         </div>
                       </div>
-
-                      {/* Close */}
-                      <Button
-                        variant="light"
-                        className="border-0 rounded-circle d-flex align-items-center justify-content-center p-0"
-                        style={{
-                          width: "28px",
-                          height: "28px",
-                          backgroundColor: "#FFFFFF",
-                          color: "#64748B",
-                        }}
+                      <button
+                        type="button"
+                        className="rc-ai-close"
                         onClick={handleDismissAi}
                         title="Dismiss AI suggestion"
                       >
                         <FaTimes size={10} />
-                      </Button>
+                      </button>
                     </div>
 
-                    {/* ── AI CONTENT ── */}
+                    {/* AI CONTENT */}
                     <div className="p-3">
                       {/* Category + Priority */}
                       <Row className="g-3 mb-3">
-                        {/* Category */}
                         <Col xs={12} sm={6}>
-                          <div
-                            className="rounded-3 p-3 h-100"
-                            style={{
-                              backgroundColor: "#F8FAFC",
-                              border: "1px solid #E2E8F0",
-                            }}
-                          >
-                            <div
-                              className="text-muted mb-2"
-                              style={{
-                                fontSize: "0.67rem",
-                                fontWeight: 700,
-                                letterSpacing: "0.04em",
-                              }}
-                            >
-                              SUGGESTED CATEGORY
-                            </div>
-
+                          <div className="rc-ai-box" style={{ animationDelay: "0.1s" }}>
+                            <div className="rc-ai-box-label">Suggested Category</div>
                             {aiResult.suggested_category ? (
-                              <Badge
-                                pill
-                                className="px-3 py-2"
-                                style={{
-                                  backgroundColor: "#EDE9FE",
-                                  color: "#E2E8F0",
-                                  fontSize: "0.76rem",
-                                  fontWeight: 600,
-                                }}
-                              >
+                              <Badge pill className="rc-ai-cat-badge">
                                 {aiResult.suggested_category}
                               </Badge>
                             ) : (
@@ -605,40 +615,17 @@ const RaiseComplaint = () => {
                           </div>
                         </Col>
 
-                        {/* Priority */}
                         <Col xs={12} sm={6}>
-                          <div
-                            className="rounded-3 p-3 h-100"
-                            style={{
-                              backgroundColor: "#F8FAFC",
-                              border: "1px solid #E2E8F0",
-                            }}
-                          >
-                            <div
-                              className="text-muted mb-2"
-                              style={{
-                                fontSize: "0.67rem",
-                                fontWeight: 700,
-                                letterSpacing: "0.04em",
-                              }}
-                            >
-                              SUGGESTED PRIORITY
-                            </div>
-
+                          <div className="rc-ai-box" style={{ animationDelay: "0.2s" }}>
+                            <div className="rc-ai-box-label">Suggested Priority</div>
                             {aiResult.suggested_priority ? (
                               <Badge
                                 pill
-                                className="px-3 py-2"
+                                className="rc-ai-pri-badge"
                                 style={{
                                   backgroundColor:
-                                    getPriorityColor(
-                                      aiResult.suggested_priority,
-                                    ) + "18",
-                                  color: getPriorityColor(
-                                    aiResult.suggested_priority,
-                                  ),
-                                  fontSize: "0.76rem",
-                                  fontWeight: 700,
+                                    getPriorityColor(aiResult.suggested_priority) + "18",
+                                  color: getPriorityColor(aiResult.suggested_priority),
                                 }}
                               >
                                 {aiResult.suggested_priority
@@ -653,164 +640,64 @@ const RaiseComplaint = () => {
                         </Col>
                       </Row>
 
-                      {/* ── AI REASON ── */}
+                      {/* AI REASON */}
                       {aiResult.reason && (
-                        <div
-                          className="rounded-3 p-3 mb-3"
-                          style={{
-                            backgroundColor: "#F8FAFC",
-                            border: "1px solid #E2E8F0",
-                          }}
-                        >
-                          <div
-                            className="d-flex align-items-center gap-2 mb-1"
-                            style={{
-                              color: "#475569",
-                              fontSize: "0.75rem",
-                              fontWeight: 700,
-                            }}
-                          >
-                            <FaMagic
-                              style={{
-                                fontSize: "0.68rem",
-                                color: "#6366F1",
-                              }}
-                            />
+                        <div className="rc-ai-box rc-ai-reason" style={{ animationDelay: "0.3s" }}>
+                          <div className="rc-ai-reason-title">
+                            <FaMagic className="rc-ai-reason-icon" />
                             AI Reasoning
                           </div>
+                          <div className="rc-ai-reason-text">{aiResult.reason}</div>
+                        </div>
+                      )}
 
-                          <div
-                            className="text-muted"
-                            style={{
-                              fontSize: "0.78rem",
-                              lineHeight: 1.55,
-                            }}
-                          >
-                            {aiResult.reason}
+                      {/* RELATED ARTICLES */}
+                      {aiResult.related_faqs && aiResult.related_faqs.length > 0 && (
+                        <div className="rc-ai-faqs" style={{ animationDelay: "0.4s" }}>
+                          <div className="rc-ai-faqs-title">
+                            <div className="rc-ai-faqs-icon">
+                              <FaBook />
+                            </div>
+                            Related Articles
+                          </div>
+
+                          <div className="d-flex flex-column gap-1">
+                            {aiResult.related_faqs.map((faq, index) => (
+                              <div
+                                key={faq.id || index}
+                                className="rc-faq-item"
+                                onClick={() => navigate("/employee/faqs")}
+                              >
+                                <FaChevronRight className="rc-faq-arrow" />
+                                <span>{faq.question}</span>
+                              </div>
+                            ))}
                           </div>
                         </div>
                       )}
 
-                      {/* ── RELATED ARTICLES ── */}
-                      {aiResult.related_faqs &&
-                        aiResult.related_faqs.length > 0 && (
-                          <div className="mb-3">
-                            <div
-                              className="d-flex align-items-center gap-2 mb-2"
-                              style={{
-                                fontSize: "0.76rem",
-                                fontWeight: 700,
-                                color: "#1E293B",
-                              }}
-                            >
-                              <div
-                                className="d-flex align-items-center justify-content-center rounded-2"
-                                style={{
-                                  width: "24px",
-                                  height: "24px",
-                                  backgroundColor: "#EFF6FF",
-                                }}
-                              >
-                                <FaBook
-                                  style={{
-                                    fontSize: "0.65rem",
-                                    color: "#2563EB",
-                                  }}
-                                />
-                              </div>
-                              Related Articles
-                            </div>
-
-                            <div className="d-flex flex-column gap-1">
-                              {aiResult.related_faqs.map((faq, index) => (
-                                <div
-                                  key={faq.id || index}
-                                  className="d-flex align-items-center gap-2 rounded-3 px-2 py-2"
-                                  style={{
-                                    fontSize: "0.76rem",
-                                    color: "#2563EB",
-                                    backgroundColor: "#F8FAFC",
-                                    cursor: "pointer",
-                                    transition: "all 0.15s ease",
-                                  }}
-                                  onClick={() => navigate("/employee/faqs")}
-                                  onMouseEnter={(e) => {
-                                    e.currentTarget.style.backgroundColor =
-                                      "#EFF6FF";
-                                  }}
-                                  onMouseLeave={(e) => {
-                                    e.currentTarget.style.backgroundColor =
-                                      "#F8FAFC";
-                                  }}
-                                >
-                                  <FaChevronRight
-                                    style={{
-                                      fontSize: "0.55rem",
-                                      flexShrink: 0,
-                                    }}
-                                  />
-
-                                  <span>{faq.question}</span>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-
-                      {/* ── ACTIONS ── */}
-                      <div
-                        className="d-flex align-items-center flex-wrap gap-2 pt-3"
-                        style={{
-                          borderTop: "1px solid #F1F5F9",
-                        }}
-                      >
-                        {/* Accept */}
+                      {/* ACTIONS */}
+                      <div className="rc-ai-actions" style={{ animationDelay: "0.5s" }}>
                         <Button
                           size="sm"
-                          className="rounded-pill px-4 border-0"
-                          style={{
-                            background:
-                              "linear-gradient(135deg, #4F46E5,#2563EB)",
-                            fontSize: "0.76rem",
-                            fontWeight: 600,
-                            boxShadow: "0 3px 8px rgba(79, 70, 229, 0.18)",
-                          }}
+                          className="rc-btn-primary-pill px-4"
                           onClick={handleAcceptSuggestion}
                         >
                           <FaCheck className="me-1" />
                           Accept Suggestion
                         </Button>
 
-                        {/* Dismiss */}
                         <Button
                           size="sm"
                           variant="light"
-                          className="border rounded-pill px-3"
-                          style={{
-                            fontSize: "0.76rem",
-                            fontWeight: 500,
-                            color: "#475569",
-                            borderColor: "#E2E8F0",
-                          }}
+                          className="rc-btn-outline-pill px-3"
                           onClick={handleDismissAi}
                         >
                           Dismiss
                         </Button>
 
-                        {/* Verification text */}
-                        <div
-                          className="d-flex align-items-center gap-1 ms-auto"
-                          style={{
-                            fontSize: "0.67rem",
-                            color: "#94A3B8",
-                          }}
-                        >
-                          <FaCheck
-                            style={{
-                              fontSize: "0.55rem",
-                              color: "#94A3B8",
-                            }}
-                          />
+                        <div className="rc-ai-note">
+                          <FaCheck />
                           Verify before submitting
                         </div>
                       </div>
@@ -818,16 +705,10 @@ const RaiseComplaint = () => {
                   </div>
                 )}
 
-                {/* ── CATEGORY ── */}
-                <Form.Group className="mb-4">
-                  <Form.Label
-                    className="fw-semibold text-dark mb-1"
-                    style={{ fontSize: "0.85rem" }}
-                  >
-                    <FaTag
-                      className="me-1 text-muted"
-                      style={{ fontSize: "0.75rem" }}
-                    />
+                {/* ═══ CATEGORY ═══ */}
+                <Form.Group className="mb-4 rc-anim" style={{ animationDelay: "0.42s" }}>
+                  <Form.Label className="rc-label">
+                    <FaTag className="rc-label-icon" />
                     Category <span className="text-danger">*</span>
                   </Form.Label>
                   <Form.Select
@@ -836,13 +717,10 @@ const RaiseComplaint = () => {
                     onChange={handleChange}
                     required
                     disabled={categoryLoading}
-                    className="shadow-none py-2"
-                    style={{ borderRadius: "12px", fontSize: "0.92rem" }}
+                    className="rc-input"
                   >
                     <option value="">
-                      {categoryLoading
-                        ? "Loading categories..."
-                        : "Select Category"}
+                      {categoryLoading ? "Loading categories..." : "Select Category"}
                     </option>
                     {categories.map((category) => (
                       <option key={category.id} value={category.id}>
@@ -852,16 +730,10 @@ const RaiseComplaint = () => {
                   </Form.Select>
                 </Form.Group>
 
-                {/* ── PRIORITY (Visual Selector!) ── */}
-                <Form.Group className="mb-4">
-                  <Form.Label
-                    className="fw-semibold text-dark mb-2"
-                    style={{ fontSize: "0.85rem" }}
-                  >
-                    <FaFlag
-                      className="me-1 text-muted"
-                      style={{ fontSize: "0.75rem" }}
-                    />
+                {/* ═══ PRIORITY ═══ */}
+                <Form.Group className="mb-4 rc-anim" style={{ animationDelay: "0.5s" }}>
+                  <Form.Label className="rc-label">
+                    <FaFlag className="rc-label-icon" />
                     Priority
                   </Form.Label>
 
@@ -871,59 +743,38 @@ const RaiseComplaint = () => {
                       return (
                         <Col xs={6} md={3} key={priority.value}>
                           <div
-                            className="rounded-4 p-3 h-100"
-                            style={{
-                              cursor: "pointer",
-                              border: isSelected
-                                ? `2px solid ${priority.color}`
-                                : "1px solid #e2e8f0",
-                              backgroundColor: isSelected
-                                ? priority.bg
-                                : "#ffffff",
-                              transition: "all 0.15s",
-                              transform: isSelected
-                                ? "translateY(-2px)"
-                                : "none",
-                              boxShadow: isSelected
-                                ? `0 4px 12px ${priority.color}25`
-                                : "none",
-                            }}
+                            className={`rc-priority-card ${isSelected ? "rc-priority-selected" : ""}`}
+                            style={
+                              isSelected
+                                ? {
+                                    borderColor: priority.color,
+                                    backgroundColor: priority.bg,
+                                    boxShadow: `0 6px 16px ${priority.color}30`,
+                                  }
+                                : undefined
+                            }
                             onClick={() => handlePrioritySelect(priority.value)}
                           >
                             <div className="d-flex align-items-center justify-content-between">
                               <span
-                                className="fw-bold"
-                                style={{
-                                  color: priority.color,
-                                  fontSize: "0.85rem",
-                                }}
+                                className="rc-priority-label"
+                                style={{ color: priority.color }}
                               >
                                 {priority.label}
                               </span>
                               {isSelected && (
-                                <FaCheck
-                                  className="rounded-circle"
-                                  style={{
-                                    backgroundColor: priority.color,
-                                    color: "white",
-                                    fontSize: "0.6rem",
-                                    padding: "2px",
-                                  }}
-                                />
+                                <span
+                                  className="rc-priority-check"
+                                  style={{ backgroundColor: priority.color }}
+                                >
+                                  <FaCheck />
+                                </span>
                               )}
                             </div>
+                            <div className="rc-priority-desc">{priority.desc}</div>
                             <div
-                              className="text-muted mt-1"
-                              style={{ fontSize: "0.7rem", lineHeight: 1.4 }}
-                            >
-                              {priority.desc}
-                            </div>
-                            <div
-                              className="mt-2 fw-semibold"
-                              style={{
-                                fontSize: "0.65rem",
-                                color: priority.color,
-                              }}
+                              className="rc-priority-sla"
+                              style={{ color: priority.color }}
                             >
                               ⏱ {priority.sla}
                             </div>
@@ -934,39 +785,16 @@ const RaiseComplaint = () => {
                   </Row>
                 </Form.Group>
 
-                {/* ── FILE UPLOAD (Drag & Drop) ── */}
-                <Form.Group className="mb-4">
-                  <Form.Label
-                    className="fw-semibold text-dark mb-2"
-                    style={{ fontSize: "0.85rem" }}
-                  >
-                    <FaImage
-                      className="me-1 text-muted"
-                      style={{ fontSize: "0.75rem" }}
-                    />
+                {/* ═══ FILE UPLOAD ═══ */}
+                <Form.Group className="mb-4 rc-anim" style={{ animationDelay: "0.58s" }}>
+                  <Form.Label className="rc-label">
+                    <FaImage className="rc-label-icon" />
                     Screenshot / Attachment
-                    <span className="text-muted fw-normal ms-1">
-                      (optional)
-                    </span>
+                    <span className="rc-optional">(optional)</span>
                   </Form.Label>
 
                   <div
-                    className="rounded-4 position-relative"
-                    style={{
-                      border: dragOver
-                        ? "2px dashed #4f46e5"
-                        : fileName
-                          ? "2px dashed #22c55e"
-                          : "2px dashed #cbd5e1",
-                      backgroundColor: dragOver
-                        ? "#eef2ff"
-                        : fileName
-                          ? "#f0fdf4"
-                          : "#f8fafc",
-                      padding: fileName ? "16px" : "32px 16px",
-                      cursor: "pointer",
-                      transition: "all 0.15s",
-                    }}
+                    className={`rc-upload ${dragOver ? "rc-upload-drag" : ""} ${fileName ? "rc-upload-filled" : ""}`}
                     onDragOver={(e) => {
                       e.preventDefault();
                       setDragOver(true);
@@ -991,57 +819,30 @@ const RaiseComplaint = () => {
                         className="d-flex align-items-center gap-3"
                         onClick={(e) => e.stopPropagation()}
                       >
-                        <div
-                          className="rounded-3 d-flex align-items-center justify-content-center flex-shrink-0"
-                          style={{
-                            width: "44px",
-                            height: "44px",
-                            backgroundColor: "#dcfce7",
-                          }}
-                        >
-                          <FaImage
-                            style={{ color: "#22c55e", fontSize: "1.1rem" }}
-                          />
+                        <div className="rc-upload-file-icon">
+                          <FaImage />
                         </div>
                         <div className="flex-grow-1 min-w-0">
-                          <div
-                            className="fw-semibold text-dark text-truncate"
-                            style={{ fontSize: "0.85rem" }}
-                          >
-                            {fileName}
-                          </div>
-                          <div
-                            className="text-muted"
-                            style={{ fontSize: "0.72rem" }}
-                          >
+                          <div className="rc-upload-file-name">{fileName}</div>
+                          <div className="rc-upload-file-sub">
                             File attached successfully
                           </div>
                         </div>
                         <FaTimesCircle
-                          className="text-danger flex-shrink-0"
-                          style={{ fontSize: "1.1rem", cursor: "pointer" }}
+                          className="rc-upload-remove"
                           onClick={removeFile}
                           title="Remove file"
                         />
                       </div>
                     ) : (
                       <div className="text-center">
-                        <FaCloudUploadAlt
-                          style={{
-                            fontSize: "2rem",
-                            color: dragOver ? "#4f46e5" : "#94a3b8",
-                          }}
-                        />
-                        <div
-                          className="fw-semibold text-dark mt-2"
-                          style={{ fontSize: "0.85rem" }}
-                        >
-                          Click to upload or drag & drop
+                        <div className="rc-upload-cloud">
+                          <FaCloudUploadAlt />
                         </div>
-                        <div
-                          className="text-muted"
-                          style={{ fontSize: "0.72rem" }}
-                        >
+                        <div className="rc-upload-title">
+                          Click to upload or drag &amp; drop
+                        </div>
+                        <div className="rc-upload-hint">
                           Images (PNG, JPG) or PDF — Max 5MB
                         </div>
                       </div>
@@ -1049,25 +850,19 @@ const RaiseComplaint = () => {
                   </div>
                 </Form.Group>
 
-                {/* ── BUTTONS ── */}
-                <div className="d-flex justify-content-end gap-2 pt-3 border-top">
+                {/* ═══ BUTTONS ═══ */}
+                <div className="d-flex justify-content-end gap-2 pt-3 border-top rc-anim" style={{ animationDelay: "0.66s" }}>
                   <Button
                     type="button"
                     variant="light"
-                    className="border rounded-pill px-4 py-2"
-                    style={{ fontSize: "0.88rem", fontWeight: 500 }}
+                    className="rc-btn-outline-pill px-4 py-2"
                     onClick={() => navigate("/employee/tickets")}
                   >
                     Cancel
                   </Button>
                   <Button
                     type="submit"
-                    className="rounded-pill px-4 py-2 border-0 shadow-sm"
-                    style={{
-                      fontSize: "0.88rem",
-                      fontWeight: 600,
-                      background: "linear-gradient(135deg, #2563eb, #3b82f6)",
-                    }}
+                    className="rc-submit-btn px-4 py-2"
                     disabled={loading || categoryLoading}
                   >
                     {loading ? (
@@ -1083,231 +878,61 @@ const RaiseComplaint = () => {
                     )}
                   </Button>
                 </div>
+
               </Form>
             </Card.Body>
           </Card>
         </Col>
 
-        {/* ════════════ SIDE PANEL ════════════ */}
+        {/* ════════════ SIDEBAR ════════════ */}
         <Col lg={4}>
-          {/* ── TIPS ── */}
-          <Card className="border-0 shadow-sm rounded-4 mb-4">
+          {/* TIPS */}
+          <Card className="rc-card rc-tips-card rc-anim" style={{ animationDelay: "0.3s" }}>
             <Card.Body className="p-4">
-              <div className="d-flex align-items-center gap-2 mb-3">
-                <div
-                  className="rounded-3 d-flex align-items-center justify-content-center"
-                  style={{
-                    width: "32px",
-                    height: "32px",
-                    backgroundColor: "#fef3c7",
-                  }}
-                >
-                  <FaLightbulb
-                    style={{ fontSize: "0.8rem", color: "#f59e0b" }}
-                  />
+              <div className="rc-tips-header">
+                <div className="rc-tips-icon">
+                  <FaLightbulb />
                 </div>
-                <h6 className="fw-bold text-dark mb-0">
-                  Tips for a Good Ticket
-                </h6>
+                <h6 className="rc-tips-title mb-0">Quick Tips</h6>
               </div>
-              <div className="d-flex flex-column gap-2">
+
+              <div className="d-flex flex-column gap-1">
                 {tips.map((tip, index) => (
-                  <div key={index} className="d-flex align-items-start gap-2">
-                    <span
-                      className="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0 mt-0.5"
-                      style={{
-                        width: "18px",
-                        height: "18px",
-                        backgroundColor: "#d1fae5",
-                        color: "#059669",
-                        fontSize: "0.6rem",
-                        fontWeight: 700,
-                      }}
-                    >
-                      ✓
-                    </span>
-                    <span
-                      className="text-muted"
-                      style={{ fontSize: "0.8rem", lineHeight: 1.5 }}
-                    >
-                      {tip}
-                    </span>
+                  <div
+                    key={index}
+                    className="rc-tip-item"
+                    style={{ animationDelay: `${0.45 + index * 0.09}s` }}
+                  >
+                    <span className="rc-tip-bullet">{index + 1}</span>
+                    <span>{tip}</span>
                   </div>
                 ))}
               </div>
             </Card.Body>
           </Card>
 
-          {/* ── PRIORITY GUIDE ── */}
-          <Card
-            className="border-0 shadow-sm rounded-4 mb-4"
-            style={{
-              border: "1px solid #e5e7eb",
-              backgroundColor: "#ffffff",
-            }}
-          >
+          {/* HOW IT WORKS */}
+          <Card className="rc-card rc-flow-card rc-anim" style={{ animationDelay: "0.55s" }}>
             <Card.Body className="p-4">
-              {/* Header */}
-              <div className="d-flex align-items-center gap-2 mb-3">
-                <div
-                  className="rounded-3 d-flex align-items-center justify-content-center"
-                  style={{
-                    width: "34px",
-                    height: "34px",
-                    backgroundColor: "#EFF6FF",
-                  }}
-                >
-                  <FaFlag
-                    style={{
-                      fontSize: "0.85rem",
-                      color: "#2563EB",
-                    }}
-                  />
+              <div className="rc-tips-header">
+                <div className="rc-flow-icon">
+                  <FaInfoCircle />
                 </div>
-
-                <div>
-                  <h6
-                    className="fw-bold text-dark mb-0"
-                    style={{ fontSize: "0.95rem" }}
-                  >
-                    SLA Response Times
-                  </h6>
-
-                  <small className="text-muted" style={{ fontSize: "0.7rem" }}>
-                    Response time based on priority
-                  </small>
-                </div>
+                <h6 className="rc-tips-title mb-0">What Happens Next</h6>
               </div>
 
-              {/* Priority Items */}
-              <div className="d-flex flex-column gap-2">
-                {priorityOptions.map((priority) => {
-                  const isSelected = formData.priority === priority.value;
-
-                  return (
-                    <div
-                      key={priority.value}
-                      className="d-flex align-items-center gap-3 rounded-3"
-                      style={{
-                        padding: "10px",
-                        backgroundColor: isSelected ? priority.bg : "#F8FAFC",
-
-                        border: isSelected
-                          ? `1px solid ${priority.color}30`
-                          : "1px solid transparent",
-
-                        transition: "all 0.2s ease",
-                      }}
-                    >
-                      {/* Priority Indicator */}
-                      <span
-                        className="rounded-circle flex-shrink-0"
-                        style={{
-                          width: "11px",
-                          height: "11px",
-                          backgroundColor: priority.color,
-                          boxShadow: `0 0 0 3px ${priority.bg}`,
-                        }}
-                      />
-
-                      {/* Priority Details */}
-                      <div className="flex-grow-1">
-                        <div
-                          className="fw-semibold text-dark"
-                          style={{
-                            fontSize: "0.82rem",
-                            lineHeight: 1.3,
-                          }}
-                        >
-                          {priority.label}
-                        </div>
-
-                        <div
-                          className="text-muted"
-                          style={{
-                            fontSize: "0.7rem",
-                            marginTop: "2px",
-                          }}
-                        >
-                          {priority.desc}
-                        </div>
-                      </div>
-
-                      {/* SLA Badge */}
-                      <Badge
-                        pill
-                        style={{
-                          backgroundColor: "#2563EB",
-                          color: "#FFFFFF",
-                          fontSize: "0.65rem",
-                          fontWeight: 600,
-                          padding: "5px 10px",
-                          minWidth: "58px",
-                          textAlign: "center",
-                        }}
-                      >
-                        {priority.sla}
-                      </Badge>
-                    </div>
-                  );
-                })}
-              </div>
-            </Card.Body>
-          </Card>
-
-          {/* ── FAQ CTA ── */}
-          <Card
-            className="border-0 rounded-4 overflow-hidden"
-            style={{
-              background:
-                "linear-gradient(135deg, #2563eb, 0%,  #3b82f6 60%, #a855f7 100%)",
-              cursor: "pointer",
-            }}
-            onClick={() => navigate("/employee/faqs")}
-          >
-            <Card.Body className="p-4 text-center text-white position-relative">
-              <div
-                className="position-absolute rounded-circle"
-                style={{
-                  width: "120px",
-                  height: "120px",
-                  backgroundColor: "rgba(255,255,255,0.08)",
-                  top: "-40px",
-                  right: "-30px",
-                }}
-              />
-              <div className="position-relative">
-                <div
-                  className="d-inline-flex align-items-center justify-content-center rounded-4 mb-3"
-                  style={{
-                    width: "48px",
-                    height: "48px",
-                    backgroundColor: "rgba(255,255,255,0.2)",
-                    border: "1px solid rgba(255,255,255,0.35)",
-                  }}
-                >
-                  <FaBook style={{ fontSize: "1.2rem", color: "white" }} />
-                </div>
-                <div className="fw-bold mb-1" style={{ fontSize: "0.95rem" }}>
-                  Check FAQs First
-                </div>
-                <p
-                  className="mb-3"
-                  style={{
-                    fontSize: "0.78rem",
-                    color: "rgba(255,255,255,0.9)",
-                  }}
-                >
-                  Many common issues have instant solutions in our Knowledge
-                  Base.
-                </p>
-                <span
-                  className="d-inline-flex align-items-center gap-1 fw-semibold"
-                  style={{ fontSize: "0.82rem" }}
-                >
-                  Browse Knowledge Base
-                  <FaChevronRight style={{ fontSize: "0.6rem" }} />
-                </span>
+              <div className="rc-flow-steps">
+                {[
+                  { icon: <FaPaperPlane />, text: "Ticket submitted with auto SLA" },
+                  { icon: <FaHeadset />, text: "Admin assigns a technician" },
+                  { icon: <FaCheck />, text: "You get email updates at every step" },
+                ].map((step, i) => (
+                  <div key={i} className="rc-flow-step">
+                    <div className="rc-flow-step-icon">{step.icon}</div>
+                    <div className="rc-flow-step-text">{step.text}</div>
+                    {i < 2 && <div className="rc-flow-line" />}
+                  </div>
+                ))}
               </div>
             </Card.Body>
           </Card>

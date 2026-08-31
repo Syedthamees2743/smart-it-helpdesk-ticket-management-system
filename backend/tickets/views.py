@@ -18,6 +18,8 @@ from .serializers import (
     ReopenTicketSerializer,
     IssueCategorySerializer,
 )
+from .serializers import get_active_assignments
+from assets.models import AssetAssignment
 from notifications.services import (
     send_ticket_assigned_notification,
     send_status_update_notification,
@@ -122,6 +124,31 @@ class TicketViewSet(viewsets.ModelViewSet):
                 'technician_id': profile.technician_id if profile else None,
                 'department': profile.department.name if profile and profile.department else None,
                 'specialization': profile.specialization if profile else None,
+            })
+        return Response(data)
+
+        # ── NEW: MY ELIGIBLE ASSETS (Employee ticket creation dropdown) ──
+
+    @action(detail=False, methods=["get"], url_path="my-assets")
+    def my_assets(self, request):
+        """Return active assets assigned to current employee."""
+        if request.user.role != "employee":
+            return Response(
+                {"error": "Only employees can access this endpoint."},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        assignments = get_active_assignments(request.user)
+
+        data = []
+        for a in assignments:
+            data.append({
+                'id': a.asset.id,
+                'asset_name': a.asset.asset_name,
+                'asset_code': a.asset.asset_code,
+                'category_name': a.asset.category.name if a.asset.category else None,
+                'brand': a.asset.brand,
+                'model': a.asset.model,
             })
         return Response(data)
 
@@ -378,54 +405,57 @@ class TicketCommentViewSet(viewsets.ModelViewSet):
         return TicketComment.objects.filter(ticket_id=ticket_id)
 
     def perform_create(self, serializer):
-        ticket_id = self.kwargs.get("ticket_pk")
-        try:
-            ticket = Ticket.objects.get(pk=ticket_id)
-        except Ticket.DoesNotExist:
-            raise ValidationError({"error": "Ticket not found."})
-
         user = self.request.user
 
-        if user.role == "employee" and ticket.employee != user:
-            raise PermissionDenied("You can only comment on your own tickets.")
-        elif user.role == "technician" and ticket.assigned_technician != user:
-            raise PermissionDenied("You can only comment on tickets assigned to you.")
+        # =================================================
+        # NEW: ASSET-BASED RESTRICTION (Employees only)
+        # Backend-level enforcement — frontend bypass panna mudiyathu
+        # =================================================
+        if user.role == "employee":
+            active_assignments = get_active_assignments(user)
 
-        comment = serializer.save(user=user, ticket=ticket)
+            # Rule 1: At least ONE active asset required
+            if not active_assignments.exists():
+                raise ValidationError({
+                    "error": "No IT asset is currently assigned to you. "
+                             "Please contact the IT Admin before creating a support ticket."
+                })
 
-        if user.role == "technician" and ticket.employee:
+            # Rule 2: Selected asset must belong to this employee
+            selected_asset = serializer.validated_data.get("asset")
+            if not selected_asset:
+                raise ValidationError({
+                    "error": "Please select the affected asset for this ticket."
+                })
+            if not active_assignments.filter(asset=selected_asset).exists():
+                raise ValidationError({
+                    "error": "Invalid asset. You can only create tickets "
+                             "for assets assigned to you."
+                })
+
+            profile = getattr(user, 'employee_profile', None)
+            dept = profile.department if profile else None
+            ticket = serializer.save(employee=user, department=dept)
+        else:
+            # Admin/Technician — NO restriction
+            ticket = serializer.save(employee=user)
+
+        create_notification(
+            user=ticket.employee,
+            title="Ticket Created",
+            message=f"Your ticket {ticket.ticket_number} has been created successfully.",
+            notification_type="ticket_created",
+            ticket=ticket,
+        )
+        admins = User.objects.filter(role="admin")
+        for admin in admins:
             create_notification(
-                user=ticket.employee,
-                title="New Comment",
-                message=f"Technician added a comment to your ticket {ticket.ticket_number}.",
-                notification_type="ticket_comment",
+                user=admin,
+                title="New Ticket",
+                message=f"New ticket {ticket.ticket_number} from {ticket.employee.get_full_name()}: {ticket.title}",
+                notification_type="ticket_created",
                 ticket=ticket,
             )
-        elif user.role == "employee" and ticket.assigned_technician:
-            create_notification(
-                user=ticket.assigned_technician,
-                title="New Comment",
-                message=f"Employee added a comment to ticket {ticket.ticket_number}.",
-                notification_type="ticket_comment",
-                ticket=ticket,
-            )
-        elif user.role == "admin":
-            if ticket.employee and ticket.employee != user:
-                create_notification(
-                    user=ticket.employee,
-                    title="New Comment",
-                    message=f"A comment was added to your ticket {ticket.ticket_number}.",
-                    notification_type="ticket_comment",
-                    ticket=ticket,
-                )
-            if ticket.assigned_technician and ticket.assigned_technician != user:
-                create_notification(
-                    user=ticket.assigned_technician,
-                    title="New Comment",
-                    message=f"A comment was added to ticket {ticket.ticket_number}.",
-                    notification_type="ticket_comment",
-                    ticket=ticket,
-                )
 
 
 class AIAnalyzeComplaintView(APIView):

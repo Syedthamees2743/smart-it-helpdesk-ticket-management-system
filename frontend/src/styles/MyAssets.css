@@ -1,0 +1,466 @@
+/* =========================================================
+   MY ASSETS — EMPLOYEE (Animated)
+   ========================================================= */
+.ma-page {
+  animation: maFadeIn 0.45s ease;
+}
+
+@keyframes maFadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Header ── */
+.ma-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.ma-header-icon {
+  width: 46px;
+  height: 46px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #2563eb, #3b82f6);
+  color: #ffffff;
+  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.3);
+  animation: maIconPop 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes maIconPop {
+  0% { opacity: 0; transform: scale(0.6); }
+  60% { transform: scale(1.08); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+.ma-header-title {
+  margin: 0;
+  font-weight: 700;
+  color: #0f172a;
+  font-size: 1.35rem;
+  letter-spacing: -0.3px;
+}
+
+.ma-header-sub {
+  margin: 2px 0 0;
+  color: #64748b;
+  font-size: 0.85rem;
+}
+
+/* ── Refresh Button ── */
+.ma-refresh-btn {
+  width: 38px;
+  height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  background: #ffffff;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.ma-refresh-btn:hover {
+  border-color: #93c5fd;
+  background: #eff6ff;
+  color: #2563eb;
+  transform: rotate(90deg);
+}
+
+.ma-refresh-btn.ma-refreshing svg {
+  animation: maSpin 1s linear infinite;
+}
+
+@keyframes maSpin {
+  to { transform: rotate(360deg); }
+}
+
+/* ── Skeleton Loading ── */
+.ma-skeleton {
+  background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+  background-size: 200% 100%;
+  animation: maSkeletonPulse 1.4s ease-in-out infinite;
+  border-radius: 10px;
+}
+
+@keyframes maSkeletonPulse {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+.ma-skeleton-icon { width: 46px; height: 46px; border-radius: 12px; }
+.ma-skeleton-title { width: 140px; height: 22px; margin-bottom: 6px; }
+.ma-skeleton-sub { width: 200px; height: 14px; }
+.ma-skeleton-stat { height: 74px; border-radius: 14px; }
+.ma-skeleton-card { height: 230px; border-radius: 14px; padding: 20px; display: flex; flex-direction: column; gap: 14px; }
+.ma-skeleton-line { height: 14px; }
+.w-40 { width: 40%; }
+.w-60 { width: 60%; }
+.w-80 { width: 80%; }
+.w-100 { width: 100%; }
+
+/* ── Summary Cards ── */
+.ma-summary-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px 18px;
+  border-radius: 14px;
+  border: 1px solid;
+  opacity: 0;
+  animation: maSummaryIn 0.55s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.25s ease;
+}
+
+@keyframes maSummaryIn {
+  from { opacity: 0; transform: translateY(16px) scale(0.96); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.ma-summary-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.1);
+}
+
+.ma-summary-icon {
+  width: 42px;
+  height: 42px;
+  min-width: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 11px;
+  background: rgba(255, 255, 255, 0.75);
+  transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.ma-summary-card:hover .ma-summary-icon {
+  transform: scale(1.1) rotate(-4deg);
+}
+
+.ma-summary-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: -0.5px;
+}
+
+.ma-summary-date {
+  font-size: 1.05rem;
+  padding-top: 3px;
+}
+
+.ma-summary-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #64748b;
+  margin-top: 2px;
+}
+
+.ma-summary-blue {
+  background: linear-gradient(135deg, #f0f7ff, #e8f0fe);
+  border-color: #d0e1fd;
+}
+.ma-summary-blue .ma-summary-icon { color: #2563eb; }
+.ma-summary-blue .ma-summary-value { color: #1d4ed8; }
+
+.ma-summary-green {
+  background: linear-gradient(135deg, #f0fdf4, #dcfce7);
+  border-color: #bbf7d0;
+}
+.ma-summary-green .ma-summary-icon { color: #059669; }
+.ma-summary-green .ma-summary-value { color: #047857; }
+
+.ma-summary-amber {
+  background: linear-gradient(135deg, #fffbeb, #fef3c7);
+  border-color: #fde68a;
+}
+.ma-summary-amber .ma-summary-icon { color: #d97706; }
+.ma-summary-amber .ma-summary-value { color: #b45309; }
+
+/* ── Asset Card ── */
+.ma-card {
+  border: 1px solid #eef0f4 !important;
+  border-radius: 14px !important;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04) !important;
+  cursor: pointer;
+  opacity: 0;
+  animation: maCardIn 0.5s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  transition:
+    transform 0.3s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.3s ease,
+    border-color 0.3s ease;
+}
+
+@keyframes maCardIn {
+  from { opacity: 0; transform: translateY(22px) scale(0.97); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.ma-card:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 16px 32px rgba(15, 23, 42, 0.12) !important;
+  border-color: #dbe3f0 !important;
+}
+
+/* Shine sweep on hover */
+.ma-card::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 60%;
+  height: 100%;
+  background: linear-gradient(
+    105deg,
+    transparent 40%,
+    rgba(255, 255, 255, 0.5) 50%,
+    transparent 60%
+  );
+  transform: translateX(-120%) skewX(-15deg);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.ma-card:hover::after {
+  animation: maShine 0.7s ease forwards;
+}
+
+@keyframes maShine {
+  to { transform: translateX(250%) skewX(-15deg); }
+}
+
+.ma-card-bar {
+  height: 4px;
+}
+
+/* ── Card Header ── */
+.ma-card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 14px;
+  gap: 8px;
+}
+
+.ma-card-head-left {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  min-width: 0;
+}
+
+.ma-category-icon {
+  width: 40px;
+  height: 40px;
+  min-width: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 11px;
+  transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.ma-card:hover .ma-category-icon {
+  transform: scale(1.12) rotate(-5deg);
+}
+
+.ma-card-title-wrap { min-width: 0; }
+
+.ma-card-name {
+  font-weight: 700;
+  color: #0f172a;
+  font-size: 0.92rem;
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 170px;
+}
+
+.ma-card-code {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: #94a3b8;
+  font-size: 0.72rem;
+  font-weight: 600;
+  margin-top: 3px;
+}
+
+.ma-card-code svg { font-size: 11px; }
+
+.ma-card-code span {
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* ── Status Badge ── */
+.ma-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  flex-shrink: 0;
+  padding: 4px 11px;
+  border-radius: 20px;
+  background: #ecfdf5;
+  color: #059669;
+  border: 1px solid #a7f3d0;
+  font-size: 0.68rem;
+  font-weight: 700;
+}
+
+.ma-status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #10b981;
+  animation: maDotPulse 2s ease-in-out infinite;
+}
+
+@keyframes maDotPulse {
+  0%, 100% { opacity: 1; transform: scale(1); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.5); }
+  50% { opacity: 0.6; transform: scale(0.85); box-shadow: 0 0 0 4px rgba(16, 185, 129, 0); }
+}
+
+/* ── Info Grid ── */
+.ma-info-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.ma-info-box {
+  padding: 10px 12px;
+  background: #f8fafc;
+  border: 1px solid #eef0f5;
+  border-radius: 10px;
+  transition: background 0.25s ease, border-color 0.25s ease, transform 0.25s ease;
+}
+
+.ma-card:hover .ma-info-box {
+  background: #f1f5f9;
+  border-color: #e2e8f0;
+}
+
+.ma-info-label {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.66rem;
+  font-weight: 600;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  margin-bottom: 4px;
+}
+
+.ma-info-label svg { font-size: 10px; }
+
+.ma-info-value {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #1e293b;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ma-serial {
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+/* ── Card Footer ── */
+.ma-card-footer {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 5px;
+  padding-top: 12px;
+  border-top: 1px solid #f1f5f9;
+}
+
+.ma-footer-text {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #64748b;
+  transition: color 0.25s ease, letter-spacing 0.25s ease;
+}
+
+.ma-footer-arrow {
+  color: #64748b;
+  transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1), color 0.25s ease;
+}
+
+.ma-card:hover .ma-footer-text {
+  color: #2563eb;
+  letter-spacing: 0.3px;
+}
+
+.ma-card:hover .ma-footer-arrow {
+  color: #2563eb;
+  transform: translateX(5px);
+}
+
+/* ── Empty State ── */
+.ma-empty-card {
+  cursor: default;
+  animation: maFadeIn 0.4s ease;
+  opacity: 1;
+}
+
+.ma-empty-icon {
+  width: 80px;
+  height: 80px;
+  margin: 0 auto 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: #f1f5f9;
+  color: #94a3b8;
+  animation: maIconPop 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.ma-empty-title {
+  font-weight: 700;
+  color: #334155;
+  margin-bottom: 8px;
+}
+
+.ma-empty-text {
+  color: #94a3b8;
+  font-size: 0.85rem;
+  line-height: 1.6;
+  max-width: 380px;
+  margin: 0 auto;
+}
+
+/* ── Responsive ── */
+@media (max-width: 575px) {
+  .ma-card-name { max-width: 140px; }
+  .ma-summary-card { padding: 14px 16px; }
+  .ma-summary-value { font-size: 1.3rem; }
+  .ma-summary-date { font-size: 0.95rem; }
+}
+
+/* ── Reduced Motion ── */
+@media (prefers-reduced-motion: reduce) {
+  .ma-page,
+  .ma-card,
+  .ma-summary-card,
+  .ma-empty-card {
+    animation: none !important;
+    opacity: 1 !important;
+  }
+
+  .ma-card::after { display: none !important; }
+}

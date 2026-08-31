@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { Form, Button, InputGroup, Spinner } from "react-bootstrap";
+import { Spinner } from "react-bootstrap";
 
 import {
   FaEye,
@@ -7,19 +7,24 @@ import {
   FaLock,
   FaUser,
   FaHeadset,
-  FaCheckCircle,
-  FaShieldAlt,
-  FaServer,
-  FaExclamationTriangle,
+  FaArrowRight,
   FaUserPlus,
   FaUserCog,
-  FaArrowRight,
+  FaShieldAlt,
+  FaServer,
+  FaTicketAlt,
+  FaLaptop,
+  FaNetworkWired,
+  FaCheckCircle,
+  FaClock,
+  FaChevronRight,
 } from "react-icons/fa";
 
 import { useAuth } from "../../context/AuthContext";
 import { useNavigate, Link } from "react-router-dom";
 
 import "../../styles/login.css";
+
 
 const Login = () => {
   const [formData, setFormData] = useState({
@@ -30,7 +35,8 @@ const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [focusedField, setFocusedField] = useState(null);
+  const [success, setSuccess] = useState(false);
+  const [shaking, setShaking] = useState(false);
 
   const isSubmitting = useRef(false);
 
@@ -39,22 +45,56 @@ const Login = () => {
 
   const { username, password } = formData;
 
+
+  /* =========================================================
+     INPUT CHANGE
+     ========================================================= */
+
   const onChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-    if (error) setError("");
+    setFormData({
+      ...formData,
+      [e.target.name]: e.target.value,
+    });
+
+    if (error) {
+      setError("");
+    }
   };
+
+
+  /* =========================================================
+     SHAKE ERROR
+     ========================================================= */
+
+  const shakeCard = () => {
+    setShaking(true);
+
+    setTimeout(() => {
+      setShaking(false);
+    }, 500);
+  };
+
+
+  /* =========================================================
+     LOGIN
+     ========================================================= */
 
   const onSubmit = async (e) => {
     e.preventDefault();
-    e.stopPropagation();
 
-    if (isSubmitting.current) return;
+    if (isSubmitting.current) {
+      return;
+    }
+
     isSubmitting.current = true;
-
     setError("");
 
-    if (!username || !password) {
+    /* Validation */
+
+    if (!username.trim() || !password) {
       setError("Please enter your username and password.");
+      shakeCard();
+
       isSubmitting.current = false;
       return;
     }
@@ -63,306 +103,654 @@ const Login = () => {
 
     try {
       await login(username, password);
-      const currentUser = JSON.parse(localStorage.getItem("user"));
 
-      if (currentUser?.role) {
-        navigate(`/${currentUser.role}`);
-      } else {
-        setError("User role not found. Please contact administrator.");
-      }
-    } catch (err) {
-      if (err.response?.data?.detail) {
-        setError(err.response.data.detail);
-      } else if (err.response?.data?.error) {
-        setError(err.response.data.error);
-      } else if (err.response?.data?.non_field_errors) {
-        const field_errors = err.response.data.non_field_errors;
-        if (Array.isArray(field_errors)) {
-          setError(field_errors.join(", "));
-        } else {
-          setError(String(field_errors));
-        }
-      } else {
-        setError("Login failed. Please check your credentials and try again.");
-      }
-    } finally {
       setLoading(false);
+      setSuccess(true);
+
       setTimeout(() => {
-        isSubmitting.current = false;
-      }, 500);
+        const user = JSON.parse(
+          localStorage.getItem("user")
+        );
+
+        if (user?.role) {
+          navigate(`/${user.role}`);
+        } else {
+          setError(
+            "User role not found. Please contact your administrator."
+          );
+
+          setSuccess(false);
+          shakeCard();
+
+          isSubmitting.current = false;
+        }
+      }, 1500);
+
+    } catch (err) {
+
+      setLoading(false);
+
+      const data = err.response?.data;
+
+      if (data?.detail) {
+        setError(data.detail);
+
+      } else if (data?.error) {
+        setError(data.error);
+
+      } else if (data?.non_field_errors) {
+        const fieldError = data.non_field_errors;
+
+        setError(
+          Array.isArray(fieldError)
+            ? fieldError.join(", ")
+            : String(fieldError)
+        );
+
+      } else {
+        setError(
+          "Login failed. Please check your credentials and try again."
+        );
+      }
+
+      shakeCard();
+
+      isSubmitting.current = false;
     }
   };
 
-  return (
-    <div className="itsm-login-page">
-      {/* Background Image Layer */}
-      <div className="login-bg-image"></div>
-      <div className="login-bg-overlay"></div>
 
-      {/* Floating Orbs */}
-      <div className="login-orbs">
-        <div className="login-orb orb-1"></div>
-        <div className="login-orb orb-2"></div>
-        <div className="login-orb orb-3"></div>
+  return (
+    <div className="it-login-page">
+
+      {/* =====================================================
+          BACKGROUND
+          ===================================================== */}
+
+      <div className="it-bg">
+
+        <div className="it-bg-grid" />
+
+        <div className="it-bg-glow it-bg-glow-one" />
+        <div className="it-bg-glow it-bg-glow-two" />
+
+        <div className="it-bg-orb it-bg-orb-one" />
+        <div className="it-bg-orb it-bg-orb-two" />
+
+        <div className="it-code code-one">
+          010101 110010 101011
+        </div>
+
+        <div className="it-code code-two">
+          SERVER_01 // ONLINE
+        </div>
+
+        <div className="it-code code-three">
+          API_GATEWAY // SECURE
+        </div>
+
       </div>
 
-      <div className="login-container">
-        {/* Desktop Brand Section */}
-        <div className="login-brand-section">
-          <div className="brand-content">
-            <div className="brand-logo">
+
+      {/* =====================================================
+          MAIN CONTAINER
+          ===================================================== */}
+
+      <main className="it-login-shell">
+
+
+        {/* ===================================================
+            LEFT / HERO AREA
+            =================================================== */}
+
+        <section className="it-hero">
+
+
+          {/* Brand */}
+
+          <div className="it-brand">
+
+            <div className="it-brand-icon">
               <FaHeadset />
-              <span className="brand-logo-badge">IT</span>
             </div>
 
-            <h1 className="brand-title">
-              Smart IT
-              <span>Service Desk</span>
+            <div>
+              <div className="it-brand-name">
+                Smart<span>IT</span>
+              </div>
+
+              <div className="it-brand-sub">
+                SERVICE DESK
+              </div>
+            </div>
+
+          </div>
+
+
+          {/* Hero Content */}
+
+          <div className="it-hero-content">
+
+            <div className="it-eyebrow">
+              <span className="it-eyebrow-dot" />
+              ENTERPRISE IT OPERATIONS
+            </div>
+
+
+            <h1>
+              Your IT.
+              <br />
+
+              <span>Always Connected.</span>
             </h1>
 
-            <p className="brand-description">
-              A centralized platform for managing IT support, service
-              requests and technical issues across your organization.
+
+            <p className="it-hero-description">
+              One secure platform to manage support tickets,
+              IT assets, service requests and technical operations.
             </p>
 
-            <div className="feature-list">
-              {[
-                {
-                  icon: <FaCheckCircle />,
-                  title: "Smart Ticket Management",
-                  desc: "Automated routing and prioritization",
-                },
-                {
-                  icon: <FaCheckCircle />,
-                  title: "Faster Issue Resolution",
-                  desc: "Streamlined workflows and escalations",
-                },
-                {
-                  icon: <FaCheckCircle />,
-                  title: "SLA & Performance Monitoring",
-                  desc: "Real-time tracking and reporting",
-                },
-                {
-                  icon: <FaCheckCircle />,
-                  title: "Centralized IT Support",
-                  desc: "Single pane of glass for all requests",
-                },
-              ].map((feature, index) => (
-                <div
-                  className="feature-item"
-                  key={index}
-                  style={{ animationDelay: `${0.4 + index * 0.12}s` }}
-                >
-                  <div className="feature-icon-wrap">{feature.icon}</div>
-                  <div className="feature-text">
-                    <strong>{feature.title}</strong>
-                    <small>{feature.desc}</small>
-                  </div>
+
+            {/* Feature List */}
+
+            <div className="it-feature-list">
+
+              <div className="it-feature">
+
+                <div className="it-feature-icon">
+                  <FaTicketAlt />
                 </div>
-              ))}
-            </div>
-          </div>
 
-          <div className="brand-footer">
-            <div className="brand-footer-line"></div>
-            <span>IT Service Management Platform</span>
-          </div>
-        </div>
+                <div>
+                  <strong>Smart Ticket Management</strong>
+                  <span>
+                    Track and resolve support requests faster.
+                  </span>
+                </div>
 
-        {/* Mobile Brand Section */}
-        <div className="mobile-brand-section">
-          <div className="mobile-brand-logo">
-            <FaHeadset />
-          </div>
-          <h1>
-            Smart IT <span>Service Desk</span>
-          </h1>
-          <p>IT Support Management Platform</p>
-
-          <div className="mobile-features">
-            <div className="mobile-feature">
-              <FaCheckCircle />
-              <span>Smart Ticketing</span>
-            </div>
-            <div className="mobile-feature">
-              <FaCheckCircle />
-              <span>Faster Resolution</span>
-            </div>
-            <div className="mobile-feature">
-              <FaCheckCircle />
-              <span>SLA Monitoring</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Login Form */}
-        <div className="login-form-section">
-          <div className={`login-card ${error ? "shake-error" : ""}`}>
-            <div className="login-card-glow"></div>
-
-            <div className="login-header">
-              <div className="mobile-logo">
-                <FaHeadset />
               </div>
-              <h2>Welcome Back</h2>
-              <p>Sign in to access your service desk</p>
+
+
+              <div className="it-feature">
+
+                <div className="it-feature-icon">
+                  <FaLaptop />
+                </div>
+
+                <div>
+                  <strong>IT Asset Tracking</strong>
+                  <span>
+                    Keep your organization’s devices organized.
+                  </span>
+                </div>
+
+              </div>
+
+
+              <div className="it-feature">
+
+                <div className="it-feature-icon">
+                  <FaNetworkWired />
+                </div>
+
+                <div>
+                  <strong>Connected IT Operations</strong>
+                  <span>
+                    Keep employees and technicians in sync.
+                  </span>
+                </div>
+
+              </div>
+
             </div>
 
-            {/* Error */}
-            {error && (
-              <div className="login-error-box">
-                <div className="error-icon-wrap">
-                  <FaExclamationTriangle />
+
+            {/* System Status */}
+
+            <div className="it-system-status">
+
+              <div className="it-status-icon">
+                <FaCheckCircle />
+              </div>
+
+              <div className="it-status-text">
+                <strong>All systems operational</strong>
+                <span>Service Desk infrastructure is online</span>
+              </div>
+
+              <div className="it-status-live">
+                LIVE
+              </div>
+
+            </div>
+
+          </div>
+
+
+          {/* Hero Bottom */}
+
+          <div className="it-hero-bottom">
+
+            <span>
+              <FaShieldAlt />
+              Enterprise Security
+            </span>
+
+            <span>
+              <FaClock />
+              24/7 Support Operations
+            </span>
+
+            <span>
+              <FaServer />
+              Secure Infrastructure
+            </span>
+
+          </div>
+
+
+          {/* Decorative Network */}
+
+          <div className="it-network">
+
+            <div className="network-line line-one" />
+            <div className="network-line line-two" />
+            <div className="network-line line-three" />
+
+            <div className="network-node node-one" />
+            <div className="network-node node-two" />
+            <div className="network-node node-three" />
+            <div className="network-node node-four" />
+            <div className="network-node node-five" />
+
+          </div>
+
+        </section>
+
+
+
+        {/* ===================================================
+            RIGHT / LOGIN AREA
+            =================================================== */}
+
+        <section className="it-login-area">
+
+
+          {/* Login Card */}
+
+          <div
+            className={`it-login-card ${
+              shaking ? "it-card-shake" : ""
+            }`}
+          >
+
+
+            {/* Success */}
+
+            {success && (
+              <div className="it-success">
+
+                <div className="it-success-circle">
+                  <FaCheckCircle />
                 </div>
-                <div className="error-text-content">{error}</div>
-                <button
-                  type="button"
-                  className="error-dismiss-btn"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    setError("");
-                  }}
-                  aria-label="Dismiss error"
-                >
-                  ✕
-                </button>
+
+                <h3>
+                  Welcome Back!
+                </h3>
+
+                <p>
+                  Authentication successful
+                </p>
+
+                <div className="it-success-loader">
+                  Redirecting to your dashboard...
+                </div>
+
               </div>
             )}
 
-            <Form onSubmit={onSubmit} noValidate>
-              {/* Username */}
-              <Form.Group
-                className={`login-form-group ${error ? "has-error" : ""}`}
-              >
-                <Form.Label>Username</Form.Label>
-                <InputGroup
-                  className={`login-input-group ${
-                    error ? "input-error-state" : ""
-                  } ${focusedField === "username" ? "input-focused" : ""}`}
+
+            {/* Card Top */}
+
+            <div className="it-card-top">
+
+              <div className="it-mobile-brand">
+                <div className="it-mobile-logo">
+                  <FaHeadset />
+                </div>
+
+                <div>
+                  <strong>
+                    Smart<span>IT</span>
+                  </strong>
+
+                  <small>
+                    SERVICE DESK
+                  </small>
+                </div>
+              </div>
+
+
+              <div className="it-login-badge">
+                <FaShieldAlt />
+                SECURE LOGIN
+              </div>
+
+            </div>
+
+
+            {/* Header */}
+
+            <div className="it-login-header">
+
+              <h2>
+                Welcome back
+              </h2>
+
+              <p>
+                Sign in to access your IT service desk.
+              </p>
+
+            </div>
+
+
+            {/* Error */}
+
+            {error && (
+              <div className="it-error">
+
+                <div className="it-error-icon">
+                  !
+                </div>
+
+                <div className="it-error-content">
+                  <strong>
+                    Authentication failed
+                  </strong>
+
+                  <span>
+                    {error}
+                  </span>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setError("")}
+                  aria-label="Close error"
                 >
-                  <InputGroup.Text>
+                  ×
+                </button>
+
+              </div>
+            )}
+
+
+            {/* Form */}
+
+            <form
+              className="it-login-form"
+              onSubmit={onSubmit}
+              noValidate
+            >
+
+
+              {/* Username */}
+
+              <div className="it-form-group">
+
+                <label htmlFor="username">
+                  Username
+                </label>
+
+                <div className="it-input-box">
+
+                  <div className="it-input-icon">
                     <FaUser />
-                  </InputGroup.Text>
-                  <Form.Control
+                  </div>
+
+                  <input
+                    id="username"
                     type="text"
                     name="username"
                     value={username}
                     onChange={onChange}
-                    onFocus={() => setFocusedField("username")}
-                    onBlur={() => setFocusedField(null)}
                     placeholder="Enter your username"
                     autoComplete="username"
-                    disabled={loading}
                     autoFocus
+                    disabled={loading || success}
                   />
-                </InputGroup>
-              </Form.Group>
+
+                </div>
+
+              </div>
+
 
               {/* Password */}
-              <Form.Group
-                className={`login-form-group ${error ? "has-error" : ""}`}
-              >
-                <Form.Label>Password</Form.Label>
-                <InputGroup
-                  className={`login-input-group ${
-                    error ? "input-error-state" : ""
-                  } ${focusedField === "password" ? "input-focused" : ""}`}
-                >
-                  <InputGroup.Text>
+
+              <div className="it-form-group">
+
+                <div className="it-label-row">
+
+                  <label htmlFor="password">
+                    Password
+                  </label>
+
+                  <span>
+                    Protected
+                  </span>
+
+                </div>
+
+
+                <div className="it-input-box">
+
+                  <div className="it-input-icon">
                     <FaLock />
-                  </InputGroup.Text>
-                  <Form.Control
-                    type={showPassword ? "text" : "password"}
+                  </div>
+
+                  <input
+                    id="password"
+                    type={
+                      showPassword
+                        ? "text"
+                        : "password"
+                    }
                     name="password"
                     value={password}
                     onChange={onChange}
-                    onFocus={() => setFocusedField("password")}
-                    onBlur={() => setFocusedField(null)}
                     placeholder="Enter your password"
                     autoComplete="current-password"
-                    disabled={loading}
+                    disabled={loading || success}
                   />
-                  <Button
+
+
+                  <button
                     type="button"
-                    className="password-toggle"
-                    onClick={() => setShowPassword(!showPassword)}
-                    disabled={loading}
+                    className="it-password-toggle"
+                    onClick={() =>
+                      setShowPassword(
+                        (value) => !value
+                      )
+                    }
+                    disabled={loading || success}
                     aria-label={
-                      showPassword ? "Hide password" : "Show password"
+                      showPassword
+                        ? "Hide password"
+                        : "Show password"
                     }
                   >
-                    {showPassword ? <FaEyeSlash /> : <FaEye />}
-                  </Button>
-                </InputGroup>
-              </Form.Group>
+                    {showPassword ? (
+                      <FaEyeSlash />
+                    ) : (
+                      <FaEye />
+                    )}
+                  </button>
 
-              {/* Login Button */}
-              <Button
+                </div>
+
+              </div>
+
+
+              {/* Remember / Security */}
+
+              <div className="it-login-meta">
+
+                <span>
+                  <span className="it-mini-dot" />
+                  Secure connection
+                </span>
+
+                <span>
+                  256-bit encrypted
+                </span>
+
+              </div>
+
+
+              {/* Submit */}
+
+              <button
                 type="submit"
-                className="login-submit-btn"
-                disabled={loading}
+                className="it-login-button"
+                disabled={loading || success}
               >
+
                 {loading ? (
                   <>
-                    <Spinner animation="border" size="sm" className="me-2" />
-                    Signing in...
+                    <Spinner
+                      animation="border"
+                      size="sm"
+                    />
+
+                    <span>
+                      Authenticating...
+                    </span>
                   </>
                 ) : (
                   <>
-                    Sign In
-                    <FaArrowRight className="ms-2 btn-arrow" />
+                    <span>
+                      Sign in to Service Desk
+                    </span>
+
+                    <FaArrowRight />
                   </>
                 )}
-              </Button>
-            </Form>
 
-            {/* Security Badge */}
-            <div className="login-security">
-              <FaShieldAlt />
-              <span>Secure organizational access</span>
-            </div>
+              </button>
 
-            {/* Signup Section */}
-            <div className="login-signup-section">
-              <div className="signup-divider">
-                <span>New to Service Desk?</span>
+            </form>
+
+
+            {/* Divider */}
+
+            {!success && (
+              <div className="it-divider">
+                <span>
+                  New to Smart IT Service Desk?
+                </span>
               </div>
-              <div className="signup-buttons">
+            )}
+
+
+            {/* Signup */}
+
+            {!success && (
+              <div className="it-register-grid">
+
+
                 <Link
                   to="/employee/signup"
-                  className="signup-link-btn employee-signup-btn"
+                  className="it-register-card"
                 >
-                  <FaUserPlus />
-                  <span>Join as Employee</span>
+
+                  <div className="it-register-icon">
+                    <FaUserPlus />
+                  </div>
+
+                  <div className="it-register-content">
+                    <strong>
+                      Employee
+                    </strong>
+
+                    <span>
+                      Create account
+                    </span>
+                  </div>
+
+                  <FaChevronRight className="it-register-arrow" />
+
                 </Link>
+
+
                 <Link
                   to="/technician/signup"
-                  className="signup-link-btn technician-signup-btn"
+                  className="it-register-card it-register-card-alt"
                 >
-                  <FaUserCog />
-                  <span>Join as Technician</span>
+
+                  <div className="it-register-icon">
+                    <FaUserCog />
+                  </div>
+
+                  <div className="it-register-content">
+                    <strong>
+                      Technician
+                    </strong>
+
+                    <span>
+                      Join support team
+                    </span>
+                  </div>
+
+                  <FaChevronRight className="it-register-arrow" />
+
                 </Link>
+
+
               </div>
+            )}
+
+
+            {/* Card Footer */}
+
+            <div className="it-card-footer">
+
+              <FaShieldAlt />
+
+              <span>
+                Your credentials are securely encrypted
+              </span>
+
             </div>
 
-            {/* System Status */}
-            <div className="system-status">
-              <span className="status-dot"></span>
-              <FaServer />
-              <span>Service Desk Portal</span>
-              <span className="status-text">Online</span>
-            </div>
           </div>
-        </div>
-      </div>
 
-      {/* Copyright */}
-      <div className="login-copyright">
-        © {new Date().getFullYear()} Smart IT Service Desk
-      </div>
+
+          {/* Bottom copyright */}
+
+          <div className="it-login-copyright">
+
+            <span>
+              © {new Date().getFullYear()}
+              {" "}Smart IT Service Desk
+            </span>
+
+            <span className="it-copyright-divider">
+              •
+            </span>
+
+            <span>
+              Enterprise IT Support Platform
+            </span>
+
+          </div>
+
+        </section>
+
+      </main>
+
     </div>
   );
 };
+
 
 export default Login;

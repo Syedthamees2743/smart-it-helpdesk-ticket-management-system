@@ -26,6 +26,9 @@ export const changeTicketStatus = (id, data) => api.post(`${API_URL}${id}/change
 export const getComments = (ticketId) => api.get(`${API_URL}${ticketId}/comments/`);
 export const addComment = (ticketId, data) => api.post(`${API_URL}${ticketId}/comments/`, data);
 
+// NEW: Employee-oda eligible (active) assets for ticket creation
+export const getMyEligibleAssets = () => api.get(`${API_URL}my-assets/`);
+
 export const getCategories = async (params = {}) => {
   const response = await api.get("/tickets/categories/", { params });
   return response.data;
