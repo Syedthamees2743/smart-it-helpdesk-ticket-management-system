@@ -17,6 +17,8 @@ from .serializers import (
     ChangeStatusSerializer,
     ReopenTicketSerializer,
     IssueCategorySerializer,
+    TicketCommentSerializer,
+    TicketCommentListSerializer,
 )
 from .serializers import get_active_assignments
 from assets.models import AssetAssignment
@@ -387,13 +389,9 @@ class IssueCategoryViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
 
 
-from .serializers import TicketCommentSerializer, TicketCommentListSerializer
-
-
 class TicketCommentViewSet(viewsets.ModelViewSet):
     serializer_class = TicketCommentSerializer
     permission_classes = [permissions.IsAuthenticated]
-    ordering = ["-created_at"]
 
     def get_serializer_class(self):
         if self.action == "list":
@@ -401,61 +399,92 @@ class TicketCommentViewSet(viewsets.ModelViewSet):
         return TicketCommentSerializer
 
     def get_queryset(self):
+        user = self.request.user
         ticket_id = self.kwargs.get("ticket_pk")
-        return TicketComment.objects.filter(ticket_id=ticket_id)
+
+        qs = TicketComment.objects.filter(ticket_id=ticket_id).select_related(
+            "user", "user__employee_profile", "user__technician_profile"
+        )
+
+        # Role-based visibility
+        if user.role == "employee":
+            qs = qs.filter(ticket__employee=user)
+        elif user.role == "technician":
+            qs = qs.filter(ticket__assigned_technician=user)
+        # admin — ellame parkalam
+
+        return qs
+
+    def _get_ticket(self):
+        ticket_id = self.kwargs.get("ticket_pk")
+        try:
+            return Ticket.objects.get(pk=ticket_id)
+        except Ticket.DoesNotExist:
+            raise ValidationError({"error": "Ticket not found."})
 
     def perform_create(self, serializer):
         user = self.request.user
+        ticket = self._get_ticket()
 
-        # =================================================
-        # NEW: ASSET-BASED RESTRICTION (Employees only)
-        # Backend-level enforcement — frontend bypass panna mudiyathu
-        # =================================================
-        if user.role == "employee":
-            active_assignments = get_active_assignments(user)
+        # Participants mattum comment panna mudiyum
+        if user.role == "employee" and ticket.employee_id != user.id:
+            raise PermissionDenied("You can only comment on your own tickets.")
+        if user.role == "technician" and ticket.assigned_technician_id != user.id:
+            raise PermissionDenied("You can only comment on tickets assigned to you.")
 
-            # Rule 1: At least ONE active asset required
-            if not active_assignments.exists():
-                raise ValidationError({
-                    "error": "No IT asset is currently assigned to you. "
-                             "Please contact the IT Admin before creating a support ticket."
-                })
+        comment = serializer.save(ticket=ticket, user=user)
 
-            # Rule 2: Selected asset must belong to this employee
-            selected_asset = serializer.validated_data.get("asset")
-            if not selected_asset:
-                raise ValidationError({
-                    "error": "Please select the affected asset for this ticket."
-                })
-            if not active_assignments.filter(asset=selected_asset).exists():
-                raise ValidationError({
-                    "error": "Invalid asset. You can only create tickets "
-                             "for assets assigned to you."
-                })
+        # ── NEW: Conversation notification ──
+        self._notify_participants(ticket, comment)
 
-            profile = getattr(user, 'employee_profile', None)
-            dept = profile.department if profile else None
-            ticket = serializer.save(employee=user, department=dept)
-        else:
-            # Admin/Technician — NO restriction
-            ticket = serializer.save(employee=user)
+    def _notify_participants(self, ticket, comment):
+        from notifications.models import NotificationPreference
 
-        create_notification(
-            user=ticket.employee,
-            title="Ticket Created",
-            message=f"Your ticket {ticket.ticket_number} has been created successfully.",
-            notification_type="ticket_created",
-            ticket=ticket,
-        )
-        admins = User.objects.filter(role="admin")
-        for admin in admins:
+        commenter = comment.user
+        commenter_name = commenter.get_full_name() or commenter.username
+
+        # Comment preview — munnadi 80 chars mattum
+        text = comment.comment.strip()
+        preview = text[:80] + ("..." if len(text) > 80 else "")
+
+        # 1. Ticket participants (commenter-va exclude pannitu)
+        recipients = []
+        if ticket.employee_id and ticket.employee_id != commenter.id:
+            recipients.append(ticket.employee)
+        if ticket.assigned_technician_id and ticket.assigned_technician_id != commenter.id:
+            recipients.append(ticket.assigned_technician)
+
+        # 2. Technician illa + employee comment pannurapo → admins-ku
+        #    (assign panna mudiyum munadi additional info add panna)
+        if not ticket.assigned_technician_id and commenter.role == "employee":
+            recipients += list(User.objects.filter(role="admin"))
+
+        for recipient in recipients:
+            # Settings-la user comment_notifications OFF pannirundha skip
+            prefs = getattr(recipient, "notification_preferences", None)
+            if prefs is not None and not prefs.comment_notifications:
+                continue
+
             create_notification(
-                user=admin,
-                title="New Ticket",
-                message=f"New ticket {ticket.ticket_number} from {ticket.employee.get_full_name()}: {ticket.title}",
-                notification_type="ticket_created",
+                user=recipient,
+                title="New Comment",
+                message=(
+                    f"{commenter_name} commented on ticket "
+                    f"{ticket.ticket_number}: {preview}"
+                ),
+                notification_type="ticket_comment",
                 ticket=ticket,
             )
+
+    def perform_update(self, serializer):
+        if serializer.instance.user_id != self.request.user.id:
+            raise PermissionDenied("You can only edit your own comments.")
+        serializer.save()
+
+    def perform_destroy(self, instance):
+        if instance.user_id != self.request.user.id and self.request.user.role != "admin":
+            raise PermissionDenied("You can only delete your own comments.")
+        instance.delete()
 
 
 class AIAnalyzeComplaintView(APIView):

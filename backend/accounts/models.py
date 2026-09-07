@@ -3,8 +3,7 @@ Custom User Model for Smart IT Service Desk
 """
 
 from django.contrib.auth.models import AbstractUser
-from django.db import models
-import secrets
+from django.db import models, transaction, IntegrityError
 from django.conf import settings
 from django.utils import timezone
 from datetime import timedelta
@@ -87,6 +86,64 @@ class User(AbstractUser):
         return f"{self.get_full_name()} ({self.get_role_display()})"
 
 
+# ============================================================
+# ID GENERATION (database-backed, concurrency-safe)
+# ===== NEW: added for automatic EMP-/TECH- ID generation =====
+# ============================================================
+
+class IDCounter(models.Model):
+    """
+    Persistent counter for human-readable IDs (EMP-000001, TECH-000001, ...).
+    One row per ID type. Increments happen under SELECT ... FOR UPDATE
+    inside a transaction, so concurrent registrations can never receive
+    the same number, and deleted profiles can never cause ID reuse.
+    (count()+1 is NEVER used.)
+    """
+    key = models.CharField(max_length=64, unique=True)
+    value = models.BigIntegerField(default=0)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = 'ID Counter'
+        verbose_name_plural = 'ID Counters'
+
+    def __str__(self):
+        return f"{self.key}: {self.value}"
+
+
+def _next_id_number(counter_key):
+    """
+    Atomically increment and return the next number for a counter.
+    Safe under concurrency: requests serialize on the row lock.
+    """
+    with transaction.atomic():
+        try:
+            counter = IDCounter.objects.select_for_update().get(key=counter_key)
+        except IDCounter.DoesNotExist:
+            # First ever use — create the row. The unique constraint on
+            # `key` protects against a rare concurrent-insert race.
+            try:
+                with transaction.atomic():  # savepoint
+                    return IDCounter.objects.create(key=counter_key, value=1).value
+            except IntegrityError:
+                # Lost the insert race — the winner's row exists now.
+                counter = IDCounter.objects.select_for_update().get(key=counter_key)
+
+        counter.value += 1
+        counter.save(update_fields=['value'])
+        return counter.value
+
+
+def generate_employee_id():
+    """EMP-000001, EMP-000002, ... — 6 digits, unique, concurrency-safe."""
+    return f"EMP-{_next_id_number('employee_id'):06d}"
+
+
+def generate_technician_id():
+    """TECH-000001, TECH-000002, ... — 6 digits, unique, concurrency-safe."""
+    return f"TECH-{_next_id_number('technician_id'):06d}"
+
+
 class EmployeeProfile(models.Model):
     """Additional profile information for employees."""
 
@@ -114,7 +171,7 @@ class EmployeeProfile(models.Model):
         blank=True,
         null=True,
         verbose_name='Employee ID',
-        help_text='Official employee ID (e.g., EMP-001)'
+        help_text='Auto-generated (EMP-000001)'
     )
 
     designation = models.CharField(
@@ -134,6 +191,14 @@ class EmployeeProfile(models.Model):
         verbose_name = 'Employee Profile'
         verbose_name_plural = 'Employee Profiles'
         ordering = ['employee_id']
+
+    # ===== NEW: auto-generate ID on first save =====
+    # Covers ALL creation paths (signal, signup, admin API, Django admin,
+    # shell). Existing stored IDs are NEVER overwritten.
+    def save(self, *args, **kwargs):
+        if not self.employee_id:
+            self.employee_id = generate_employee_id()
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return f"{self.employee_id or 'N/A'} - {self.user.get_full_name()}"
@@ -166,7 +231,7 @@ class TechnicianProfile(models.Model):
         blank=True,
         null=True,
         verbose_name='Technician ID',
-        help_text='Official technician ID (e.g., TECH-001)'
+        help_text='Auto-generated (TECH-000001)'
     )
 
     specialization = models.CharField(
@@ -186,6 +251,12 @@ class TechnicianProfile(models.Model):
         verbose_name = 'Technician Profile'
         verbose_name_plural = 'Technician Profiles'
         ordering = ['technician_id']
+
+    # ===== NEW: auto-generate ID on first save =====
+    def save(self, *args, **kwargs):
+        if not self.technician_id:
+            self.technician_id = generate_technician_id()
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return f"{self.technician_id or 'N/A'} - {self.user.get_full_name()}"

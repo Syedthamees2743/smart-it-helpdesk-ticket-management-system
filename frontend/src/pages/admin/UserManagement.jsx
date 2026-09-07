@@ -27,9 +27,7 @@ const UserManagement = () => {
   const [roleFilter, setRoleFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
 
-  // =========================================================
-  // NEW: Department Filter States
-  // =========================================================
+  // Department Filter States
   const [departments, setDepartments] = useState([]);
   const [departmentFilter, setDepartmentFilter] = useState('');
 
@@ -47,9 +45,7 @@ const UserManagement = () => {
 
   const hasActiveFilters = searchTerm || roleFilter || statusFilter || departmentFilter;
 
-  // =========================================================
-  // NEW: Fetch departments for dropdown
-  // =========================================================
+  // Fetch departments for dropdown
   useEffect(() => {
     getDepartments({ page_size: 100 })
       .then((res) => {
@@ -60,13 +56,13 @@ const UserManagement = () => {
       .catch(() => {});
   }, []);
 
-  // Build query params from filters — department-um add pannirukken
+  // Build query params from filters
   const getFilterParams = () => {
     const params = { page_size: 20 };
     if (searchTerm) params.search = searchTerm;
     if (roleFilter) params.role = roleFilter;
     if (statusFilter) params.is_active = statusFilter === 'active' ? 'true' : 'false';
-    if (departmentFilter) params.department = departmentFilter; // NEW
+    if (departmentFilter) params.department = departmentFilter;
     return params;
   };
 
@@ -92,7 +88,7 @@ const UserManagement = () => {
     }
   };
 
-  // Re-fetch when filters change — departmentFilter-um dependency-la add pannirukken
+  // Re-fetch when filters change
   useEffect(() => {
     fetchUsers();
   }, [searchTerm, roleFilter, statusFilter, departmentFilter]);
@@ -102,18 +98,22 @@ const UserManagement = () => {
     setSearchTerm('');
     setRoleFilter('');
     setStatusFilter('');
-    setDepartmentFilter(''); // NEW
+    setDepartmentFilter('');
   };
 
   // Handlers
+  // ===== CHANGED: now returns the API response so UserFormModal can read
+  // the backend-generated employee_id / technician_id after creation. =====
   const handleSaveUser = async (formData, isEditMode) => {
+    let response;
     if (isEditMode) {
       const { password, password2, ...updateData } = formData;
-      await updateUser(editingUser.id, updateData);
+      response = await updateUser(editingUser.id, updateData);
     } else {
-      await createUser(formData);
+      response = await createUser(formData);
     }
     fetchUsers();
+    return response;
   };
 
   const handleToggleStatus = async () => {
@@ -191,9 +191,9 @@ const UserManagement = () => {
             onRoleChange={setRoleFilter}
             statusFilter={statusFilter}
             onStatusChange={setStatusFilter}
-            departmentFilter={departmentFilter}       // NEW
-            onDepartmentChange={setDepartmentFilter}   // NEW
-            departments={departments}                  // NEW
+            departmentFilter={departmentFilter}
+            onDepartmentChange={setDepartmentFilter}
+            departments={departments}
             onRefresh={() => fetchUsers()}
             onClear={clearFilters}
           />

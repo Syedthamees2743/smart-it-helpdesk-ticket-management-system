@@ -27,7 +27,7 @@ import {
   FaCheck
 } from 'react-icons/fa';
 import authService from '../../services/authService';
-import '../../styles/login.css';
+import '../../styles/AuthPages.css';
 
 const ActivateAccount = () => {
   const { token } = useParams();

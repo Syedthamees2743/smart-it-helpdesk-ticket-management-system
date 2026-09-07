@@ -1,47 +1,12 @@
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
+from django.db import transaction
 from .models import EmployeeProfile, TechnicianProfile, AccountActivation
 from departments.models import Department
-from django.db.models import Max
-import re
 
 User = get_user_model()
 
-def generate_employee_id():
-    """
-    Auto-generates next Employee ID in format EMP-001, EMP-002, etc.
-    """
-    from .models import EmployeeProfile
-    
-    last_profile = EmployeeProfile.objects.order_by('-id').first()
-    
-    if last_profile and last_profile.employee_id:
-        # Extract number from EMP-001 format
-        match = re.search(r'(\d+)$', last_profile.employee_id)
-        if match:
-            next_num = int(match.group(1)) + 1
-            return f"EMP-{next_num:03d}"
-    
-    return "EMP-001"
-
-
-def generate_technician_id():
-    """
-    Auto-generates next Technician ID in format TECH-001, TECH-002, etc.
-    """
-    from .models import TechnicianProfile
-    
-    last_profile = TechnicianProfile.objects.order_by('-id').first()
-    
-    if last_profile and last_profile.technician_id:
-        # Extract number from TECH-001 format
-        match = re.search(r'(\d+)$', last_profile.technician_id)
-        if match:
-            next_num = int(match.group(1)) + 1
-            return f"TECH-{next_num:03d}"
-    
-    return "TECH-001"
 
 class RegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, min_length=6)
@@ -131,7 +96,9 @@ class EmployeeProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = EmployeeProfile
         fields = ('id', 'user', 'employee_id', 'department', 'department_name', 'designation', 'created_at')
-        read_only_fields = ('id', 'user', 'created_at')
+        # ===== CHANGED: employee_id is read-only — backend generates it.
+        # Client-submitted employee_id is silently ignored by DRF.
+        read_only_fields = ('id', 'user', 'employee_id', 'created_at')
 
 
 class TechnicianProfileSerializer(serializers.ModelSerializer):
@@ -141,7 +108,8 @@ class TechnicianProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = TechnicianProfile
         fields = ('id', 'user', 'technician_id', 'department', 'department_name', 'specialization', 'created_at')
-        read_only_fields = ('id', 'user', 'created_at')
+        # ===== CHANGED: technician_id is read-only — backend generates it.
+        read_only_fields = ('id', 'user', 'technician_id', 'created_at')
 
 
 class AdminCreateUserSerializer(serializers.ModelSerializer):
@@ -173,6 +141,7 @@ class AdminCreateUserSerializer(serializers.ModelSerializer):
         allow_blank=False,
         min_length=8,
         error_messages={
+            'min_length': 'Password must be at least 8 characters long.',
             'blank': 'Please confirm your password.',
             'required': 'Please confirm your password.'
         }
@@ -244,14 +213,14 @@ class EmployeeSignupSerializer(serializers.Serializer):
     Backend enforces role = 'employee'.
     No password — user sets password during activation.
     Creates User with account_status='pending' and is_active=False.
-    Also creates EmployeeProfile with department, employee_id, designation.
+    Also creates EmployeeProfile with department, designation.
+    employee_id is generated automatically by EmployeeProfile.save().
     """
     first_name = serializers.CharField(max_length=150, required=True)
     last_name = serializers.CharField(max_length=150, required=True)
     email = serializers.EmailField(required=True)
     phone_number = serializers.CharField(max_length=15, required=False, allow_blank=True, default='')
     username = serializers.CharField(max_length=150, required=True)
-    # REMOVED: employee_id - now auto-generated
     department = serializers.PrimaryKeyRelatedField(
         queryset=Department.objects.all(),
         required=True
@@ -280,34 +249,36 @@ class EmployeeSignupSerializer(serializers.Serializer):
             raise serializers.ValidationError("Selected department does not exist.")
         return value
 
+    # ===== CHANGED: employee_id NOT generated here anymore —
+    # it is generated inside EmployeeProfile.save() (via the post_save
+    # signal creating the profile). Atomic so user + profile commit together.
     def create(self, validated_data):
-        # Auto-generate Employee ID
-        employee_id = generate_employee_id()
-        
-        user = User(
-            username=validated_data['username'],
-            email=validated_data['email'],
-            first_name=validated_data['first_name'],
-            last_name=validated_data['last_name'],
-            phone_number=validated_data.get('phone_number', ''),
-            role='employee',
-            account_status='pending',
-            is_active=False,
-        )
-        user.set_unusable_password()
-        user.save()
+        with transaction.atomic():
+            user = User(
+                username=validated_data['username'],
+                email=validated_data['email'],
+                first_name=validated_data['first_name'],
+                last_name=validated_data['last_name'],
+                phone_number=validated_data.get('phone_number', ''),
+                role='employee',
+                account_status='pending',
+                is_active=False,
+            )
+            user.set_unusable_password()
+            # post_save signal creates the EmployeeProfile here, and its
+            # save() generates the EMP-XXXXXX ID automatically.
+            user.save()
 
-        EmployeeProfile.objects.update_or_create(
-            user=user,
-            defaults={
-                'employee_id': employee_id,  # Auto-generated
-                'department': validated_data.get('department'),
-                'designation': validated_data.get('designation', ''),
-            }
-        )
-
+            # Fill signup data into the profile created by the signal.
+            # employee_id is NOT passed — already generated.
+            EmployeeProfile.objects.update_or_create(
+                user=user,
+                defaults={
+                    'department': validated_data.get('department'),
+                    'designation': validated_data.get('designation', ''),
+                }
+            )
         return user
-    
 
 
 # ============================================================
@@ -320,14 +291,14 @@ class TechnicianSignupSerializer(serializers.Serializer):
     Backend enforces role = 'technician'.
     No password — user sets password during activation.
     Creates User with account_status='pending' and is_active=False.
-    Also creates TechnicianProfile with department, technician_id, specialization.
+    Also creates TechnicianProfile with department, specialization.
+    technician_id is generated automatically by TechnicianProfile.save().
     """
     first_name = serializers.CharField(max_length=150, required=True)
     last_name = serializers.CharField(max_length=150, required=True)
     email = serializers.EmailField(required=True)
     phone_number = serializers.CharField(max_length=15, required=False, allow_blank=True, default='')
     username = serializers.CharField(max_length=150, required=True)
-    # REMOVED: technician_id - now auto-generated
     department = serializers.PrimaryKeyRelatedField(
         queryset=Department.objects.all(),
         required=True
@@ -356,32 +327,30 @@ class TechnicianSignupSerializer(serializers.Serializer):
             raise serializers.ValidationError("Selected department does not exist.")
         return value
 
+    # ===== CHANGED: technician_id NOT generated here anymore —
+    # generated inside TechnicianProfile.save(). Atomic.
     def create(self, validated_data):
-        # Auto-generate Technician ID
-        technician_id = generate_technician_id()
-        
-        user = User(
-            username=validated_data['username'],
-            email=validated_data['email'],
-            first_name=validated_data['first_name'],
-            last_name=validated_data['last_name'],
-            phone_number=validated_data.get('phone_number', ''),
-            role='technician',
-            account_status='pending',
-            is_active=False,
-        )
-        user.set_unusable_password()
-        user.save()
+        with transaction.atomic():
+            user = User(
+                username=validated_data['username'],
+                email=validated_data['email'],
+                first_name=validated_data['first_name'],
+                last_name=validated_data['last_name'],
+                phone_number=validated_data.get('phone_number', ''),
+                role='technician',
+                account_status='pending',
+                is_active=False,
+            )
+            user.set_unusable_password()
+            user.save()
 
-        TechnicianProfile.objects.update_or_create(
-            user=user,
-            defaults={
-                'technician_id': technician_id,  # Auto-generated
-                'department': validated_data.get('department'),
-                'specialization': validated_data.get('specialization', ''),
-            }
-        )
-
+            TechnicianProfile.objects.update_or_create(
+                user=user,
+                defaults={
+                    'department': validated_data.get('department'),
+                    'specialization': validated_data.get('specialization', ''),
+                }
+            )
         return user
 
 

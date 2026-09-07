@@ -35,6 +35,10 @@ const TechnicianSignup = () => {
   const [departmentsLoading, setDepartmentsLoading] = useState(true);
   const [departmentsError, setDepartmentsError] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+
+  // ===== NEW: holds the backend-generated Technician ID (e.g. TECH-000003) =====
+  const [generatedId, setGeneratedId] = useState(null);
+
   const [error, setError] = useState('');
   const [fieldErrors, setFieldErrors] = useState({});
   const [animateIn, setAnimateIn] = useState(false);
@@ -192,6 +196,7 @@ const TechnicianSignup = () => {
       return;
     }
 
+    // No technician_id here — the backend generates it automatically.
     const submitData = {
       username: formData.username.trim(),
       first_name: formData.first_name.trim(),
@@ -205,7 +210,9 @@ const TechnicianSignup = () => {
     setLoading(true);
 
     try {
-      await authService.technicianSignup(submitData);
+      // ===== CHANGED: capture the response so we can read the generated ID =====
+      const response = await authService.technicianSignup(submitData);
+      setGeneratedId(response?.data?.data?.technician_id || null);
       setSubmitted(true);
     } catch (err) {
       setFieldErrors({});
@@ -295,6 +302,36 @@ const TechnicianSignup = () => {
                 <p className="status-description mb-4">
                   Your technician registration request has been submitted successfully.
                 </p>
+
+                {/* ===== NEW: prominent backend-generated Technician ID with copy ===== */}
+                {generatedId && (
+                  <div
+                    className="mb-4 p-3 rounded-3 d-flex justify-content-between align-items-center"
+                    style={{
+                      backgroundColor: 'rgba(25, 135, 84, 0.08)',
+                      border: '1px solid rgba(25, 135, 84, 0.3)'
+                    }}
+                  >
+                    <div className="text-start">
+                      <div
+                        className="text-muted small text-uppercase fw-semibold"
+                        style={{ letterSpacing: '0.5px' }}
+                      >
+                        Your Technician ID
+                      </div>
+                      <div className="fs-4 fw-bold font-monospace text-success">
+                        {generatedId}
+                      </div>
+                    </div>
+                    <Button
+                      variant="outline-success"
+                      size="sm"
+                      onClick={() => navigator.clipboard?.writeText(generatedId)}
+                    >
+                      <i className="bi bi-clipboard me-1"></i> Copy
+                    </Button>
+                  </div>
+                )}
 
                 <div className="user-summary user-summary-animate">
                   {summary.map(item => (
