@@ -64,7 +64,7 @@ import feedbackService from '../../services/feedbackService';
 
 import FeedbackCard from '../../components/common/FeedbackCard';
 
-import '../../styles/feedbackCard.css';
+import '../../styles/FeedbackCard.css';
 
 
 const TechnicianTicketDetails = () => {
