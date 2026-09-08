@@ -106,11 +106,11 @@ WSGI_APPLICATION = 'core.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'smart_it_service_desk',
-        'USER' : 'postgres',
-        'PASSWORD' : '12345',
-        'HOST' : 'localhost',
-        'PORT' : '5432',
+        'NAME': os.environ.get('DB_NAME', 'smart_it_service_desk'),
+        'USER': os.environ.get('DB_USER', 'postgres'),
+        'PASSWORD': os.environ.get('DB_PASSWORD', '12345'),
+        'HOST': os.environ.get('DB_HOST', 'localhost'),
+        'PORT': os.environ.get('DB_PORT', '5432'),
     }
 }
 
