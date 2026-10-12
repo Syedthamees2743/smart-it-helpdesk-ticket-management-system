@@ -4,8 +4,12 @@ from django.conf import settings
 from django.conf.urls.static import static
 from django.http import JsonResponse
 
+def health(request):
+    return JsonResponse({"status" : "ok"})
+
 urlpatterns = [
     path('admin/', admin.site.urls),
+    path('api/health/', health),
     path('api/auth/', include('accounts.urls')),
     path('api/departments/', include('departments.urls')),
     path('api/tickets/', include('tickets.urls')),
