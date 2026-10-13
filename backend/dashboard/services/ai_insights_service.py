@@ -443,6 +443,13 @@ def generate_insights():
         }
 
     except Exception as e:
+        import logging
+
+        logging.exception(
+            "Hugging Face support-insights failed: %s",
+            type(e).__name__
+        )
+
         error_msg = str(e)
 
         if 'loading' in error_msg.lower() or '503' in error_msg:
