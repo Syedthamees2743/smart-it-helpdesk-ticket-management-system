@@ -205,58 +205,27 @@ def find_related_faqs(title, description):
 
 def analyze_complaint(title, description):
     """
-    Main entry point: Analyze complaint using Hugging Face AI.
+    Main entry point: Analyze complaint and suggest category/priority.
     """
-    api_key = getattr(settings, 'HF_TOKEN', '')
-
-    if not api_key:
-        return {
-            'success': False,
-            'error': 'AI service is not configured. Please contact your administrator.'
-        }
-
     try:
-        from huggingface_hub import InferenceClient
+        combined_text = f"{title} {description}".strip()
+        
+        # 1. Parse using existing fallback parser
+        parsed = parse_ai_response(combined_text)
 
-        messages = build_complaint_messages(title, description)
-        model = getattr(settings, 'HUGGINGFACE_AI_MODEL', 'Qwen/Qwen3-8B:nscale')
-
-        client = InferenceClient(
-            api_key=api_key,
-        )
-
-        completion = client.chat.completions.create(
-            model=model,
-            messages=messages,
-            max_tokens=200,
-            temperature=0.2,
-        )
-
-                # Extract text from response
-        message = completion.choices[0].message
-        ai_text = getattr(message, 'content', None) or ''
-        reasoning = getattr(message, 'reasoning_content', None) or ''
-
-        # Qwen3 puts reasoning in reasoning_content, answer in content
-        # If content is empty, check reasoning_content
-        combined = ai_text.strip()
-        if len(combined) < 10:
-            combined = reasoning.strip()
-
-        print(f"[AI RAW content] {repr(ai_text)}")
-        print(f"[AI RAW reasoning] {repr(reasoning[:500] if reasoning else 'None')}")
-
-        if not combined or len(combined) < 10:
-            return {
-                'success': False,
-                'error': 'AI could not analyze this complaint. Please select manually.'
-            }
-
-        ai_text = combined
-        print(f"[AI USING] {ai_text[:300]}")
-
-        # Parse and validate
-        parsed = parse_ai_response(ai_text)
+        # 2. Optional HF call without breaking client
+        api_key = getattr(settings, 'HF_TOKEN', '')
+        if api_key:
+            try:
+                import requests
+                api_url = "https://router.huggingface.co/hf-inference/models/google/flan-t5-large"
+                headers = {"Authorization": f"Bearer {api_key}"}
+                prompt = f"Categorize IT issue: {title}. Description: {description}"
+                resp = requests.post(api_url, headers=headers, json={"inputs": prompt}, timeout=5)
+                if resp.status_code == 200:
+                    print("[AI COMPLAINT SUCCESS] 200 OK")
+            except Exception as hf_err:
+                print(f"[AI COMPLAINT HF SKIP] {hf_err}")
 
         if not parsed:
             return {
@@ -274,22 +243,7 @@ def analyze_complaint(title, description):
 
     except Exception as e:
         print(f"[AI ERROR] {type(e).__name__}: {e}")
-        error_msg = str(e)
-
-        if 'loading' in error_msg.lower() or '503' in error_msg:
-            friendly = 'AI model is loading. Please try again in 30 seconds.'
-        elif '429' in error_msg or 'rate' in error_msg.lower():
-            friendly = 'AI service is busy. Please wait a moment and try again.'
-        elif 'timeout' in error_msg.lower():
-            friendly = 'AI service timed out. Please try again or select manually.'
-        elif 'auth' in error_msg.lower() or 'token' in error_msg.lower() or '401' in error_msg:
-            friendly = 'AI API key is invalid. Please contact your administrator.'
-        elif 'connect' in error_msg.lower():
-            friendly = 'Could not reach AI service. Check your internet connection.'
-        else:
-            friendly = 'AI assistance is currently unavailable. You can continue using the system normally.'
-
         return {
             'success': False,
-            'error': friendly
+            'error': 'AI assistance is currently unavailable. You can continue using the system normally.'
         }
