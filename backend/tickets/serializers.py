@@ -28,6 +28,7 @@ class TicketListSerializer(serializers.ModelSerializer):
     technician_department = serializers.SerializerMethodField()
     technician_specialization = serializers.SerializerMethodField()
     sla_status = serializers.SerializerMethodField()
+    screenshot_url = serializers.SerializerMethodField()
 
     # ── NEW: Asset fields ──
     asset_name = serializers.SerializerMethodField()
@@ -80,6 +81,15 @@ class TicketListSerializer(serializers.ModelSerializer):
             return None
         profile = getattr(obj.assigned_technician, 'technician_profile', None)
         return profile.specialization if profile else None
+
+    def get_screenshot_url(self, obj):
+        if obj.screenshot:
+            request = self.context.get('request')
+            if request:
+                return request.build_absolute_uri(obj.screenshot.url)
+            # fallback production url:
+            return f"https://smart-it-service-desk-api.onrender.com{obj.screenshot.url}"
+        return None
 
     # ── NEW: Asset methods ──
     def get_asset_name(self, obj):
