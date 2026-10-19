@@ -1,13 +1,16 @@
 from rest_framework import viewsets, status, permissions
 from rest_framework.decorators import action, APIView
 from rest_framework.response import Response
+import threading
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from rest_framework.exceptions import PermissionDenied, ValidationError
 from django.utils import timezone
 from django.contrib.auth import get_user_model
 from .services.ai_complaint_service import analyze_complaint as ai_analyze_complaint
 from accounts.permissions import IsEmployee, IsTechnician
-from .services.ai_troubleshooting_service import troubleshoot_ticket as ai_troubleshoot_ticket
+from .services.ai_troubleshooting_service import (
+    troubleshoot_ticket as ai_troubleshoot_ticket,
+)
 from .models import Ticket, TicketComment, IssueCategory
 from .serializers import (
     TicketListSerializer,
@@ -69,7 +72,7 @@ class TicketViewSet(viewsets.ModelViewSet):
         user = self.request.user
         # Employee: auto-set department from profile, ignore frontend value
         if user.role == "employee":
-            profile = getattr(user, 'employee_profile', None)
+            profile = getattr(user, "employee_profile", None)
             dept = profile.department if profile else None
             ticket = serializer.save(employee=user, department=dept)
         else:
@@ -114,19 +117,23 @@ class TicketViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=["get"], url_path="technicians-dropdown")
     def technicians_dropdown(self, request):
         """Return technicians with profile info for dropdowns."""
-        technicians = User.objects.filter(
-            role="technician"
-        ).select_related('technician_profile', 'technician_profile__department')
+        technicians = User.objects.filter(role="technician").select_related(
+            "technician_profile", "technician_profile__department"
+        )
         data = []
         for t in technicians:
-            profile = getattr(t, 'technician_profile', None)
-            data.append({
-                'id': t.id,
-                'name': t.get_full_name(),
-                'technician_id': profile.technician_id if profile else None,
-                'department': profile.department.name if profile and profile.department else None,
-                'specialization': profile.specialization if profile else None,
-            })
+            profile = getattr(t, "technician_profile", None)
+            data.append(
+                {
+                    "id": t.id,
+                    "name": t.get_full_name(),
+                    "technician_id": profile.technician_id if profile else None,
+                    "department": profile.department.name
+                    if profile and profile.department
+                    else None,
+                    "specialization": profile.specialization if profile else None,
+                }
+            )
         return Response(data)
 
         # ── NEW: MY ELIGIBLE ASSETS (Employee ticket creation dropdown) ──
@@ -137,39 +144,47 @@ class TicketViewSet(viewsets.ModelViewSet):
         if request.user.role != "employee":
             return Response(
                 {"error": "Only employees can access this endpoint."},
-                status=status.HTTP_403_FORBIDDEN
+                status=status.HTTP_403_FORBIDDEN,
             )
 
         assignments = get_active_assignments(request.user)
 
         data = []
         for a in assignments:
-            data.append({
-                'id': a.asset.id,
-                'asset_name': a.asset.asset_name,
-                'asset_code': a.asset.asset_code,
-                'category_name': a.asset.category.name if a.asset.category else None,
-                'brand': a.asset.brand,
-                'model': a.asset.model,
-            })
+            data.append(
+                {
+                    "id": a.asset.id,
+                    "asset_name": a.asset.asset_name,
+                    "asset_code": a.asset.asset_code,
+                    "category_name": a.asset.category.name
+                    if a.asset.category
+                    else None,
+                    "brand": a.asset.brand,
+                    "model": a.asset.model,
+                }
+            )
         return Response(data)
 
     @action(detail=False, methods=["get"], url_path="employees-dropdown")
     def employees_dropdown(self, request):
         """Return employees with profile info for dropdowns."""
-        employees = User.objects.filter(
-            role="employee"
-        ).select_related('employee_profile', 'employee_profile__department')
+        employees = User.objects.filter(role="employee").select_related(
+            "employee_profile", "employee_profile__department"
+        )
         data = []
         for e in employees:
-            profile = getattr(e, 'employee_profile', None)
-            data.append({
-                'id': e.id,
-                'name': e.get_full_name(),
-                'employee_id': profile.employee_id if profile else None,
-                'department': profile.department.name if profile and profile.department else None,
-                'designation': profile.designation if profile else None,
-            })
+            profile = getattr(e, "employee_profile", None)
+            data.append(
+                {
+                    "id": e.id,
+                    "name": e.get_full_name(),
+                    "employee_id": profile.employee_id if profile else None,
+                    "department": profile.department.name
+                    if profile and profile.department
+                    else None,
+                    "designation": profile.designation if profile else None,
+                }
+            )
         return Response(data)
 
     # ── WORKFLOW ACTIONS ──
@@ -229,6 +244,7 @@ class TicketViewSet(viewsets.ModelViewSet):
             status=status.HTTP_200_OK,
         )
 
+
     @action(detail=True, methods=["post"], url_path="change-status")
     def change_status(self, request, pk=None):
         ticket = self.get_object()
@@ -250,12 +266,20 @@ class TicketViewSet(viewsets.ModelViewSet):
                 or allowed_transitions[old_status] != new_status
             ):
                 raise ValidationError(
-                    {"error": f"Technicians can only change: Assigned → In Progress → Resolved."}
+                    {
+                        "error": f"Technicians can only change: Assigned → In Progress → Resolved."
+                    }
                 )
 
             if new_status == "resolved":
                 ticket.resolved_at = timezone.now()
-                send_ticket_resolved_notification(ticket)
+
+                # ── இமெயிலை தனி த்ரெட்டில் இயக்கவும் (Worker timeout ஆகாது) ──
+                threading.Thread(
+                    target=send_ticket_resolved_notification,
+                    args=(ticket,),
+                    daemon=True,
+                ).start()
 
                 create_notification(
                     user=ticket.employee,
@@ -281,7 +305,12 @@ class TicketViewSet(viewsets.ModelViewSet):
         ticket.status = new_status
         ticket.save()
 
-        send_status_update_notification(ticket, old_status, new_status)
+        # ── Status update notification-ஐயும் background த்ரெட்டிற்கு மாற்றலாம் ──
+        threading.Thread(
+            target=send_status_update_notification,
+            args=(ticket, old_status, new_status),
+            daemon=True,
+        ).start()
 
         return Response(
             {"message": f"Status changed to {new_status}", "status": ticket.status},
@@ -296,7 +325,9 @@ class TicketViewSet(viewsets.ModelViewSet):
         ticket = self.get_object()
         if ticket.status != "resolved":
             raise ValidationError(
-                {"error": "Only RESOLVED tickets can be reopened. Closed tickets cannot be reopened."}
+                {
+                    "error": "Only RESOLVED tickets can be reopened. Closed tickets cannot be reopened."
+                }
             )
         if ticket.employee != request.user:
             raise PermissionDenied("You can only reopen your own tickets.")
@@ -316,7 +347,7 @@ class TicketViewSet(viewsets.ModelViewSet):
         TicketComment.objects.create(
             ticket=ticket,
             user=request.user,
-            comment=f"Ticket REOPENED by employee.\n\nReason: {reason}"
+            comment=f"Ticket REOPENED by employee.\n\nReason: {reason}",
         )
 
         send_ticket_reopened_notification(ticket)
@@ -451,7 +482,10 @@ class TicketCommentViewSet(viewsets.ModelViewSet):
         recipients = []
         if ticket.employee_id and ticket.employee_id != commenter.id:
             recipients.append(ticket.employee)
-        if ticket.assigned_technician_id and ticket.assigned_technician_id != commenter.id:
+        if (
+            ticket.assigned_technician_id
+            and ticket.assigned_technician_id != commenter.id
+        ):
             recipients.append(ticket.assigned_technician)
 
         # 2. Technician illa + employee comment pannurapo → admins-ku
@@ -482,7 +516,10 @@ class TicketCommentViewSet(viewsets.ModelViewSet):
         serializer.save()
 
     def perform_destroy(self, instance):
-        if instance.user_id != self.request.user.id and self.request.user.role != "admin":
+        if (
+            instance.user_id != self.request.user.id
+            and self.request.user.role != "admin"
+        ):
             raise PermissionDenied("You can only delete your own comments.")
         instance.delete()
 
@@ -491,13 +528,16 @@ class AIAnalyzeComplaintView(APIView):
     permission_classes = [IsEmployee]
 
     def post(self, request):
-        title = request.data.get('title', '').strip()
-        description = request.data.get('description', '').strip()
+        title = request.data.get("title", "").strip()
+        description = request.data.get("description", "").strip()
 
         if not title and not description:
             return Response(
-                {'success': False, 'error': 'Please enter a title and description first.'},
-                status=status.HTTP_400_BAD_REQUEST
+                {
+                    "success": False,
+                    "error": "Please enter a title and description first.",
+                },
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
         result = ai_analyze_complaint(title, description)
@@ -508,28 +548,31 @@ class AITroubleshootView(APIView):
     permission_classes = [IsTechnician]
 
     def post(self, request):
-        ticket_id = request.data.get('ticket_id')
+        ticket_id = request.data.get("ticket_id")
 
         if not ticket_id:
             return Response(
-                {'success': False, 'error': 'Ticket ID is required.'},
-                status=status.HTTP_400_BAD_REQUEST
+                {"success": False, "error": "Ticket ID is required."},
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
         try:
             ticket = Ticket.objects.select_related(
-                'category', 'assigned_technician', 'employee'
+                "category", "assigned_technician", "employee"
             ).get(pk=ticket_id)
         except Ticket.DoesNotExist:
             return Response(
-                {'success': False, 'error': 'Ticket not found.'},
-                status=status.HTTP_404_NOT_FOUND
+                {"success": False, "error": "Ticket not found."},
+                status=status.HTTP_404_NOT_FOUND,
             )
 
         if ticket.assigned_technician != request.user:
             return Response(
-                {'success': False, 'error': 'You can only analyze tickets assigned to you.'},
-                status=status.HTTP_403_FORBIDDEN
+                {
+                    "success": False,
+                    "error": "You can only analyze tickets assigned to you.",
+                },
+                status=status.HTTP_403_FORBIDDEN,
             )
 
         result = ai_troubleshoot_ticket(ticket)
