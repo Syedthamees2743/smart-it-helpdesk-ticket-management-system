@@ -40,7 +40,7 @@ import {
   changeTicketStatus,
 } from "../../services/ticketService";
 import api from "../../services/api";
-import { getFullImageUrl } from "../utils/imageHelper";
+import { getFullImageUrl } from "../../services/imageHelper";
 
 const TicketDetails = () => {
   const { id } = useParams();
