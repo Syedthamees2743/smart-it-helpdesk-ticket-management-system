@@ -44,7 +44,8 @@ class TicketListSerializer(serializers.ModelSerializer):
             'technician_name', 'technician_id', 'technician_department', 'technician_specialization',
             'priority', 'status',
             'asset_name', 'asset_code',
-            'sla_deadline', 'sla_status', 'created_at'
+            'sla_deadline', 'sla_status', 'created_at',
+            'screenshot_url'    
         )
 
     def get_employee_id(self, obj):
